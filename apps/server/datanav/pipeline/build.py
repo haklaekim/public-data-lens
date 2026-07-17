@@ -73,7 +73,11 @@ def build_release(source_csv: Path, snapshot: str, min_rows: int = 1000) -> Path
     started = _now()
     csv_path, source_sha = preserve_snapshot(source_csv, snapshot)
 
-    release_name = f"{snapshot}_{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    base_name = f"{snapshot}_{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    release_name, n = base_name, 1
+    while (config.RELEASES_DIR / release_name).exists():  # 같은 초 내 재빌드 충돌 방지
+        release_name = f"{base_name}-{n}"
+        n += 1
     release_dir = config.RELEASES_DIR / release_name
     release_dir.mkdir(parents=True, exist_ok=False)
     db_path = release_dir / "catalog.db"
@@ -149,7 +153,28 @@ def build_release(source_csv: Path, snapshot: str, min_rows: int = 1000) -> Path
     # 5) diff (이전 릴리스가 있으면)
     prev_release = _read_current()
     diff_summary = {"baseSnapshot": None, "counts": {}}
-    if prev_release and prev_release["snapshot"] != snapshot:
+    if prev_release and prev_release["snapshot"] == snapshot:
+        # 같은 스냅샷 재빌드: 입력이 동일하므로 이전 릴리스의 diff를 승계한다
+        prev_db = config.RELEASES_DIR / prev_release["release"] / "catalog.db"
+        if prev_db.exists():
+            prev_conn = store.open_ro(prev_db)
+            carried = prev_conn.execute(
+                "SELECT record_id, list_key, status, changed_fields, base_snapshot, title, org_name FROM changes"
+            ).fetchall()
+            prev_conn.close()
+            if carried:
+                conn.executemany(
+                    "INSERT INTO changes (record_id, list_key, status, changed_fields, base_snapshot, title, org_name)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [tuple(r) for r in carried],
+                )
+                conn.commit()
+                counts: dict[str, int] = {}
+                for r in carried:
+                    counts[r["status"]] = counts.get(r["status"], 0) + 1
+                diff_summary = {"baseSnapshot": carried[0]["base_snapshot"], "counts": counts,
+                                "carriedFrom": prev_release["release"]}
+    elif prev_release and prev_release["snapshot"] != snapshot:
         prev_db = config.RELEASES_DIR / prev_release["release"] / "catalog.db"
         if prev_db.exists():
             prev_conn = store.open_ro(prev_db)
@@ -189,10 +214,10 @@ def build_release(source_csv: Path, snapshot: str, min_rows: int = 1000) -> Path
         "duplicateListKeys": len(dup_records) // 2 if dup_records else 0,
         "acceptance": checks,
         "aird": {
-            "rule": assessment["provenance"]["rule"] if "provenance" in assessment else None,
+            "rule": assessment.get("prov:wasGeneratedBy", {}).get("kdp:rule"),
             "qualityIndexMMI": assessment.get("aird:qualityIndexMMI"),
             "diagnosticMaturity": assessment.get("aird:diagnosticMaturity"),
-            "label": assessment.get("label"),
+            "label": assessment.get("kdp:label"),
         },
         "discoverability": discoverability["catalogMetadataReadinessScore"],
         "shacl": {k: shacl_report[k] for k in ("conforms", "violationCount", "warningCount", "sampleSize", "mode")},

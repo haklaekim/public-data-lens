@@ -1,7 +1,7 @@
 {
   "specVersion": "1.0-draft",
   "status": "DRAFT — 승인 시점이 공개 계약 동결 시점(설계서 §13.1)",
-  "generatedAt": "2026-07-17T08:34:58Z",
+  "generatedAt": "2026-07-17T13:35:56Z",
   "baseUri": "https://data.datahub.kr/projects/datanav",
   "compatibilityPolicy": "필드 추가는 하위 호환(minor). required 필드 제거·타입/의미 변경·오류 코드 제거는 breaking(major). meta.schemaVersion으로 전달.",
   "inputLimits": {
@@ -20,9 +20,12 @@
       "inputSchema": {
         "properties": {
           "recordIds": {
+            "description": "비교할 recordId 목록(2~5개)",
             "items": {
               "type": "string"
             },
+            "maxItems": 5,
+            "minItems": 2,
             "title": "Recordids",
             "type": "array"
           }
@@ -429,6 +432,7 @@
               }
             ],
             "default": null,
+            "description": "변경 상태 필터: ADDED|MODIFIED|MISSING_FROM_SNAPSHOT|REAPPEARED|POSSIBLE_IDENTITY_CHANGE|OFFICIALLY_WITHDRAWN",
             "title": "Status"
           },
           "cursor": {
@@ -441,10 +445,14 @@
               }
             ],
             "default": null,
+            "description": "이전 응답의 nextCursor",
             "title": "Cursor"
           },
           "pageSize": {
             "default": 20,
+            "description": "페이지 크기(1~100)",
+            "maximum": 100,
+            "minimum": 1,
             "title": "Pagesize",
             "type": "integer"
           }
@@ -829,11 +837,15 @@
       "inputSchema": {
         "properties": {
           "axis": {
+            "description": "통계 축: theme|org|format|completeness|listType",
             "title": "Axis",
             "type": "string"
           },
           "limit": {
             "default": 30,
+            "description": "버킷 수(1~200, completeness 축에는 미적용)",
+            "maximum": 200,
+            "minimum": 1,
             "title": "Limit",
             "type": "integer"
           }
@@ -1649,11 +1661,13 @@
       "inputSchema": {
         "properties": {
           "recordId": {
+            "description": "search_datasets 결과의 recordId(원칙적으로 목록키, 이중 등재 시 '목록키-유형')",
             "title": "Recordid",
             "type": "string"
           },
           "view": {
             "default": "card",
+            "description": "조회 뷰: card(판단용 요약)|normalized(정규화 전체)|source(원본 CSV 필드·값)|jsonld(정본 Discovery JSON-LD)",
             "title": "View",
             "type": "string"
           }
@@ -2151,6 +2165,7 @@
               }
             ],
             "default": null,
+            "description": "검색 키워드(공백 구분, 전체 단어 일치 우선 후 부분 일치 완화). 최대 500자",
             "title": "Query"
           },
           "theme": {
@@ -2163,6 +2178,7 @@
               }
             ],
             "default": null,
+            "description": "분류체계 대분류(예: '공공행정') 또는 원문 전체(예: '공공행정 - 법제')",
             "title": "Theme"
           },
           "org": {
@@ -2175,6 +2191,7 @@
               }
             ],
             "default": null,
+            "description": "제공기관명 부분 일치(예: '기상청', '서울특별시')",
             "title": "Org"
           },
           "format": {
@@ -2187,6 +2204,7 @@
               }
             ],
             "default": null,
+            "description": "정규화 포맷 토큰(예: CSV, JSON, XML, XLSX, SHP)",
             "title": "Format"
           },
           "updateCycle": {
@@ -2199,6 +2217,7 @@
               }
             ],
             "default": null,
+            "description": "정규화 주기 코드: DAILY|WEEKLY|MONTHLY|QUARTERLY|SEMIANNUAL|ANNUAL|IRREGULAR|UNSPECIFIED",
             "title": "Updatecycle"
           },
           "license": {
@@ -2211,6 +2230,7 @@
               }
             ],
             "default": null,
+            "description": "정규화 라이선스 코드: NO_RESTRICTION|KOGL_BY|KOGL_BY_NC|KOGL_BY_ND|KOGL_BY_NC_ND 등",
             "title": "License"
           },
           "listType": {
@@ -2223,6 +2243,7 @@
               }
             ],
             "default": null,
+            "description": "목록 유형: FILE|API|STD",
             "title": "Listtype"
           },
           "region": {
@@ -2235,10 +2256,12 @@
               }
             ],
             "default": null,
+            "description": "시·도 코드(ISO 3166-2:KR, 예: KR-11=서울, KR-26=부산)",
             "title": "Region"
           },
           "includeInferred": {
             "default": true,
+            "description": "true면 제목·기관·설명에서 추론된 지역 매칭 포함, false면 공간범위 명시(EXPLICIT_SPATIAL)만",
             "title": "Includeinferred",
             "type": "boolean"
           },
@@ -2252,6 +2275,7 @@
               }
             ],
             "default": null,
+            "description": "이 날짜 이후 수정된 목록만(YYYY-MM-DD)",
             "title": "Updatedafter"
           },
           "cursor": {
@@ -2264,10 +2288,14 @@
               }
             ],
             "default": null,
+            "description": "이전 응답의 nextCursor(불투명 토큰, 현재 스냅샷에 귀속)",
             "title": "Cursor"
           },
           "pageSize": {
             "default": 20,
+            "description": "페이지 크기(1~100)",
+            "maximum": 100,
+            "minimum": 1,
             "title": "Pagesize",
             "type": "integer"
           }

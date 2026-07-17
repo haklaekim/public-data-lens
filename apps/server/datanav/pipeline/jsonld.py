@@ -1,6 +1,8 @@
 """JSON-LD 매핑 — dcat:Catalog / dcat:Dataset(Discovery 계층 1) / dcat:CatalogRecord (§3.1, §7)."""
 from __future__ import annotations
 
+import json
+
 from ..config import BASE_URI
 
 CONTEXT_URI = f"{BASE_URI}/context/catalog/1.0"
@@ -116,11 +118,18 @@ def catalog_jsonld(
         "title": f"공공데이터포털 목록개방현황 카탈로그 {snapshot}",
         "description": "공공데이터포털 목록개방현황(월간)을 정규화한 월별 카탈로그. 각 목록 행은 개별 공공데이터의 Discovery Profile로 제공된다.",
         "dct:language": "ko",
-        "issued": processed_at,
+        # dct:issued는 컨텍스트상 xsd:date — 날짜부만 기록하고 전체 시각은 별도 키(J2)
+        "issued": processed_at[:10],
+        "kdp:processedAt": processed_at,
         "kdp:datasetCount": dataset_count,
         "kdp:evidenceLevel": "CATALOG_METADATA_ONLY",
         "kdp:airdAssessment": {"@id": assessment["@id"]},
-        "kdp:catalogDiscoverability": discoverability,
+        # 중첩 키가 RDF에서 소실되지 않도록 프리픽스 부여, 상세는 JSON 리터럴(J3)
+        "kdp:catalogDiscoverability": {
+            "kdp:rule": discoverability["rule"],
+            "kdp:catalogMetadataReadinessScore": discoverability["catalogMetadataReadinessScore"],
+            "kdp:indicatorsJson": json.dumps(discoverability["indicators"], ensure_ascii=False),
+        },
     }
     # DM-0은 판정 조건 충족 시에만 기록(§9). Discoverable에서 qualityTier는 금지(제3부 5.3절).
     if assessment.get("aird:diagnosticMaturity"):

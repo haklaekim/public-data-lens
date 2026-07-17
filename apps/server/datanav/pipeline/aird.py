@@ -12,11 +12,13 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import re
 import sqlite3
 
 from ..config import BASE_URI
 from ..rules import RULE_AIRD, RULE_DISCOVERABILITY
+from .jsonld import CONTEXT_URI
 
 QI_MMI_THRESHOLD = 0.7  # 면제 불가 게이트(제2부 §8.1, AIRD-OPG-001 §15.3)
 
@@ -49,15 +51,16 @@ def measure_mmi(
     # 6.1절 7항 — 데이터 적재 사전 검사
     if record_count == 0:
         return {
+            "@context": CONTEXT_URI,
             "@id": f"{BASE_URI}/catalog/{snapshot}/aird-assessment",
             "@type": "kdp:AirdAssessment",
             "aird:dataType": "STRUCT",
-            "diagnosticStatus": "SCHEMA_ONLY",
-            "recordCount": 0,
+            "kdp:diagnosticStatus": "SCHEMA_ONLY",
+            "kdp:recordCount": 0,
             "aird:qualityIndexMMI": None,
             "aird:diagnosticMaturity": None,
-            "rule": RULE_AIRD,
-            "standardRef": AIRD_STANDARD_REF,
+            "kdp:rule": RULE_AIRD,
+            "kdp:standardRef": AIRD_STANDARD_REF,
         }
 
     indicators = []
@@ -84,76 +87,82 @@ def measure_mmi(
         }
     d5_03 = round(1 - (dummy_cells / measured_cells), 4) if measured_cells else 1.0
     indicators.append({
-        "id": "D5-03",
-        "name": "통계적 타당성",
-        "score": d5_03,
-        "status": "APPLIED",
-        "details": {
+        "kdp:indicatorId": "D5-03",
+        "kdp:indicatorName": "통계적 타당성",
+        "kdp:score": d5_03,
+        "kdp:status": "APPLIED",
+        "kdp:detailsJson": json.dumps({
             "dummyValuePatterns": sorted(DUMMY_VALUES),
             "dummyValueRate": per_column,
             "note": "문자열형 더미 패턴('0000' 등)은 정수 정규화로 판별 불가하여 제외",
-        },
+        }, ensure_ascii=False),
     })
 
     # ---- D6-01 유일성: 식별 컬럼(목록키) 기준 ---------------------------
     unique_keys = conn.execute("SELECT COUNT(DISTINCT list_key) FROM datasets").fetchone()[0]
     d6_01 = round(unique_keys / record_count, 4)
     indicators.append({
-        "id": "D6-01",
-        "name": "유일성",
-        "score": d6_01,
-        "status": "APPLIED",
-        "details": {
+        "kdp:indicatorId": "D6-01",
+        "kdp:indicatorName": "유일성",
+        "kdp:score": d6_01,
+        "kdp:status": "APPLIED",
+        "kdp:detailsJson": json.dumps({
             "identifierColumn": "목록키",
             "identifierUniqueness": {"uniqueKeys": unique_keys, "records": record_count},
-        },
+        }, ensure_ascii=False),
     })
 
     # ---- D7-01 인코딩 일관성: 단일 파일, 기준 UTF-8 ---------------------
     d7_01 = 1.0 if encoding_ok else 0.0
     indicators.append({
-        "id": "D7-01",
-        "name": "인코딩 일관성",
-        "score": d7_01,
-        "status": "APPLIED",
-        "details": {"files": 1, "baselineEncoding": "UTF-8", "note": "BOM 유무는 측정 대상 아님"},
+        "kdp:indicatorId": "D7-01",
+        "kdp:indicatorName": "인코딩 일관성",
+        "kdp:score": d7_01,
+        "kdp:status": "APPLIED",
+        "kdp:detailsJson": json.dumps(
+            {"files": 1, "baselineEncoding": "UTF-8", "note": "BOM 유무는 측정 대상 아님"},
+            ensure_ascii=False),
     })
 
     # ---- D7-02 기술적 유효성: STRUCT = 파일 파싱 가능 여부 ---------------
     d7_02 = 1.0 if parse_failures == 0 else round(1 - parse_failures / record_count, 4)
     indicators.append({
-        "id": "D7-02",
-        "name": "기술적 유효성",
-        "score": d7_02,
-        "status": "APPLIED",
-        "details": {"files": 1, "parseFailures": parse_failures,
-                    "applicability": "STRUCT에서 선택(○)이나 적용 가능 집합에 포함(표 9.1)"},
+        "kdp:indicatorId": "D7-02",
+        "kdp:indicatorName": "기술적 유효성",
+        "kdp:score": d7_02,
+        "kdp:status": "APPLIED",
+        "kdp:detailsJson": json.dumps(
+            {"files": 1, "parseFailures": parse_failures,
+             "applicability": "STRUCT에서 선택(○)이나 적용 가능 집합에 포함(표 9.1)"},
+            ensure_ascii=False),
     })
 
-    qi_mmi = round(sum(i["score"] for i in indicators) / len(indicators), 4)
+    qi_mmi = round(sum(i["kdp:score"] for i in indicators) / len(indicators), 4)
     passed = qi_mmi >= QI_MMI_THRESHOLD
     return {
+        "@context": CONTEXT_URI,
         "@id": f"{BASE_URI}/catalog/{snapshot}/aird-assessment",
         "@type": "kdp:AirdAssessment",
         "aird:dataType": "STRUCT",
-        "diagnosticStatus": "POPULATED",
-        "recordCount": record_count,
-        "indicators": indicators,
-        "applicableMmiCount": len(indicators),
+        "kdp:diagnosticStatus": "POPULATED",
+        "kdp:recordCount": record_count,
+        "kdp:indicators": indicators,
+        "kdp:applicableMmiCount": len(indicators),
         "aird:qualityIndexMMI": qi_mmi,
-        "threshold": QI_MMI_THRESHOLD,
+        "kdp:threshold": QI_MMI_THRESHOLD,
         "aird:diagnosticMaturity": "DM-0" if passed else None,
-        "label": "DM-0 (기본 적합성, STRUCT, 참고)" if passed else None,
-        "disclosure": "참고 공시 — DM-0·DM-1은 내부 진단 참고용이며 공식 적합성 선언에 사용하지 않는다(제2부 5.4절)",
-        "provenance": {
-            "measuredAt": _now(),
-            "sourceSnapshot": snapshot,
-            "sourceSha256": source_sha256,
-            "tool": "datanav/0.1.0",
-            "rule": RULE_AIRD,
-            "standardRef": AIRD_STANDARD_REF,
+        "kdp:label": "DM-0 (기본 적합성, STRUCT, 참고)" if passed else None,
+        "kdp:disclosure": "참고 공시 — DM-0·DM-1은 내부 진단 참고용이며 공식 적합성 선언에 사용하지 않는다(제2부 5.4절)",
+        "prov:wasGeneratedBy": {
+            "@type": "prov:Activity",
+            "prov:endedAtTime": _now(),
+            "kdp:sourceSnapshot": snapshot,
+            "kdp:sourceSha256": source_sha256,
+            "kdp:tool": "datanav/0.1.0",
+            "kdp:rule": RULE_AIRD,
+            "kdp:standardRef": AIRD_STANDARD_REF,
         },
-        "note": (
+        "kdp:note": (
             "월별 카탈로그 전체를 1건의 STRUCT 데이터셋으로 보고 측정. "
             "개별 목록 행에는 Q-Tier·DM을 부여하지 않는다(evidenceLevel=CATALOG_METADATA_ONLY). "
             "aird:qualityTier는 Discoverable 상태에서 금지되므로 기록하지 않는다(제3부 5.3절)."

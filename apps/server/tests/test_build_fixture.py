@@ -92,10 +92,11 @@ def test_full_build_on_fixture(tmp_path, isolated_config):
     assessment = json.loads(
         (release_dir / "aird-assessment-9999-01.jsonld").read_text(encoding="utf-8")
     )
-    scores = {i["id"]: i["score"] for i in assessment["indicators"]}
+    scores = {i["kdp:indicatorId"]: i["kdp:score"] for i in assessment["kdp:indicators"]}
     assert scores["D6-01"] < 1.0  # 중복 목록키 반영
     assert scores["D5-03"] < 1.0  # 더미값 9999 반영
-    assert assessment["provenance"]["sourceSha256"]
+    assert assessment["prov:wasGeneratedBy"]["kdp:sourceSha256"]
+    assert assessment["@context"]  # 단독 해석 가능한 JSON-LD
 
     # 벌크 정본: 라인 수 = 레코드 수, Dataset URI는 목록키 기반
     bulk = report["bulk"]
@@ -117,3 +118,24 @@ def test_full_build_on_fixture(tmp_path, isolated_config):
     # 원자적 배포: 포인터가 새 릴리스를 가리킴
     ptr = json.loads(isolated_config.CURRENT_POINTER.read_text(encoding="utf-8"))
     assert ptr["snapshot"] == "9999-01"
+
+
+def test_same_snapshot_rebuild_carries_changes(tmp_path, isolated_config):
+    """같은 스냅샷 재빌드 시 이전 릴리스의 diff를 승계해야 한다(변경 피드 소실 방지)."""
+    from datanav.pipeline.build import build_release
+
+    csv1 = tmp_path / "a.csv"
+    make_fixture_csv(csv1, n_unique=20)
+    build_release(csv1, "9999-01", min_rows=5)
+
+    csv2 = tmp_path / "b.csv"
+    make_fixture_csv(csv2, n_unique=19)  # 1행 제거 → MISSING 1 발생
+    rel2 = build_release(csv2, "9999-02", min_rows=5)
+    r2 = json.loads((rel2 / "build_report.json").read_text(encoding="utf-8"))
+    assert r2["diff"]["counts"].get("MISSING_FROM_SNAPSHOT") == 1
+
+    rel3 = build_release(csv2, "9999-02", min_rows=5)  # 같은 스냅샷 재빌드
+    r3 = json.loads((rel3 / "build_report.json").read_text(encoding="utf-8"))
+    assert r3["diff"]["counts"] == r2["diff"]["counts"]  # diff 승계
+    assert r3["diff"]["baseSnapshot"] == "9999-01"
+    assert "carriedFrom" in r3["diff"]
