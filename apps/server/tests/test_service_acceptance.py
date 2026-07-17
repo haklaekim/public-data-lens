@@ -50,8 +50,9 @@ def test_four_views_consistency(service):
     jld = service.get_dataset(rid, "jsonld")["data"]["dataset"]
     assert card["title"] == norm["title"] == src["sourceFields"]["목록명"] == jld["title"]
     assert card["listKey"] == norm["list_key"] == src["sourceFields"]["목록키"]
-    # 정본 URI·근거 수준·Q-Tier 금지(명시적 null)
-    assert jld["@id"].endswith(f"/dataset/{rid}")
+    # 정본 URI는 목록키 기반 불변(§7), record_id는 내부 식별자(kdp:recordId)
+    assert jld["@id"].endswith(f"/dataset/{card['listKey']}")
+    assert jld["kdp:recordId"] == rid
     assert jld["kdp:evidenceLevel"] == "CATALOG_METADATA_ONLY"
     assert jld["kdp:qualityTier"] is None
     assert jld["kdp:diagnosticMaturity"] is None

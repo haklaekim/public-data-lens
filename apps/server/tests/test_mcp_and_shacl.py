@@ -65,20 +65,58 @@ def test_shacl_catches_fatal_violation():
     assert res["violationCount"] >= 2  # title 누락 + listType 위반
 
 
-def test_aird_dm0_threshold():
-    """QI_MMI < 0.7이면 DM-0을 부여하지 않는다(§3.1)."""
+def _mini_db(rows):
+    """rows: (record_id, list_key, row_count) 목록으로 최소 datasets 테이블 구성."""
     import sqlite3
-    from datanav.pipeline.aird import measure_mmi
     from datanav.store.db import SCHEMA
 
     conn = sqlite3.connect(":memory:")
     conn.executescript(SCHEMA)
-    # 빈약한 메타데이터 행
-    conn.execute(
-        "INSERT INTO datasets (record_id, list_key, list_type, title, keywords, license_code, source_json)"
-        " VALUES ('1', '1', 'FILE', '제목', '[]', 'UNSPECIFIED', '{}')"
+    for rid, key, rc in rows:
+        conn.execute(
+            "INSERT INTO datasets (record_id, list_key, list_type, title, keywords,"
+            " license_code, row_count, source_json)"
+            " VALUES (?, ?, 'FILE', '제목', '[]', 'KOGL_BY', ?, '{}')",
+            (rid, key, rc),
+        )
+    return conn
+
+
+def test_aird_standard_mmi():
+    """표준 MMI(aird-mmi-v1.1, AIRD 제2부 v0.87): 4지표·QI_MMI·DM-0 판정."""
+    from datanav.pipeline.aird import measure_mmi
+
+    # (a) recordCount=0 → SCHEMA_ONLY, 판정 불가(6.1절 7항)
+    empty = measure_mmi(_mini_db([]), "t")
+    assert empty["diagnosticStatus"] == "SCHEMA_ONLY"
+    assert empty["aird:qualityIndexMMI"] is None
+    assert empty["aird:diagnosticMaturity"] is None
+
+    # (b) 정상 데이터 → 4지표 전부 APPLIED, DM-0(참고 공시 라벨)
+    clean = measure_mmi(_mini_db([("1", "1", 10), ("2", "2", 20)]), "t")
+    ids = {i["id"] for i in clean["indicators"]}
+    assert ids == {"D5-03", "D6-01", "D7-01", "D7-02"}
+    assert all(i["status"] == "APPLIED" for i in clean["indicators"])
+    assert clean["aird:qualityIndexMMI"] == 1.0
+    assert clean["aird:diagnosticMaturity"] == "DM-0"
+    assert clean["label"] == "DM-0 (기본 적합성, STRUCT, 참고)"
+    assert "aird:qualityTier" not in clean  # Discoverable에서 qualityTier 금지(제3부 5.3절)
+
+    # (c) 더미값(9999, -1)은 D5-03 감점, 중복 목록키는 D6-01 감점
+    dirty = measure_mmi(
+        _mini_db([("1", "K", 9999), ("2", "K", -1), ("3", "3", 5), ("4", "4", 7)]), "t"
     )
-    r = measure_mmi(conn)
-    assert r["qiMmi"] < 0.7
-    assert r["dmLevel"] is None
-    assert r["state"] == "NotAssessed"
+    by_id = {i["id"]: i["score"] for i in dirty["indicators"]}
+    assert by_id["D5-03"] == 0.5   # 4셀 중 2셀 더미
+    assert by_id["D6-01"] == 0.75  # 4행 중 유니크 키 3개
+    assert dirty["aird:qualityIndexMMI"] < 1.0
+
+
+def test_discoverability_is_not_mmi():
+    """발견성 8지표는 참고 지표 — DM 판정 필드를 갖지 않는다."""
+    from datanav.pipeline.aird import measure_discoverability
+
+    r = measure_discoverability(_mini_db([("1", "1", 10)]))
+    assert r["rule"] == "catalog-discoverability-v1.0"
+    assert "catalogMetadataReadinessScore" in r
+    assert "aird:diagnosticMaturity" not in r

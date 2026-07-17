@@ -3,6 +3,9 @@
 [설계서 v1.0 확정판](docs/공공데이터_내비게이터_설계서_v1.0_확정판.md) 기반 구현.
 공공데이터포털 목록개방현황(월간)을 AIRD 정본(1층) → MCP 서버(2층) → 웹(3층)으로 제공한다.
 
+**현재 상태: v1.0 코어 구현 후보 (M1·M2 beta)** — 검색·정규화·MCP·비생성형 웹은 구현되었으며,
+2026-06 스냅샷 재빌드·골든셋 인간 검수·공개 계약 동결(부속 명세)·정본 URI 호스팅을 보완한 후 v1.0으로 확정한다.
+
 > 본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을 보증하지 않습니다.
 
 ## 구조
@@ -68,7 +71,16 @@ cd ../web && npm install && npm run dev   # http://localhost:5173
 
 ## v1.0 구현 메모 (부속 명세 확정 대상)
 
-- 목록키 중복(FILE/API 이중 등재 22건)은 `{목록키}-{유형}`으로 분리하고 이슈 관찰로 표면화 — [매핑표 §2](docs/매핑표_v1.0.md)
+- **AIRD 진단은 표준 MMI 기준**(aird-mmi-v1.1, AIRD 제2부 v0.87): D5-03·D6-01·D7-01·D7-02 4지표,
+  QI_MMI ≥ 0.7 → `DM-0 (기본 적합성, STRUCT, 참고)` — 참고 공시이며 공식 적합성 선언은 DM-2 이상.
+  발견성 8지표는 `catalog-discoverability-v1.0`(참고)으로 분리
+- **Dataset 정본 URI는 항상 목록키 기반 불변**(`/dataset/{목록키}`). record_id는 내부 식별자이며
+  FILE/API 이중 등재(22건)는 동일 데이터셋의 복수 제공 형태로 해석, CatalogRecord가 유형별 시점 기술 담당
+- **벌크 정본 산출**(릴리스 디렉터리): `datasets-{월}.ndjson.gz`, `catalog-records-{월}.ndjson.gz`,
+  `quality-annotations-{월}.ndjson.gz`(DQV·PROV), `aird-assessment-{월}.jsonld`, `catalog.jsonld`
 - SHACL은 카탈로그 노드 + 표본 검증(기본 500건, `DATANAV_SHACL_SAMPLE=0`으로 전수) + 프로그램적 전수 구조 검사
 - 오류 코드에 `RATE_LIMITED` 추가(설계서 검토에서 식별된 §4.3 보완)
 - 계통적 이슈 패턴(전 행 50% 초과)은 카탈로그 수준 관찰 1건으로 축약
+- 운영 환경변수: `DATANAV_CORS_ORIGINS`(쉼표 구분), `DATANAV_RATE_LIMIT_PER_MIN`, `DATANAV_SHACL_SAMPLE`
+- 재현성: `requirements.lock`(의존성 고정), fixture 기반 빌드 테스트(`tests/test_build_fixture.py`,
+  실카탈로그 없이 파이프라인 전 과정 검증), 골든셋은 자동 생성 v0(예비 평가, 인간 검수 전)

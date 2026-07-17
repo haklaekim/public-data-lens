@@ -45,7 +45,7 @@
       "ruleId": "record-identity-v1.0",
       "title": "레코드 식별 규칙",
       "effectiveDate": "2026-07-17",
-      "definition": "레코드 ID는 원칙적으로 목록키. 동일 목록키가 복수 목록유형(FILE/API)으로 등재된 경우 두 행을 모두 보존하고 ID를 '{목록키}-{목록유형}'으로 부여하며 DUPLICATE_LIST_KEY 이슈 관찰을 생성한다(원본 불변, §6)."
+      "definition": "Dataset 정본 URI는 항상 목록키 기반 불변(/dataset/{목록키}, §7). record_id는 내부 조회 식별자이며 동일 목록키가 복수 목록유형(FILE/API)으로 등재된 경우 '{목록키}-{목록유형}'으로 분리 보존하고 DUPLICATE_LIST_KEY 이슈 관찰을 생성한다(원본 불변, §6). 이중 등재는 동일 데이터셋의 복수 제공 형태로 해석하며, 유형별 시점 기술은 dcat:CatalogRecord(/catalog/{월}/record/{record_id})가 구분해 담는다."
     },
     {
       "ruleId": "region-match-v1.0",
@@ -85,9 +85,23 @@
     },
     {
       "ruleId": "aird-mmi-v1.0",
-      "title": "월별 카탈로그 MMI 측정 및 DM-0 판정",
+      "title": "(폐기) 월별 카탈로그 MMI 측정 및 DM-0 판정",
       "effectiveDate": "2026-07-17",
-      "definition": "적용 가능한 MMI 지표(식별자 보유율, 제목 충족률, 설명 충족률, 발행자 기재율, 라이선스 명시율, 키워드 보유율, 날짜 기재율, URL 형식 유효율)를 전수 측정. QI_MMI = 지표 평균. QI_MMI ≥ 0.7이면 DM-0(Discoverable) 부여. AIRD Core Manifest는 DM-2 이상 및 Quality-Ready 전이 후 생성(§3.1)."
+      "deprecated": true,
+      "supersededBy": "aird-mmi-v1.1",
+      "definition": "자체 정의 8지표를 MMI로 오기한 판정 규칙. AIRD 제2부의 MMI 정의와 불일치하여 폐기. 해당 8지표는 catalog-discoverability-v1.0으로 이관."
+    },
+    {
+      "ruleId": "aird-mmi-v1.1",
+      "title": "월별 카탈로그 표준 MMI 측정 및 DM-0 판정",
+      "effectiveDate": "2026-07-17",
+      "definition": "AIRD 제2부 v0.87 기준. 월별 카탈로그 전체를 1건의 STRUCT 데이터셋으로 보고 MMI 4지표(D5-03 통계적 타당성, D6-01 유일성, D7-01 인코딩 일관성, D7-02 기술적 유효성)를 측정한다. STRUCT 적용 가능 집합은 4개 전부(D7-02는 선택(○)이나 적용 가능 — 표 9.1). 사전 검사: recordCount ≥ 1(0이면 SCHEMA_ONLY, 판정 불가). QI_MMI = 적용 가능 지표 점수 합 / 적용 가능 지표 수. 전 지표 APPLIED이고 QI_MMI ≥ 0.7이면 DM-0(기본 적합성). 표기: 'DM-0 (기본 적합성, STRUCT, 참고)' — DM-0은 참고 공시이며 공식 적합성 선언은 DM-2 이상(제2부 5.4절). aird:qualityTier는 Discoverable 상태에서 기록 금지(제3부 5.3절). 측정 대상 해시·도구·규칙 버전을 provenance로 기록."
+    },
+    {
+      "ruleId": "catalog-discoverability-v1.0",
+      "title": "카탈로그 발견성 지표 (참고)",
+      "effectiveDate": "2026-07-17",
+      "definition": "목록 메타데이터 충실도 8지표(식별자·제목·설명·발행자·라이선스·키워드·날짜 기재율, URL 형식 유효율)의 평균 = catalogMetadataReadinessScore. AIRD MMI가 아니며 Q-Tier·DM 판정에 사용하지 않는 참고 지표."
     }
   ]
 }

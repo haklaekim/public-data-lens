@@ -12,6 +12,10 @@ JSONLD_CONTEXT = {
     "dct": "http://purl.org/dc/terms/",
     "foaf": "http://xmlns.com/foaf/0.1/",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "dqv": "http://www.w3.org/ns/dqv#",
+    "oa": "http://www.w3.org/ns/oa#",
+    "prov": "http://www.w3.org/ns/prov#",
+    "aird": f"{BASE_URI}/ns/aird#",
     "kdp": f"{BASE_URI}/ns/kdp#",
     "title": "dct:title",
     "description": "dct:description",
@@ -31,8 +35,9 @@ JSONLD_CONTEXT = {
 }
 
 
-def dataset_uri(record_id: str) -> str:
-    return f"{BASE_URI}/dataset/{record_id}"
+def dataset_uri(list_key: str) -> str:
+    """정본 Dataset URI — 항상 목록키 기반 불변(§7, rule: record-identity-v1.0)."""
+    return f"{BASE_URI}/dataset/{list_key}"
 
 
 def catalog_uri(snapshot: str) -> str:
@@ -47,9 +52,10 @@ def dataset_jsonld(rec: dict, snapshot: str) -> dict:
     """개별 공공데이터의 Discovery Profile. Q-Tier·DM 부여 금지(§3.1) — null 고정."""
     doc = {
         "@context": CONTEXT_URI,
-        "@id": dataset_uri(rec["record_id"]),
+        "@id": dataset_uri(rec["list_key"]),
         "@type": "dcat:Dataset",
         "identifier": rec["list_key"],
+        "dct:language": "ko",
         "title": rec["title"],
         "description": rec["description"],
         "keyword": rec["keywords"] or None,
@@ -68,6 +74,7 @@ def dataset_jsonld(rec: dict, snapshot: str) -> dict:
         "temporal": rec["temporal_raw"],
         "kdp:listType": rec["list_type"],
         "kdp:listKey": rec["list_key"],
+        "kdp:recordId": rec["record_id"],
         "kdp:evidenceLevel": "CATALOG_METADATA_ONLY",
         "kdp:qualityTier": None,
         "kdp:diagnosticMaturity": None,
@@ -90,28 +97,63 @@ def catalog_record_jsonld(rec: dict, snapshot: str) -> dict:
         "@context": CONTEXT_URI,
         "@id": record_uri(snapshot, rec["record_id"]),
         "@type": "dcat:CatalogRecord",
-        "foaf:primaryTopic": {"@id": dataset_uri(rec["record_id"])},
+        "foaf:primaryTopic": {"@id": dataset_uri(rec["list_key"])},
         "modified": rec["modified_date"],
+        "kdp:listType": rec["list_type"],
         "kdp:sourceSnapshot": snapshot,
         "kdp:sourceRowNo": rec["source_row_no"],
     }
 
 
-def catalog_jsonld(snapshot: str, dataset_count: int, aird_report: dict, processed_at: str) -> dict:
-    """월별 카탈로그 전체(1건의 STRUCT 데이터셋) — Discovery JSON-LD + AIRD 진단 리포트."""
+def catalog_jsonld(
+    snapshot: str, dataset_count: int, assessment: dict, discoverability: dict, processed_at: str
+) -> dict:
+    """월별 카탈로그 전체(1건의 STRUCT 데이터셋) — Discovery JSON-LD + AIRD 진단 레코드 참조."""
     doc = {
         "@context": CONTEXT_URI,
         "@id": catalog_uri(snapshot),
         "@type": "dcat:Catalog",
         "title": f"공공데이터포털 목록개방현황 카탈로그 {snapshot}",
         "description": "공공데이터포털 목록개방현황(월간)을 정규화한 월별 카탈로그. 각 목록 행은 개별 공공데이터의 Discovery Profile로 제공된다.",
+        "dct:language": "ko",
         "issued": processed_at,
         "kdp:datasetCount": dataset_count,
-        "kdp:airdReport": aird_report,
         "kdp:evidenceLevel": "CATALOG_METADATA_ONLY",
+        "kdp:airdAssessment": {"@id": assessment["@id"]},
+        "kdp:catalogDiscoverability": discoverability,
     }
-    # DM-0은 판정 조건 충족 시에만 표시(§9)
-    if aird_report.get("dmLevel") is not None:
-        doc["kdp:diagnosticMaturity"] = aird_report["dmLevel"]
+    # DM-0은 판정 조건 충족 시에만 기록(§9). Discoverable에서 qualityTier는 금지(제3부 5.3절).
+    if assessment.get("aird:diagnosticMaturity"):
+        doc["aird:diagnosticMaturity"] = assessment["aird:diagnosticMaturity"]
+        doc["aird:qualityIndexMMI"] = assessment["aird:qualityIndexMMI"]
+        doc["aird:dataType"] = assessment["aird:dataType"]
         doc["kdp:airdState"] = "Discoverable"
     return doc
+
+
+def issue_annotation_jsonld(issue: dict, snapshot: str, dataset_list_key: str | None) -> dict:
+    """이슈 관찰의 DQV·PROV 표현(§6) — 원본 불변, 별도 관찰 객체."""
+    target: dict = {"kdp:field": issue["field"]}
+    if dataset_list_key:
+        target["@id"] = dataset_uri(dataset_list_key)
+    else:
+        target["@id"] = catalog_uri(snapshot)  # 카탈로그 수준 관찰(계통적 패턴)
+    return {
+        "@id": f"{catalog_uri(snapshot)}/annotation/{issue['issue_id']}",
+        "@type": "dqv:QualityAnnotation",
+        "oa:hasTarget": target,
+        "oa:hasBody": {
+            "kdp:issueType": issue["issue_type"],
+            "kdp:sourceValue": issue["source_value"],
+            "kdp:confidence": issue["confidence"],
+        },
+        "oa:motivatedBy": "dqv:qualityAssessment",
+        "prov:wasGeneratedBy": {
+            "@type": "prov:Activity",
+            "kdp:detectionRule": issue["detection_rule"],
+            "prov:endedAtTime": issue["detected_at"],
+        },
+        "kdp:reviewStatus": issue["review_status"],
+        "kdp:resolutionStatus": issue["resolution_status"],
+        "kdp:sourceSnapshot": snapshot,
+    }

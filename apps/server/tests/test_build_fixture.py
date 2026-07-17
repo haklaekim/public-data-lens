@@ -1,0 +1,119 @@
+"""소형 fixture로 빌드 전 과정을 재현 검증 — 실카탈로그 없이도 파이프라인이 검증되도록 한다."""
+from __future__ import annotations
+
+import csv
+import gzip
+import json
+
+import pytest
+
+from datanav.pipeline.parse import COLUMN_MAP
+
+BASE_ROW = {
+    "목록키": "", "목록유형": "FILE", "목록명": "", "파일데이터명": "테스트_20260101",
+    "분류체계": "공공행정 - 일반행정", "제공기관코드": "1000000", "제공기관": "테스트기관",
+    "관리 부서명": "팀", "관리부서 전화번호": "021234567", "보유근거": "-", "수집방법": "-",
+    "업데이트 주기": "연간", "차기 등록 예정일": "2027-01-01", "매체유형": "텍스트",
+    "전체행": "100", "확장자(데이터포맷)": "csv", "키워드": "테스트,데이터",
+    "다운로드_활용신청건수": "5", "등록일": "2024-01-01", "수정일": "2026-01-15",
+    "데이터 한계": "-", "제공형태": "다운로드", "설명": "테스트 설명입니다",
+    "기타 유의사항": "-", "공간범위": "서울특별시", "시간범위": "2025년",
+    "비용부과유무": "무료", "비용부과기준 및 단위": "-", "이용허락범위": "공공저작물_출처표시",
+    "API 유형": "-", "신청가능 트래픽": "-", "심의 유형": "-", "조회수": "10",
+    "목록 URL": "", "국가중점여부": "N", "표준데이터여부": "N",
+}
+
+
+def make_fixture_csv(path, n_unique=20):
+    rows = []
+    for i in range(n_unique):
+        r = dict(BASE_ROW)
+        r["목록키"] = f"1500{i:04d}"
+        r["목록명"] = f"테스트_데이터셋_{i}"
+        r["목록 URL"] = f"https://www.data.go.kr/data/1500{i:04d}/fileData.do"
+        rows.append(r)
+    # 중복 목록키(FILE/API 이중 등재) 1쌍
+    dup = dict(BASE_ROW, **{
+        "목록키": "1509999", "목록명": "이중등재_데이터", "목록유형": "API",
+        "API 유형": "REST", "확장자(데이터포맷)": "JSON", "전체행": "-",
+        "목록 URL": "https://www.data.go.kr/data/1509999/openapi.do",
+    })
+    dup_file = dict(BASE_ROW, **{
+        "목록키": "1509999", "목록명": "이중등재_데이터",
+        "목록 URL": "https://www.data.go.kr/data/1509999/fileData.do",
+    })
+    rows += [dup_file, dup]
+    # 더미값 행(D5-03 감점 대상) + 백틱 전화번호(이슈 관찰 대상)
+    bad = dict(BASE_ROW, **{
+        "목록키": "1508888", "목록명": "더미값_데이터", "전체행": "9999",
+        "관리부서 전화번호": "`021234567",
+        "목록 URL": "https://www.data.go.kr/data/1508888/fileData.do",
+    })
+    rows.append(bad)
+
+    with open(path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(COLUMN_MAP))
+        w.writeheader()
+        w.writerows(rows)
+    return len(rows)
+
+
+@pytest.fixture()
+def isolated_config(tmp_path, monkeypatch):
+    from datanav import config
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path / "data")
+    monkeypatch.setattr(config, "RAW_DIR", tmp_path / "data" / "raw")
+    monkeypatch.setattr(config, "CATALOG_DIR", tmp_path / "data" / "catalog")
+    monkeypatch.setattr(config, "RELEASES_DIR", tmp_path / "data" / "catalog" / "releases")
+    monkeypatch.setattr(config, "CURRENT_POINTER", tmp_path / "data" / "catalog" / "current.json")
+    (tmp_path / "data" / "catalog" / "releases").mkdir(parents=True)
+    return config
+
+
+def test_full_build_on_fixture(tmp_path, isolated_config):
+    from datanav.pipeline.build import build_release
+
+    csv_path = tmp_path / "fixture.csv"
+    total = make_fixture_csv(csv_path)
+
+    release_dir = build_release(csv_path, "9999-01", min_rows=5)
+    report = json.loads((release_dir / "build_report.json").read_text(encoding="utf-8"))
+
+    # 수용 검사(§11)
+    assert all(v["pass"] for v in report["acceptance"].values())
+    assert report["insertedRows"] == total
+    assert report["duplicateListKeys"] == 1
+
+    # 표준 MMI 진단(aird-mmi-v1.1): 더미 1셀·중복 키에도 소형 셋은 DM-0 통과
+    assert report["aird"]["rule"] == "aird-mmi-v1.1"
+    assert report["aird"]["qualityIndexMMI"] >= 0.7
+    assert report["aird"]["label"] == "DM-0 (기본 적합성, STRUCT, 참고)"
+
+    assessment = json.loads(
+        (release_dir / "aird-assessment-9999-01.jsonld").read_text(encoding="utf-8")
+    )
+    scores = {i["id"]: i["score"] for i in assessment["indicators"]}
+    assert scores["D6-01"] < 1.0  # 중복 목록키 반영
+    assert scores["D5-03"] < 1.0  # 더미값 9999 반영
+    assert assessment["provenance"]["sourceSha256"]
+
+    # 벌크 정본: 라인 수 = 레코드 수, Dataset URI는 목록키 기반
+    bulk = report["bulk"]
+    assert bulk["datasets"]["lines"] == total == bulk["catalogRecords"]["lines"]
+    with gzip.open(release_dir / bulk["datasets"]["file"], "rt", encoding="utf-8") as f:
+        docs = [json.loads(line) for line in f]
+    dup_docs = [d for d in docs if d["kdp:listKey"] == "1509999"]
+    assert len(dup_docs) == 2
+    assert all(d["@id"].endswith("/dataset/1509999") for d in dup_docs)  # 불변 URI 공유
+    assert {d["kdp:recordId"] for d in dup_docs} == {"1509999-FILE", "1509999-API"}
+
+    # 이슈 관찰 DQV 벌크: 백틱 1 + 중복키 2
+    assert bulk["qualityAnnotations"]["lines"] >= 3
+    with gzip.open(release_dir / bulk["qualityAnnotations"]["file"], "rt", encoding="utf-8") as f:
+        anns = [json.loads(line) for line in f]
+    assert all(a["@type"] == "dqv:QualityAnnotation" for a in anns)
+    assert all("prov:wasGeneratedBy" in a for a in anns)
+
+    # 원자적 배포: 포인터가 새 릴리스를 가리킴
+    ptr = json.loads(isolated_config.CURRENT_POINTER.read_text(encoding="utf-8"))
+    assert ptr["snapshot"] == "9999-01"

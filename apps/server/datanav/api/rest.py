@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from collections import defaultdict, deque
 
@@ -19,12 +20,18 @@ from .errors import HTTP_STATUS, DatanavError, RateLimited
 from .mcp_server import _SHAPES_PATH, _PROMPTS_DIR
 from .service import Service
 
-RATE_LIMIT_PER_MIN = 120
+# 운영 배포 시 환경변수로 제한: DATANAV_CORS_ORIGINS="https://datanav.example" (쉼표 구분)
+# 로컬 기본값은 개발 편의를 위한 전체 허용이며, 다중 프로세스 환경에서는
+# 프로세스 메모리 기반 rate limit 대신 프록시/게이트웨이 계층 제한을 병행해야 한다.
+RATE_LIMIT_PER_MIN = int(os.environ.get("DATANAV_RATE_LIMIT_PER_MIN", "120"))
+CORS_ORIGINS = [
+    o.strip() for o in os.environ.get("DATANAV_CORS_ORIGINS", "*").split(",") if o.strip()
+]
 
 app = FastAPI(title="공공데이터 내비게이터 API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
