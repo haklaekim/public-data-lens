@@ -145,3 +145,10 @@ def resource_shapes():
 @app.get("/api/resources/prompts/build-data-plan", response_class=PlainTextResponse)
 def resource_prompt():
     return (_PROMPTS_DIR / "build-data-plan-v1.0.md").read_text(encoding="utf-8")
+
+
+@app.get("/api/resources/spec/tools")
+def resource_tool_spec():
+    from pathlib import Path
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0-draft.json"
+    return json.loads(spec_path.read_text(encoding="utf-8"))

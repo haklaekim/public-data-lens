@@ -191,6 +191,13 @@ def prompt_doc() -> str:
     return (_PROMPTS_DIR / "build-data-plan-v1.0.md").read_text(encoding="utf-8")
 
 
+@mcp.resource(f"{BASE_URI}/spec/tools/1.0")
+def tool_spec() -> str:
+    """부속 명세(초안) — Tool별 input/output JSON Schema 전문 + 공통 계약. 승인 시 공개 계약 동결(§13.1)."""
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0-draft.json"
+    return spec_path.read_text(encoding="utf-8")
+
+
 def main() -> None:
     mcp.run()
 

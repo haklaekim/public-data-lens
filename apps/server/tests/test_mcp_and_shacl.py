@@ -22,7 +22,7 @@ def test_mcp_surface_and_calls():
             prompts = {p.name for p in (await c.list_prompts()).prompts}
             assert prompts == {"build_data_plan", "compare_for_purpose"}
             resources = {str(r.uri) for r in (await c.list_resources()).resources}
-            assert len(resources) == 4
+            assert len(resources) == 5  # 규칙·Context·SHACL·Prompt 문서·부속 명세
             assert all(u.startswith("https://data.datahub.kr/projects/datanav/") for u in resources)
 
             # Tool 정상 호출 + 봉투

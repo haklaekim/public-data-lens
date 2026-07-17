@@ -23,7 +23,7 @@ build-backend = "setuptools.build_meta"
 include = ["datanav*"]
 
 [tool.setuptools.package-data]
-datanav = ["pipeline/shapes/*.ttl", "rules/*.json", "prompts/*.md"]
+datanav = ["pipeline/shapes/*.ttl", "rules/*.json", "prompts/*.md", "spec/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
