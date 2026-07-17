@@ -32,7 +32,7 @@ app = FastAPI(title="공공데이터 내비게이터 API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],  # POST는 컨시어지 전용
     allow_headers=["*"],
 )
 
@@ -152,6 +152,34 @@ def resource_tool_spec():
     from pathlib import Path
     spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0-draft.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
+
+
+# ---- M3 생성형 컨시어지(§9 3층) — 상한 운영, 코어(비생성형)와 분리(§11)
+from pydantic import BaseModel as _BaseModel  # noqa: E402
+
+
+class ConciergeAsk(_BaseModel):
+    question: str
+    sessionId: str = "anonymous"
+
+
+@app.get("/api/concierge/status")
+def concierge_status():
+    from .concierge import MODEL, PROMPT_VERSION, UsageStore
+    enabled = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+    return {
+        "enabled": enabled,
+        "model": MODEL,
+        "promptVersion": PROMPT_VERSION,
+        "usage": UsageStore().snapshot(),
+        "note": None if enabled else "ANTHROPIC_API_KEY 미설정 — 생성형 컨시어지 비활성(비생성형 기능은 정상)",
+    }
+
+
+@app.post("/api/concierge")
+def concierge_ask(body: ConciergeAsk):
+    from .concierge import run_concierge
+    return run_concierge(body.question, body.sessionId)
 
 
 # ---- 대표 활용 사례 5개(§9 2층 산출물) — 서술은 정적, 후보 카드는 조회 시점에 실데이터로 보강

@@ -55,6 +55,7 @@ class RateLimited(DatanavError):
 
 
 HTTP_STATUS = {
+    "CONCIERGE_UNAVAILABLE": 503,  # M3 전용 — 부속 명세 v1.1 대상(비생성형 계약과 분리)
     "INVALID_ARGUMENT": 400,
     "DATASET_NOT_FOUND": 404,
     "SNAPSHOT_NOT_FOUND": 404,

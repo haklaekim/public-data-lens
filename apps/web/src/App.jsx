@@ -4,6 +4,7 @@ import SearchView from './components/SearchView.jsx'
 import CompareView from './components/CompareView.jsx'
 import ChangesView from './components/ChangesView.jsx'
 import CasesView from './components/CasesView.jsx'
+import ConciergeView from './components/ConciergeView.jsx'
 import DatasetProfile from './components/DatasetProfile.jsx'
 
 const DISCLAIMER =
@@ -11,6 +12,7 @@ const DISCLAIMER =
 
 const TABS = [
   { id: 'search', label: '검색' },
+  { id: 'concierge', label: 'AI 컨시어지' },
   { id: 'compare', label: '비교' },
   { id: 'changes', label: '변경 피드' },
   { id: 'cases', label: '활용 사례' },
@@ -87,6 +89,7 @@ export default function App() {
         )}
         {tab === 'changes' && <ChangesView onOpen={setProfileId} />}
         {tab === 'cases' && <CasesView onOpen={setProfileId} />}
+        {tab === 'concierge' && <ConciergeView onOpen={setProfileId} />}
       </main>
 
       {profileId && (

@@ -82,6 +82,12 @@ cd ../web && npm install && npm run dev   # http://localhost:5173
 - SHACL은 카탈로그 노드 + 표본 검증(기본 500건, `DATANAV_SHACL_SAMPLE=0`으로 전수) + 프로그램적 전수 구조 검사
 - 오류 코드에 `RATE_LIMITED` 추가(설계서 검토에서 식별된 §4.3 보완)
 - 계통적 이슈 패턴(전 행 50% 초과)은 카탈로그 수준 관찰 1건으로 축약
-- 운영 환경변수: `DATANAV_CORS_ORIGINS`(쉼표 구분), `DATANAV_RATE_LIMIT_PER_MIN`, `DATANAV_SHACL_SAMPLE`
+- **M3 생성형 컨시어지 구현됨(상한 운영, §9·§11)**: 서버 측 LLM(기본 `claude-haiku-4-5`)이
+  첫 번째 MCP 클라이언트로 build_data_plan 수행. `ANTHROPIC_API_KEY` 설정 + API 서버 재시작으로 활성화.
+  캡 3종(세션 5회/일 50회/월 20만 원 — 환경변수 조정), 무근거 recordId 자동 제거, 주입 방어.
+  라이브 검증: `python scripts/concierge_smoke.py` (무근거 생성 0 + 주입 방어 판정).
+  코어 완료를 차단하지 않는 별도 트랙이며 오류 코드 `CONCIERGE_UNAVAILABLE`(503)은 부속 명세 v1.1 대상
+- 운영 환경변수: `DATANAV_CORS_ORIGINS`(쉼표 구분), `DATANAV_RATE_LIMIT_PER_MIN`, `DATANAV_SHACL_SAMPLE`,
+  `DATANAV_CONCIERGE_MODEL`/`_SESSION_LIMIT`/`_DAILY_LIMIT`/`_MONTHLY_BUDGET_KRW`, `DATANAV_USD_KRW`
 - 재현성: `requirements.lock`(의존성 고정), fixture 기반 빌드 테스트(`tests/test_build_fixture.py`,
   실카탈로그 없이 파이프라인 전 과정 검증), 골든셋은 자동 생성 v0(예비 평가, 인간 검수 전)
