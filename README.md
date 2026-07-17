@@ -32,9 +32,8 @@ docs/매핑표_v1.0.md     # 정규화 매핑표(공개 산출물)
 cp .env.example .env          # ANTHROPIC_API_KEY 입력(컨시어지용, 없으면 비생성형만 동작)
 docker compose up -d --build  # 웹+API: http://localhost:8088 (API는 nginx 프록시 뒤)
 
-# 월간 카탈로그 갱신 (컨테이너에서 실행)
-docker compose run --rm api python scripts/build_catalog.py /app/data/raw/<목록개방현황.csv> <YYYY-MM>
-docker compose restart api
+# 월간 카탈로그 갱신 (빌드→수용검사→배포→재기동→로그 정리 일괄)
+scripts/monthly_update.sh <목록개방현황.csv> <YYYY-MM>
 ```
 
 클라우드 배포 시: `docker-compose.yml`에서 api의 `ports` 매핑을 제거하고(웹 8088만 노출),
@@ -113,7 +112,14 @@ cd ../web && npm install && npm run dev   # http://localhost:5173
   캡 3종(세션 5회/일 50회/월 20만 원 — 환경변수 조정), 무근거 recordId 자동 제거, 주입 방어.
   라이브 검증: `python scripts/concierge_smoke.py` (무근거 생성 0 + 주입 방어 판정).
   코어 완료를 차단하지 않는 별도 트랙이며 오류 코드 `CONCIERGE_UNAVAILABLE`(503)은 부속 명세 v1.1 대상
+- **§7 정본 URI 디레퍼런싱**: `/projects/datanav/{dataset/{목록키}, catalog/current(+aird-assessment·files/벌크),
+  context·rules·shapes·spec·prompts}`가 실제 정본 표현으로 해소됨(JSON-LD 등, 브라우저는 포털로 303).
+  도메인 연결 시 JSON-LD `@id`가 그대로 접속 가능 — Cool URIs 충족
+- **§10 익명 사용 로그**: `data/logs/usage-일자.jsonl` — 원 IP 미저장(난수 ID 또는 IP 해시),
+  DNT/GPC/X-Datanav-No-Log 시 전면 미기록, 보존 12개월(월간 갱신 시 자동 정리).
+  고지 전문: `docs/개인정보_로그_고지_v1.0.md` = 웹 푸터 링크 = `/api/resources/privacy`
 - 운영 환경변수: `DATANAV_CORS_ORIGINS`(쉼표 구분), `DATANAV_RATE_LIMIT_PER_MIN`, `DATANAV_SHACL_SAMPLE`,
+  `DATANAV_USAGE_LOG`(0=로그 비활성)/`DATANAV_LOG_DIR`,
   `DATANAV_TRUST_PROXY`(리버스 프록시 뒤에서만 1 — X-Real-IP 신뢰),
   `DATANAV_CONCIERGE_MODEL`/`_SESSION_LIMIT`/`_DAILY_LIMIT`/`_CLIENT_DAILY_LIMIT`(IP 해시 기준 일 10회 — sessionId 우회 차단)/`_MONTHLY_BUDGET_KRW`, `DATANAV_USD_KRW`
 - 재현성: `requirements.lock`(의존성 고정), fixture 기반 빌드 테스트(`tests/test_build_fixture.py`,

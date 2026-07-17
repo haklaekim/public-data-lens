@@ -7,8 +7,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
 from collections import defaultdict, deque
+from pathlib import Path
 
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -74,6 +76,58 @@ def _svc() -> Service:
     return _service
 
 
+# ---- §10 익명 사용 로그 — 지표(§12)의 원천. 원 IP·개인정보는 저장하지 않는다.
+# 옵트아웃: DNT/Sec-GPC/X-Datanav-No-Log 헤더가 있으면 해당 요청은 아예 기록하지 않는다.
+# 정책 전문: docs/개인정보_로그_고지_v1.0.md (웹 푸터·/api/resources/privacy로 공개)
+USAGE_LOG_ENABLED = os.environ.get("DATANAV_USAGE_LOG", "1") == "1"
+_log_lock = threading.Lock()
+
+
+def _log_dir() -> Path:
+    from .. import config
+    return Path(os.environ.get("DATANAV_LOG_DIR", config.DATA_DIR / "logs"))
+
+
+def _opted_out(request: Request) -> bool:
+    h = request.headers
+    return h.get("dnt") == "1" or h.get("sec-gpc") == "1" or h.get("x-datanav-no-log") == "1"
+
+
+def _write_usage_log(request: Request, status_code: int, ms: int) -> None:
+    path = request.url.path
+    if not (path.startswith("/api/") or path.startswith("/projects/datanav/")):
+        return
+    entry = {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "path": path,
+        "status": status_code,
+        "ms": ms,
+        # 익명 식별자(§10): 웹이 보낸 난수 ID 우선, 없으면 IP 단방향 해시 — 원 IP 미저장
+        "anon": request.headers.get("x-datanav-anon-id", "")[:32] or _client_key(request),
+    }
+    extra = getattr(request.state, "log_extra", None)
+    if extra:
+        entry.update(extra)
+    day = entry["ts"][:10]
+    p = _log_dir() / f"usage-{day}.jsonl"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with _log_lock:
+        with p.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+@app.middleware("http")
+async def usage_log(request: Request, call_next):
+    start = time.monotonic()
+    response = await call_next(request)
+    if USAGE_LOG_ENABLED and not _opted_out(request):
+        try:
+            _write_usage_log(request, response.status_code, int((time.monotonic() - start) * 1000))
+        except Exception:
+            pass  # 로그 실패가 본 응답을 막지 않는다
+    return response
+
+
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     ip = _client_ip(request)
@@ -102,6 +156,7 @@ def status():
 
 @app.get("/api/search")
 def search(
+    request: Request,
     query: str | None = None,
     theme: str | None = None,
     org: str | None = None,
@@ -115,12 +170,22 @@ def search(
     cursor: str | None = None,
     pageSize: int = Query(default=20, ge=1, le=100),
 ):
-    return _svc().search_datasets(
+    result = _svc().search_datasets(
         query=query, theme=theme, org=org, fmt=format, update_cycle=updateCycle,
         license_code=license, list_type=listType, region=region,
         include_inferred=includeInferred, updated_after=updatedAfter,
         cursor=cursor, page_size=pageSize,
     )
+    # §12 지표용 주석 — 검색어 원문 정책은 고지문 참조(보존 12개월, 옵트아웃 시 미기록)
+    filters = [k for k, v in [("theme", theme), ("org", org), ("format", format),
+                              ("updateCycle", updateCycle), ("license", license),
+                              ("listType", listType), ("region", region)] if v]
+    request.state.log_extra = {
+        "q": (query or "")[:200] or None,
+        "zero": result["data"]["totalEstimate"] == 0,
+        "filters": filters or None,
+    }
+    return result
 
 
 @app.get("/api/datasets/{record_id}")
@@ -169,11 +234,126 @@ def resource_prompt():
     return (_PROMPTS_DIR / "build-data-plan-v1.0.md").read_text(encoding="utf-8")
 
 
+@app.get("/api/resources/privacy", response_class=PlainTextResponse)
+def resource_privacy():
+    """§10 로그·개인정보 고지 전문 (docs/개인정보_로그_고지_v1.0.md)."""
+    from .. import config
+    p = config.PROJECT_ROOT / "docs" / "개인정보_로그_고지_v1.0.md"
+    return PlainTextResponse(p.read_text(encoding="utf-8"), media_type="text/markdown; charset=utf-8")
+
+
 @app.get("/api/resources/spec/tools")
 def resource_tool_spec():
     from pathlib import Path
     spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0.0.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
+
+
+# ---- §7 정본 URI 디레퍼런싱 — https://data.datahub.kr/projects/datanav/... 경로가
+# 실제로 해소되도록 정본 표현을 반환한다(Cool URIs). 배포 시 nginx가 이 경로를 그대로 전달한다.
+from fastapi.responses import FileResponse, RedirectResponse, Response  # noqa: E402
+
+from ..config import RELEASES_DIR  # noqa: E402
+
+_CANON = "/projects/datanav"
+
+
+def _ld(doc: dict) -> Response:
+    return Response(json.dumps(doc, ensure_ascii=False, indent=2),
+                    media_type="application/ld+json")
+
+
+@app.get(_CANON + "/context/catalog/1.0")
+def canon_context():
+    return _ld({"@context": JSONLD_CONTEXT})
+
+
+@app.get(_CANON + "/rules/catalog/1.0")
+def canon_rules():
+    return load_registry()
+
+
+@app.get(_CANON + "/shapes/catalog/1.0")
+def canon_shapes():
+    return Response(_SHAPES_PATH.read_text(encoding="utf-8"), media_type="text/turtle")
+
+
+@app.get(_CANON + "/prompts/build-data-plan/1.0")
+def canon_prompt():
+    return Response((_PROMPTS_DIR / "build-data-plan-v1.0.md").read_text(encoding="utf-8"),
+                    media_type="text/markdown")
+
+
+@app.get(_CANON + "/spec/tools/1.0")
+def canon_spec():
+    return resource_tool_spec()
+
+
+@app.get(_CANON + "/dataset/{list_key}")
+def canon_dataset(list_key: str, request: Request):
+    """Dataset 정본 URI 해소. 기본 표현은 JSON-LD.
+    브라우저(text/html)는 원문 접근 원칙에 따라 공공데이터포털로 303 연결한다."""
+    from .errors import DatasetNotFound
+
+    svc = _svc()
+    rows = svc.conn.execute(
+        "SELECT record_id, list_type, list_url FROM datasets WHERE list_key = ? "
+        "ORDER BY CASE list_type WHEN 'FILE' THEN 0 WHEN 'API' THEN 1 ELSE 2 END",
+        (list_key,),
+    ).fetchall()
+    if not rows:
+        raise DatasetNotFound(f"데이터셋을 찾을 수 없습니다: {list_key}", {"listKey": list_key})
+
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept and "application/ld+json" not in accept and rows[0]["list_url"]:
+        return RedirectResponse(rows[0]["list_url"], status_code=303)
+
+    # 이중 등재(FILE/API)는 동일 데이터셋의 복수 제공 형태 — 대표(FILE 우선) 레코드 기준 문서를 반환
+    doc = svc.get_dataset(rows[0]["record_id"], "jsonld")["data"]["dataset"]
+    return _ld(doc)
+
+
+def _release_dir(svc: Service, snapshot: str) -> Path:
+    from .errors import SnapshotNotFound
+
+    if snapshot not in ("current", svc.snapshot):
+        raise SnapshotNotFound(
+            f"호스팅 대상은 현재 스냅샷({svc.snapshot})뿐입니다 — 과거분은 벌크 아카이브로 제공",
+            {"snapshot": snapshot},
+        )
+    return RELEASES_DIR / svc.release
+
+
+@app.get(_CANON + "/catalog/{snapshot}")
+def canon_catalog(snapshot: str):
+    svc = _svc()
+    p = _release_dir(svc, snapshot) / "catalog.jsonld"
+    return _ld(json.loads(p.read_text(encoding="utf-8")))
+
+
+@app.get(_CANON + "/catalog/{snapshot}/aird-assessment")
+def canon_aird(snapshot: str):
+    svc = _svc()
+    p = _release_dir(svc, snapshot) / f"aird-assessment-{svc.snapshot}.jsonld"
+    return _ld(json.loads(p.read_text(encoding="utf-8")))
+
+
+@app.get(_CANON + "/catalog/{snapshot}/files/{filename}")
+def canon_bulk(snapshot: str, filename: str):
+    """벌크 정본(NDJSON+gzip 등) 내려받기 — 릴리스 디렉터리의 산출물만 허용."""
+    from .errors import DatasetNotFound
+
+    svc = _svc()
+    base = _release_dir(svc, snapshot)
+    p = (base / filename).resolve()
+    allowed = p.parent == base.resolve() and (
+        p.suffix in (".jsonld", ".json") or p.name.endswith(".ndjson.gz")
+    )
+    if not allowed or not p.exists():
+        raise DatasetNotFound(f"제공하지 않는 파일: {filename}", {"filename": filename})
+    media = "application/gzip" if p.name.endswith(".gz") else (
+        "application/ld+json" if p.suffix == ".jsonld" else "application/json")
+    return FileResponse(p, media_type=media, filename=p.name)
 
 
 # ---- M3 생성형 컨시어지(§9 3층) — 상한 운영, 코어(비생성형)와 분리(§11)

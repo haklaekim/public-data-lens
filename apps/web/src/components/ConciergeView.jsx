@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { anonHeaders } from '../api'
+
 const EXAMPLES = [
   '고령자 의료·교통 접근성을 분석하고 싶다',
   '관광지 방문객 데이터를 상권과 연결해 보고 싶다',
@@ -30,7 +32,7 @@ export default function ConciergeView({ onOpen }) {
   const sessionId = useRef(`web-${Math.random().toString(36).slice(2, 10)}`)
 
   const loadStatus = () =>
-    fetch('/api/concierge/status').then((r) => r.json()).then(setStatus).catch(() => setStatus(null))
+    fetch('/api/concierge/status', { headers: anonHeaders() }).then((r) => r.json()).then(setStatus).catch(() => setStatus(null))
 
   useEffect(() => { loadStatus() }, [])
 
@@ -44,7 +46,7 @@ export default function ConciergeView({ onOpen }) {
     try {
       const r = await fetch('/api/concierge/stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...anonHeaders() },
         body: JSON.stringify({ question: text, sessionId: sessionId.current }),
       })
       if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`)

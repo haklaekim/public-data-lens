@@ -11,6 +11,7 @@ services:
       DATANAV_RATE_LIMIT_PER_MIN: ${DATANAV_RATE_LIMIT_PER_MIN:-120}
     volumes:
       - ./data:/app/data
+      - ./docs:/app/docs:ro  # 고지문 등 공개 문서 서빙용
     # 디버깅용 로컬 직접 접근(외부 비노출). 클라우드에서는 이 매핑을 제거한다.
     ports:
       - "127.0.0.1:8000:8000"

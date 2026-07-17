@@ -105,6 +105,12 @@ export default function App() {
           </a>
           로 연결됩니다. 본 서비스는 포털을 대체하지 않는 탐색·판단 계층입니다.
         </p>
+        <p>
+          이용 기록은 익명으로 수집되며 브라우저의 DNT/GPC 설정으로 거부할 수 있습니다.{' '}
+          <a href="/api/resources/privacy" target="_blank" rel="noreferrer">
+            개인정보·로그 고지
+          </a>
+        </p>
       </footer>
     </div>
   )
