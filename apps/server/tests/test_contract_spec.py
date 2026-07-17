@@ -1,4 +1,4 @@
-"""계약-코드 정합 가드 — 부속 명세(초안)와 실제 서버 동작의 일치를 보증한다.
+"""계약-코드 정합 가드 — 부속 명세(v1.0.0 동결)와 실제 서버 동작의 일치를 보증한다.
 
 이 테스트가 깨지면 코드가 공개 계약에서 이탈했다는 뜻이다.
 계약을 바꾸려면 datanav/spec을 수정하고 scripts/gen_tool_spec.py로 재생성해야 한다.
@@ -15,7 +15,7 @@ from datanav.spec import OUTPUT_SCHEMAS
 from tests.conftest import requires_catalog
 
 SPEC_PATH = (
-    Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.0-draft.json"
+    Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.0.0.json"
 )
 
 

@@ -26,6 +26,9 @@ _PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
 MODEL = os.environ.get("DATANAV_CONCIERGE_MODEL", "claude-haiku-4-5")
 SESSION_LIMIT = int(os.environ.get("DATANAV_CONCIERGE_SESSION_LIMIT", "5"))
 DAILY_LIMIT = int(os.environ.get("DATANAV_CONCIERGE_DAILY_LIMIT", "50"))
+# 클라이언트별 일일 캡 — sessionId는 클라이언트가 생성하므로 세션 캡만으로는 우회 가능.
+# REST 계층이 IP를 해시한 익명 식별자(§10)를 client_key로 전달해 비용 공격을 차단한다.
+CLIENT_DAILY_LIMIT = int(os.environ.get("DATANAV_CONCIERGE_CLIENT_DAILY_LIMIT", "10"))
 MONTHLY_BUDGET_KRW = int(os.environ.get("DATANAV_CONCIERGE_MONTHLY_BUDGET_KRW", "200000"))
 USD_KRW = float(os.environ.get("DATANAV_USD_KRW", "1400"))
 MAX_QUESTION_LEN = 500
@@ -69,7 +72,7 @@ class UsageStore:
             if data.get("month") == month:
                 return data
         return {"month": month, "tokensIn": 0, "tokensOut": 0, "costKrw": 0.0,
-                "daily": {}, "sessions": {}}
+                "daily": {}, "sessions": {}, "clients": {}}
 
     def _save(self, data: dict) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,9 +89,10 @@ class UsageStore:
                 "todayQueries": data["daily"].get(day, 0),
                 "dailyLimit": DAILY_LIMIT,
                 "sessionLimit": SESSION_LIMIT,
+                "clientDailyLimit": CLIENT_DAILY_LIMIT,
             }
 
-    def check(self, session_id: str) -> None:
+    def check(self, session_id: str, client_key: str | None = None) -> None:
         """캡 검사 — 위반 시 RateLimited(컨시어지만 중단, 비생성형은 상시·§9)."""
         with self._lock:
             data = self._load()
@@ -108,8 +112,14 @@ class UsageStore:
                     "세션당 질의 제한을 초과했습니다.",
                     {"cap": "session", "limit": SESSION_LIMIT},
                 )
+            if client_key and data.get("clients", {}).get(f"{day}:{client_key}", 0) >= CLIENT_DAILY_LIMIT:
+                raise RateLimited(
+                    "클라이언트별 일일 질의 제한을 초과했습니다 — 내일 다시 시도하세요.",
+                    {"cap": "client_daily", "limit": CLIENT_DAILY_LIMIT},
+                )
 
-    def record(self, session_id: str, tokens_in: int, tokens_out: int) -> dict:
+    def record(self, session_id: str, tokens_in: int, tokens_out: int,
+               client_key: str | None = None) -> dict:
         with self._lock:
             data = self._load()
             _, day = self._now()
@@ -118,6 +128,9 @@ class UsageStore:
             data["costKrw"] = round(data["costKrw"] + cost_krw(tokens_in, tokens_out), 2)
             data["daily"][day] = data["daily"].get(day, 0) + 1
             data["sessions"][session_id] = data["sessions"].get(session_id, 0) + 1
+            if client_key:
+                clients = data.setdefault("clients", {})
+                clients[f"{day}:{client_key}"] = clients.get(f"{day}:{client_key}", 0) + 1
             self._save(data)
             return data
 
@@ -162,6 +175,7 @@ def run_concierge(
     session_id: str,
     usage_store: UsageStore | None = None,
     on_event=None,
+    client_key: str | None = None,
 ) -> dict:
     """on_event(dict)가 주어지면 단계·Tool 이벤트를 발생 즉시 방출한다(SSE 중계용)."""
     if not question or not question.strip():
@@ -179,7 +193,7 @@ def run_concierge(
                 pass  # 중계 실패가 본 처리를 막지 않는다
 
     store = usage_store or UsageStore()
-    store.check(session_id)
+    store.check(session_id, client_key)
 
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
         raise ConciergeUnavailable(
@@ -314,7 +328,7 @@ def run_concierge(
     plan, grounding = _enforce_grounding(plan, seen_ids)
     enriched = _enrich_candidates(svc, plan.get("candidates", []))
 
-    usage_after = store.record(session_id, tokens_in, tokens_out)
+    usage_after = store.record(session_id, tokens_in, tokens_out, client_key)
 
     warnings = [DISCLAIMER,
                 "생성형 응답은 목록 메타데이터 기반 계획이며, 모든 후보는 포털 원문 확인이 필요합니다."]

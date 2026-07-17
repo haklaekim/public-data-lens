@@ -1,14 +1,14 @@
-"""부속 명세 — Tool별 출력 JSON Schema 정의(공개 계약 초안).
+"""부속 명세 — Tool별 출력 JSON Schema 정의(공개 계약 v1.0.0 — 동결).
 
 입력 스키마는 MCP 서버(FastMCP)가 생성하는 것을 단일 출처로 추출하고(스크립트),
 출력 스키마는 본 모듈이 단일 출처다. 계약-코드 정합은 tests/test_contract_spec.py가 보증한다.
 
-호환성 원칙(초안): 필드 추가는 하위 호환(minor), required 필드 제거·의미 변경은 breaking(major).
+호환성 원칙(동결): 필드 추가는 하위 호환(minor), required 필드 제거·의미 변경은 breaking(major).
 schemaVersion은 응답 봉투 meta.schemaVersion으로 전달된다.
 """
 from __future__ import annotations
 
-SPEC_VERSION = "1.0-draft"
+SPEC_VERSION = "1.0.0"
 
 # ---------------------------------------------------------------- $defs
 DEFS = {

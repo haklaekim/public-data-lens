@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
@@ -27,6 +28,27 @@ RATE_LIMIT_PER_MIN = int(os.environ.get("DATANAV_RATE_LIMIT_PER_MIN", "120"))
 CORS_ORIGINS = [
     o.strip() for o in os.environ.get("DATANAV_CORS_ORIGINS", "*").split(",") if o.strip()
 ]
+# 리버스 프록시(nginx 등) 뒤에서만 1로 설정 — 직접 노출 시 X-Forwarded-For는 위조 가능하다.
+TRUST_PROXY = os.environ.get("DATANAV_TRUST_PROXY", "0") == "1"
+
+
+def _client_ip(request: Request) -> str:
+    ip = request.client.host if request.client else "unknown"
+    if TRUST_PROXY:
+        # X-Real-IP는 신뢰 프록시(nginx)가 $remote_addr로 덮어쓰므로 위조 불가.
+        # X-Forwarded-For는 클라이언트가 앞에 값을 심을 수 있어 마지막(프록시가 덧붙인) 값만 쓴다.
+        real = request.headers.get("x-real-ip")
+        fwd = request.headers.get("x-forwarded-for")
+        if real:
+            ip = real.strip()
+        elif fwd:
+            ip = fwd.split(",")[-1].strip()
+    return ip
+
+
+def _client_key(request: Request) -> str:
+    """IP의 익명 해시(§10) — 원 IP는 저장하지 않고 컨시어지 클라이언트별 캡 키로만 쓴다."""
+    return hashlib.sha256(_client_ip(request).encode()).hexdigest()[:12]
 
 app = FastAPI(title="공공데이터 내비게이터 API", version="1.0.0")
 app.add_middleware(
@@ -54,7 +76,7 @@ def _svc() -> Service:
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
-    ip = request.client.host if request.client else "unknown"
+    ip = _client_ip(request)
     now = time.monotonic()
     q = _hits[ip]
     while q and now - q[0] > 60:
@@ -150,7 +172,7 @@ def resource_prompt():
 @app.get("/api/resources/spec/tools")
 def resource_tool_spec():
     from pathlib import Path
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0-draft.json"
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0.0.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
 
 
@@ -177,13 +199,13 @@ def concierge_status():
 
 
 @app.post("/api/concierge")
-def concierge_ask(body: ConciergeAsk):
+def concierge_ask(body: ConciergeAsk, request: Request):
     from .concierge import run_concierge
-    return run_concierge(body.question, body.sessionId)
+    return run_concierge(body.question, body.sessionId, client_key=_client_key(request))
 
 
 @app.post("/api/concierge/stream")
-def concierge_stream(body: ConciergeAsk):
+def concierge_stream(body: ConciergeAsk, request: Request):
     """진행 스트리밍(SSE): 단계·Tool 이벤트를 발생 즉시 중계하고 마지막에 result/error 이벤트로 종료."""
     import queue
     import threading
@@ -193,10 +215,11 @@ def concierge_stream(body: ConciergeAsk):
     from .concierge import run_concierge
 
     q: queue.Queue = queue.Queue()
+    ckey = _client_key(request)
 
     def work():
         try:
-            result = run_concierge(body.question, body.sessionId, on_event=q.put)
+            result = run_concierge(body.question, body.sessionId, on_event=q.put, client_key=ckey)
             q.put({"type": "result", **result})
         except DatanavError as e:
             q.put({"type": "error", "error": e.to_dict(None)["error"]})

@@ -22,3 +22,4 @@ data/catalog/current.json
 nohup.out
 *.log
 data/catalog/concierge_usage.json
+.env

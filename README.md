@@ -4,7 +4,7 @@
 공공데이터포털 목록개방현황(월간)을 AIRD 정본(1층) → MCP 서버(2층) → 웹(3층)으로 제공한다.
 
 **현재 상태: v1.0 코어 구현 후보 (M1·M2 beta)** — 검색·정규화·MCP·비생성형 웹 구현, 2026-06 스냅샷(96,056건) 배포,
-2026-02→2026-06 실데이터 diff 가동. 골든셋 인간 검수·공개 계약 동결(부속 명세)·정본 URI 호스팅을 보완한 후 v1.0으로 확정한다.
+2026-02→2026-06 실데이터 diff 가동. 공개 계약은 2026-07-17 부속 명세 v1.0.0 승인으로 동결. 남은 v1.0 확정 조건: 골든셋 인간 검수, 정본 URI 호스팅(도메인 확보됨).
 
 > 본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을 보증하지 않습니다.
 
@@ -24,7 +24,24 @@ data/catalog/releases/  # 릴리스(불변) + current.json 포인터
 docs/매핑표_v1.0.md     # 정규화 매핑표(공개 산출물)
 ```
 
-## 빠른 시작
+## 빠른 시작 (Docker — 표준 실행 방식)
+
+로컬·클라우드 공용. 카탈로그(`data/`)는 볼륨 마운트라 스냅샷 교체 시 재빌드가 필요 없다.
+
+```bash
+cp .env.example .env          # ANTHROPIC_API_KEY 입력(컨시어지용, 없으면 비생성형만 동작)
+docker compose up -d --build  # 웹+API: http://localhost:8088 (API는 nginx 프록시 뒤)
+
+# 월간 카탈로그 갱신 (컨테이너에서 실행)
+docker compose run --rm api python scripts/build_catalog.py /app/data/raw/<목록개방현황.csv> <YYYY-MM>
+docker compose restart api
+```
+
+클라우드 배포 시: `docker-compose.yml`에서 api의 `ports` 매핑을 제거하고(웹 8088만 노출),
+`.env`의 `DATANAV_CORS_ORIGINS`를 서비스 도메인으로 제한한다. TLS는 클라우드 LB/프록시 계층에서 종단한다.
+rate limit·사용량 캡은 단일 api 컨테이너 전제이므로 워커·복제 수는 1로 유지한다.
+
+## 개발 환경 (venv — 테스트·MCP stdio용)
 
 ```bash
 python3 -m venv .venv
@@ -70,7 +87,7 @@ cd ../web && npm install && npm run dev   # http://localhost:5173
 - **응답 봉투**: `{ data, meta: { sourceSnapshot, processedAt, schemaVersion, ruleVersions[] }, warnings[] }`
 - **오류 모델**: INVALID_ARGUMENT / DATASET_NOT_FOUND / SNAPSHOT_NOT_FOUND / FILTER_NOT_AVAILABLE / TOO_MANY_DATASETS / INDEX_NOT_READY / SOURCE_VERSION_UNAVAILABLE / RATE_LIMITED / INTERNAL_ERROR
 
-## v1.0 구현 메모 (부속 명세 확정 대상)
+## v1.0 구현 메모 (부속 명세 v1.0.0 동결 반영)
 
 - **AIRD 진단은 표준 MMI 기준**(aird-mmi-v1.1, AIRD 제2부 v0.87): D5-03·D6-01·D7-01·D7-02 4지표,
   QI_MMI ≥ 0.7 → `DM-0 (기본 적합성, STRUCT, 참고)` — 참고 공시이며 공식 적합성 선언은 DM-2 이상.
@@ -88,6 +105,7 @@ cd ../web && npm install && npm run dev   # http://localhost:5173
   라이브 검증: `python scripts/concierge_smoke.py` (무근거 생성 0 + 주입 방어 판정).
   코어 완료를 차단하지 않는 별도 트랙이며 오류 코드 `CONCIERGE_UNAVAILABLE`(503)은 부속 명세 v1.1 대상
 - 운영 환경변수: `DATANAV_CORS_ORIGINS`(쉼표 구분), `DATANAV_RATE_LIMIT_PER_MIN`, `DATANAV_SHACL_SAMPLE`,
-  `DATANAV_CONCIERGE_MODEL`/`_SESSION_LIMIT`/`_DAILY_LIMIT`/`_MONTHLY_BUDGET_KRW`, `DATANAV_USD_KRW`
+  `DATANAV_TRUST_PROXY`(리버스 프록시 뒤에서만 1 — X-Real-IP 신뢰),
+  `DATANAV_CONCIERGE_MODEL`/`_SESSION_LIMIT`/`_DAILY_LIMIT`/`_CLIENT_DAILY_LIMIT`(IP 해시 기준 일 10회 — sessionId 우회 차단)/`_MONTHLY_BUDGET_KRW`, `DATANAV_USD_KRW`
 - 재현성: `requirements.lock`(의존성 고정), fixture 기반 빌드 테스트(`tests/test_build_fixture.py`,
   실카탈로그 없이 파이프라인 전 과정 검증), 골든셋은 자동 생성 v0(예비 평가, 인간 검수 전)

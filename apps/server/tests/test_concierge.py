@@ -34,6 +34,18 @@ def test_daily_cap(store, monkeypatch):
     assert e.value.details["cap"] == "daily"
 
 
+def test_client_daily_cap(store, monkeypatch):
+    """sessionId 재발급으로 세션 캡을 우회해도 클라이언트(IP 해시) 캡이 막는다."""
+    monkeypatch.setattr(cz, "CLIENT_DAILY_LIMIT", 2)
+    store.record("s1", 100, 10, client_key="ip-a")
+    store.record("s2", 100, 10, client_key="ip-a")  # 새 세션으로 우회 시도
+    with pytest.raises(RateLimited) as e:
+        store.check("s3", client_key="ip-a")
+    assert e.value.details["cap"] == "client_daily"
+    store.check("s3", client_key="ip-b")  # 다른 클라이언트는 정상
+    store.check("s3")  # client_key 없으면(MCP 등 내부 경로) 클라이언트 캡 미적용
+
+
 def test_monthly_budget_cap(store, monkeypatch):
     monkeypatch.setattr(cz, "MONTHLY_BUDGET_KRW", 1)  # 1원 캡
     store.record("s1", 1_000_000, 100_000)  # 확실히 1원 초과
@@ -135,7 +147,7 @@ def test_run_concierge_emit_hook_isolated():
     calls = []
 
     class FullStore(_cz.UsageStore):
-        def check(self, session_id):
+        def check(self, session_id, client_key=None):
             raise _RL("cap", {"cap": "daily"})
 
     with _pytest.raises(_RL):
