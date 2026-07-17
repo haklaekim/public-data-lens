@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "datanav-api",
+      "runtimeExecutable": "../../.venv/bin/uvicorn",
+      "runtimeArgs": ["datanav.api.rest:app", "--host", "127.0.0.1", "--port", "8000"],
+      "cwd": "apps/server",
+      "port": 8000
+    },
+    {
+      "name": "datanav-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "apps/web",
+      "port": 5173
+    }
+  ]
+}
