@@ -21,3 +21,4 @@ data/catalog/current.json
 .DS_Store
 nohup.out
 *.log
+data/catalog/concierge_usage.json
