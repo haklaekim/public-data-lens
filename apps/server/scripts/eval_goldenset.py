@@ -19,9 +19,12 @@ from datanav.api.service import Service  # noqa: E402
 K = 10
 
 
-def relevant_set(service: Service, title_regex: str, region: str | None) -> set[str]:
-    """스냅샷 전수에서 titleRegex(+region) 매칭 목록키를 관련 집합으로 산출."""
-    pat = re.compile(title_regex, re.IGNORECASE)
+def relevant_set(service: Service, q: dict) -> set[str]:
+    """관련 집합 산출 — v1(recordId 고정) 우선, 없으면 v0(titleRegex) 방식."""
+    if "relevantRecordIds" in q:
+        return set(q["relevantRecordIds"])
+    pat = re.compile(q["titleRegex"], re.IGNORECASE)
+    region = q["region"]
     out = set()
     for rid, title, regions in service.conn.execute(
         "SELECT record_id, title, regions FROM datasets"
@@ -54,7 +57,7 @@ def main() -> int:
 
     rows = []
     for q in golden["queries"]:
-        rel = relevant_set(service, q["titleRegex"], q["region"])
+        rel = relevant_set(service, q)
         res = service.search_datasets(
             query=q["searchQuery"], region=q["region"], page_size=K
         )
@@ -88,7 +91,7 @@ def main() -> int:
         "meanNdcgAt10": round(sum(r["ndcgAt10"] for r in scored) / len(scored), 4),
         "zeroResultRate": round(sum(r["zeroResult"] for r in rows) / n, 4),
         "successRate": round(sum(r["success"] for r in scored) / len(scored), 4),
-        "humanReviewed": False,
+        "humanReviewed": golden.get("humanReviewed", False),
     }
     report = {"summary": summary, "perQuery": rows}
     out = golden_path.parent / "eval_report.json"

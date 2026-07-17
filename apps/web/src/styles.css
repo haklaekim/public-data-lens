@@ -203,3 +203,8 @@ body {
   color: var(--muted); font-size: 12px;
 }
 .footer a { color: var(--accent); }
+
+.case-h { font-size: 14.5px; margin: 18px 0 6px; color: var(--text); }
+.case-list { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--text); }
+.case-list li { margin-bottom: 4px; }
+.case-list code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; }

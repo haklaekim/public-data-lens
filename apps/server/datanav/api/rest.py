@@ -152,3 +152,77 @@ def resource_tool_spec():
     from pathlib import Path
     spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0-draft.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
+
+
+# ---- 대표 활용 사례 5개(§9 2층 산출물) — 서술은 정적, 후보 카드는 조회 시점에 실데이터로 보강
+from pathlib import Path as _Path  # noqa: E402
+
+_CASES_DIR = _Path(__file__).resolve().parents[1] / "cases"
+
+
+def _load_case(case_id: str) -> dict | None:
+    p = _CASES_DIR / f"{case_id}.json"
+    if not p.exists() or not p.name.startswith("case-"):
+        return None
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+@app.get("/api/cases")
+def list_cases():
+    svc = _svc()
+    items = []
+    for p in sorted(_CASES_DIR.glob("case-*.json")):
+        c = json.loads(p.read_text(encoding="utf-8"))
+        items.append({
+            "id": c["id"], "title": c["title"], "purpose": c["purpose"],
+            "sourceSnapshot": c["metadata"]["sourceSnapshot"],
+            "humanReviewed": c["metadata"]["humanReviewed"],
+            "candidateCount": len(c["candidates"]),
+        })
+    from .envelope import envelope
+    return envelope({"items": items}, svc.snapshot, [], [
+        "사례는 작성 시점 스냅샷 기준의 편집 산출물이며, 후보 데이터셋 카드는 현재 스냅샷으로 재조회됩니다."
+    ])
+
+
+@app.get("/api/cases/{case_id}")
+def get_case(case_id: str):
+    from .envelope import envelope
+    from .errors import DatasetNotFound
+
+    case = _load_case(case_id)
+    if case is None:
+        return JSONResponse(
+            {"error": {"code": "DATASET_NOT_FOUND", "message": f"사례 없음: {case_id}",
+                       "details": {}, "sourceSnapshot": None}}, status_code=404)
+    svc = _svc()
+    warnings = []
+    enriched = []
+    for cand in case["candidates"]:
+        entry = dict(cand)
+        try:
+            card = svc.get_dataset(cand["recordId"], "card")["data"]["dataset"]
+            entry["card"] = {
+                "title": card["title"], "orgName": card["orgName"],
+                "listType": card["listType"], "formats": card["formats"],
+                "updateCycle": card["updateCycleRaw"], "modifiedDate": card["modifiedDate"],
+                "completeness": card["completeness"], "freshness": card["freshness"],
+                "portalUrl": card["portal"]["listUrl"],
+            }
+            entry["presentInCurrentSnapshot"] = True
+        except DatasetNotFound:
+            entry["presentInCurrentSnapshot"] = False
+            warnings.append(
+                f"후보 {cand['recordId']}가 현재 스냅샷({svc.snapshot})에 없습니다 — 사례 재검증 필요"
+            )
+        enriched.append(entry)
+    data = dict(case)
+    data["candidates"] = enriched
+    data["currentSnapshot"] = svc.snapshot
+    if case["metadata"]["sourceSnapshot"] != svc.snapshot:
+        warnings.append(
+            f"사례 작성 스냅샷({case['metadata']['sourceSnapshot']})과 현재 스냅샷({svc.snapshot})이 다릅니다."
+        )
+    if not case["metadata"]["humanReviewed"]:
+        warnings.append("본 사례는 인간 검토 전 초안입니다(§9 재현성 메타데이터).")
+    return envelope(data, svc.snapshot, [], warnings)
