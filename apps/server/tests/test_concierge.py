@@ -103,3 +103,42 @@ def test_rest_unavailable_without_credentials(monkeypatch):
     assert r2.status_code in (503, 429)  # 캡 상태에 따라 RateLimited일 수도 있음
     if r2.status_code == 503:
         assert r2.json()["error"]["code"] == "CONCIERGE_UNAVAILABLE"
+
+
+def test_stream_endpoint_emits_error_event_without_credentials(monkeypatch):
+    """SSE 스트림은 실패 시에도 error 이벤트로 정상 종료해야 한다."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    from fastapi.testclient import TestClient
+    from datanav.api.rest import app
+
+    c = TestClient(app)
+    with c.stream("POST", "/api/concierge/stream",
+                  json={"question": "테스트 질의", "sessionId": "sse-test"}) as r:
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/event-stream")
+        body = "".join(r.iter_text())
+    import json as _json
+    events = [_json.loads(line[6:]) for line in body.split("\n") if line.startswith("data: ")]
+    assert events, "이벤트가 없음"
+    last = events[-1]
+    assert last["type"] == "error"
+    assert last["error"]["code"] in ("CONCIERGE_UNAVAILABLE", "RATE_LIMITED")
+
+
+def test_run_concierge_emit_hook_isolated():
+    """on_event 콜백 예외가 본 처리를 중단시키지 않아야 하며, 캡 위반 전에는 호출되지 않는다."""
+    import pytest as _pytest
+    from datanav.api.errors import RateLimited as _RL
+    from datanav.api import concierge as _cz
+
+    calls = []
+
+    class FullStore(_cz.UsageStore):
+        def check(self, session_id):
+            raise _RL("cap", {"cap": "daily"})
+
+    with _pytest.raises(_RL):
+        _cz.run_concierge("q", "s", usage_store=FullStore(path=None) if False else FullStore(),
+                          on_event=calls.append)
+    assert calls == []  # 캡 검사 전에는 어떤 이벤트도 방출되지 않음

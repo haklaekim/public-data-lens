@@ -182,6 +182,46 @@ def concierge_ask(body: ConciergeAsk):
     return run_concierge(body.question, body.sessionId)
 
 
+@app.post("/api/concierge/stream")
+def concierge_stream(body: ConciergeAsk):
+    """진행 스트리밍(SSE): 단계·Tool 이벤트를 발생 즉시 중계하고 마지막에 result/error 이벤트로 종료."""
+    import queue
+    import threading
+
+    from fastapi.responses import StreamingResponse
+
+    from .concierge import run_concierge
+
+    q: queue.Queue = queue.Queue()
+
+    def work():
+        try:
+            result = run_concierge(body.question, body.sessionId, on_event=q.put)
+            q.put({"type": "result", **result})
+        except DatanavError as e:
+            q.put({"type": "error", "error": e.to_dict(None)["error"]})
+        except Exception as e:  # noqa: BLE001 — 스트림은 반드시 종료 이벤트로 닫는다
+            q.put({"type": "error", "error": {"code": "INTERNAL_ERROR", "message": str(e),
+                                              "details": {}, "sourceSnapshot": None}})
+        finally:
+            q.put(None)
+
+    threading.Thread(target=work, daemon=True).start()
+
+    def gen():
+        while True:
+            ev = q.get()
+            if ev is None:
+                break
+            yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 # ---- 대표 활용 사례 5개(§9 2층 산출물) — 서술은 정적, 후보 카드는 조회 시점에 실데이터로 보강
 from pathlib import Path as _Path  # noqa: E402
 

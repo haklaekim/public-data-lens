@@ -157,13 +157,26 @@ candidates는 2~6개. 모든 한계·미확인 항목을 정직하게 기재한�
 _RECORD_ID_RE = re.compile(r"^\d{6,9}(-(FILE|API|STD))?$")
 
 
-def run_concierge(question: str, session_id: str, usage_store: UsageStore | None = None) -> dict:
+def run_concierge(
+    question: str,
+    session_id: str,
+    usage_store: UsageStore | None = None,
+    on_event=None,
+) -> dict:
+    """on_event(dict)가 주어지면 단계·Tool 이벤트를 발생 즉시 방출한다(SSE 중계용)."""
     if not question or not question.strip():
         from .errors import InvalidArgument
         raise InvalidArgument("question이 비어 있습니다")
     if len(question) > MAX_QUESTION_LEN:
         from .errors import InvalidArgument
         raise InvalidArgument(f"question은 {MAX_QUESTION_LEN}자 이하", {"length": len(question)})
+
+    def _emit(ev: dict) -> None:
+        if on_event is not None:
+            try:
+                on_event(ev)
+            except Exception:
+                pass  # 중계 실패가 본 처리를 막지 않는다
 
     store = usage_store or UsageStore()
     store.check(session_id)
@@ -208,9 +221,11 @@ def run_concierge(question: str, session_id: str, usage_store: UsageStore | None
             for it in r["data"]["items"]
         ]
         seen_ids.update(i["recordId"] for i in items)
-        trace.append({"tool": "search_datasets",
-                      "args": {"query": query, "region": region or None, "listType": listType or None},
-                      "resultSummary": f"{r['data']['totalEstimate']}건, 반환 {len(items)}건"})
+        entry = {"tool": "search_datasets",
+                 "args": {"query": query, "region": region or None, "listType": listType or None},
+                 "resultSummary": f"{r['data']['totalEstimate']}건, 반환 {len(items)}건"}
+        trace.append(entry)
+        _emit({"type": "tool", **entry})
         return _wrap({"totalEstimate": r["data"]["totalEstimate"], "items": items})
 
     @beta_tool
@@ -223,8 +238,10 @@ def run_concierge(question: str, session_id: str, usage_store: UsageStore | None
         r = svc.get_dataset(recordId, "card")
         card = r["data"]["dataset"]
         seen_ids.add(card["recordId"])
-        trace.append({"tool": "get_dataset", "args": {"recordId": recordId},
-                      "resultSummary": card["title"]})
+        entry = {"tool": "get_dataset", "args": {"recordId": recordId},
+                 "resultSummary": card["title"]}
+        trace.append(entry)
+        _emit({"type": "tool", **entry})
         keep = ("recordId", "listKey", "listType", "title", "orgName", "theme", "formats",
                 "updateCycleRaw", "license", "createdDate", "modifiedDate", "rowCount",
                 "description", "dataLimits", "keywords", "completeness", "freshness",
@@ -240,8 +257,10 @@ def run_concierge(question: str, session_id: str, usage_store: UsageStore | None
         """
         r = svc.compare_datasets(recordIds)
         seen_ids.update(d["recordId"] for d in r["data"]["datasets"])
-        trace.append({"tool": "compare_datasets", "args": {"recordIds": recordIds},
-                      "resultSummary": f"차이 {len(r['data']['differences'])}개 항목"})
+        entry = {"tool": "compare_datasets", "args": {"recordIds": recordIds},
+                 "resultSummary": f"차이 {len(r['data']['differences'])}개 항목"}
+        trace.append(entry)
+        _emit({"type": "tool", **entry})
         return _wrap({"differences": r["data"]["differences"],
                       "sharedFields": r["data"]["sharedFields"]})
 
@@ -253,10 +272,13 @@ def run_concierge(question: str, session_id: str, usage_store: UsageStore | None
             axis: 통계 축.
         """
         r = svc.get_catalog_stats(axis, 15)
-        trace.append({"tool": "get_catalog_stats", "args": {"axis": axis},
-                      "resultSummary": "상위 15개 버킷"})
+        entry = {"tool": "get_catalog_stats", "args": {"axis": axis},
+                 "resultSummary": "상위 15개 버킷"}
+        trace.append(entry)
+        _emit({"type": "tool", **entry})
         return _wrap(r["data"])
 
+    _emit({"type": "stage", "stage": "planning", "message": "질문을 분석하고 검색 계획을 세우는 중"})
     system = build_system_prompt(svc.snapshot)
     tokens_in = tokens_out = 0
     last_message = None
@@ -283,6 +305,7 @@ def run_concierge(question: str, session_id: str, usage_store: UsageStore | None
     except TypeError as e:  # SDK가 요청 시점에 자격 증명 부재를 TypeError로 던지는 경우
         raise ConciergeUnavailable(f"자격 증명 해석 실패: {e}") from None
 
+    _emit({"type": "stage", "stage": "finalizing", "message": "활용 계획을 작성하는 중"})
     final_text = ""
     if last_message is not None:
         final_text = "".join(b.text for b in last_message.content if b.type == "text")

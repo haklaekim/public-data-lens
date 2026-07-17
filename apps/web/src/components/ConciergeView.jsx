@@ -6,12 +6,27 @@ const EXAMPLES = [
   '폭염에 취약한 지역을 찾아 대응 시설을 점검하고 싶다',
 ]
 
+const STEP_LABEL = {
+  search_datasets: (ev) => `② 검색 "${ev.args.query}"${ev.args.region ? ` (${ev.args.region})` : ''} → ${ev.resultSummary}`,
+  get_dataset: (ev) => `③ 프로필 확인 — ${ev.resultSummary}`,
+  compare_datasets: (ev) => `④ 비교 — ${ev.args.recordIds.length}개 데이터셋, ${ev.resultSummary}`,
+  get_catalog_stats: (ev) => `통계 조회 — ${ev.args.axis}`,
+}
+
+function stepLabel(ev) {
+  if (ev.type === 'stage') {
+    return ev.stage === 'planning' ? `① ${ev.message}…` : `⑤ ${ev.message}…`
+  }
+  return (STEP_LABEL[ev.tool] || ((e) => e.tool))(ev)
+}
+
 export default function ConciergeView({ onOpen }) {
   const [status, setStatus] = useState(null)
   const [question, setQuestion] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [steps, setSteps] = useState([])
   const sessionId = useRef(`web-${Math.random().toString(36).slice(2, 10)}`)
 
   const loadStatus = () =>
@@ -25,15 +40,37 @@ export default function ConciergeView({ onOpen }) {
     setLoading(true)
     setError(null)
     setResult(null)
+    setSteps([])
     try {
-      const r = await fetch('/api/concierge', {
+      const r = await fetch('/api/concierge/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: text, sessionId: sessionId.current }),
       })
-      const body = await r.json()
-      if (!r.ok) throw new Error(`${body?.error?.code || r.status}: ${body?.error?.message || '오류'}`)
-      setResult(body)
+      if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`)
+      const reader = r.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        let idx
+        while ((idx = buf.indexOf('\n\n')) >= 0) {
+          const chunk = buf.slice(0, idx)
+          buf = buf.slice(idx + 2)
+          const line = chunk.split('\n').find((l) => l.startsWith('data: '))
+          if (!line) continue
+          const ev = JSON.parse(line.slice(6))
+          if (ev.type === 'stage' || ev.type === 'tool') {
+            setSteps((prev) => [...prev, ev])
+          } else if (ev.type === 'result') {
+            setResult(ev)
+          } else if (ev.type === 'error') {
+            setError(`${ev.error.code}: ${ev.error.message}`)
+          }
+        }
+      }
       loadStatus()
     } catch (e) {
       setError(e.message)
@@ -82,10 +119,32 @@ export default function ConciergeView({ onOpen }) {
         ))}
       </div>
 
-      {loading && (
-        <p className="warning">⏳ 목적 분해 → 검색 → 프로필 → 비교 절차를 수행 중입니다 (30초~1분 소요)…</p>
+      {(loading || (steps.length > 0 && !result)) && (
+        <div className="progress-box">
+          {steps.map((s, i) => (
+            <div key={i} className={`progress-step ${i === steps.length - 1 && loading ? 'active' : 'done'}`}>
+              <span className="progress-mark">{i === steps.length - 1 && loading ? '⏳' : '✓'}</span>
+              {stepLabel(s)}
+            </div>
+          ))}
+          {loading && steps.length === 0 && (
+            <div className="progress-step active"><span className="progress-mark">⏳</span> 연결 중…</div>
+          )}
+        </div>
       )}
       {error && <p className="error">{error}</p>}
+      {result && steps.length > 0 && (
+        <details className="result-meta" style={{ margin: '8px 0' }}>
+          <summary>진행 과정 {steps.length}단계 보기</summary>
+          <div className="progress-box">
+            {steps.map((s, i) => (
+              <div key={i} className="progress-step done">
+                <span className="progress-mark">✓</span>{stepLabel(s)}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       {result && plan && (
         <div>
