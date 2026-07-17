@@ -118,8 +118,9 @@ def build_fts(conn: sqlite3.Connection) -> None:
 
 
 def open_ro(path: Path) -> sqlite3.Connection:
-    # 읽기 전용·불변 릴리스 DB — FastAPI 스레드풀에서 공유되므로 스레드 고정 해제
-    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
+    # 읽기 전용 릴리스 DB. 연결은 스레드 간 공유 금지 — Service가 스레드별로 연다.
+    # (동시 공유 시 커서 상태 오염으로 CPU 폭주 — 실측 버그)
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     return conn
 

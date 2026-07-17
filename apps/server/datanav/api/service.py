@@ -5,6 +5,7 @@ import datetime as dt
 import json
 import re
 import sqlite3
+import threading
 from pathlib import Path
 
 from ..config import (
@@ -50,6 +51,13 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class Service:
+    """읽기 전용 릴리스 DB 서비스.
+
+    SQLite 연결은 스레드 간 공유하지 않는다 — 하나의 연결을 여러 스레드가 동시에
+    사용하면 커서 상태가 오염된다(FastAPI 스레드풀에서 실측된 CPU 폭주 버그).
+    스레드별 연결(threading.local)로 격리한다. 릴리스 DB는 불변이므로 안전하다.
+    """
+
     def __init__(self, db_path: Path | None = None):
         try:
             path = db_path or current_db_path()
@@ -57,11 +65,20 @@ class Service:
             raise IndexNotReady(str(e)) from None
         if not path.exists():
             raise IndexNotReady(f"카탈로그 DB가 없습니다: {path}")
-        self.conn: sqlite3.Connection = open_ro(path)
+        self._db_path = path
+        self._local = threading.local()
         meta = {k: v for k, v in self.conn.execute("SELECT key, value FROM build_meta")}
         self.snapshot: str = meta.get("snapshot", "unknown")
         self.processed_at: str = meta.get("processedAt", "")
         self.release: str = meta.get("release", "")
+
+    @property
+    def conn(self) -> sqlite3.Connection:
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = open_ro(self._db_path)
+            self._local.conn = conn
+        return conn
 
     # ------------------------------------------------------------ search
     def search_datasets(
