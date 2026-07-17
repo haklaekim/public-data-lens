@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -38,6 +39,12 @@ mcp = FastMCP(
         f"{DISCLAIMER} {UNTRUSTED_NOTE} "
         "모든 원문 접근은 공공데이터포털로 연결한다."
     ),
+    # 원격(streamable HTTP) 모드 설정 — stdio 실행 시에는 무시된다.
+    host=os.environ.get("DATANAV_MCP_HOST", "127.0.0.1"),
+    port=int(os.environ.get("DATANAV_MCP_PORT", "8300")),
+    streamable_http_path="/mcp",
+    # 무상태: 읽기 전용 Tool뿐이라 세션 유지가 불필요 — LB·프록시 뒤에서 안전
+    stateless_http=True,
 )
 
 _service: Service | None = None
@@ -220,7 +227,14 @@ def tool_spec() -> str:
 
 
 def main() -> None:
-    mcp.run()
+    """기본은 stdio(로컬 호스트용). 원격 공개는 DATANAV_MCP_TRANSPORT=streamable-http
+    (또는 --http 인자)로 기동하고 리버스 프록시가 /mcp를 이 프로세스로 전달한다."""
+    import sys
+
+    transport = os.environ.get("DATANAV_MCP_TRANSPORT", "stdio")
+    if "--http" in sys.argv:
+        transport = "streamable-http"
+    mcp.run(transport=transport)  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":

@@ -65,7 +65,16 @@ cd ../web && npm install && npm run dev   # http://localhost:5173
 ../../.venv/bin/python -m datanav.api.mcp_server
 ```
 
-### MCP 클라이언트 등록 (Claude Code 예)
+### MCP 접속 — 원격(권장, KOSIS 사례와 동일 방식)
+
+도커 스택이 streamable HTTP MCP를 함께 제공한다. 호스트 앱의 **커스텀 커넥터**에 URL만 등록하면 된다.
+
+- 로컬: `http://localhost:8088/mcp`
+- 클라우드 배포 후: `https://<도메인>/mcp`
+- Claude 웹/앱: [설정]→[커넥터]→[커스텀 커넥터 추가]에 위 URL 입력
+- 특성: 무상태(stateless) 스트리밍 HTTP, 인증 없는 공개 읽기 전용, nginx 계층 IP당 2 req/s 제한
+
+### MCP 접속 — 로컬 stdio (Claude Code 등 개발용)
 
 ```json
 {

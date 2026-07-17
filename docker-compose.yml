@@ -16,10 +16,23 @@ services:
       - "127.0.0.1:8000:8000"
     restart: unless-stopped
 
+  # 원격 MCP(streamable HTTP) — KOSIS 사례처럼 호스트 앱 커스텀 커넥터에 URL로 등록하는 경로.
+  # 외부 노출은 web(nginx)의 /mcp 프록시를 통해서만 한다.
+  mcp:
+    build: apps/server
+    command: ["python", "-m", "datanav.api.mcp_server", "--http"]
+    environment:
+      DATANAV_MCP_HOST: 0.0.0.0
+      DATANAV_MCP_PORT: "8300"
+    volumes:
+      - ./data:/app/data:ro  # 읽기 전용 — MCP는 카탈로그를 조회만 한다
+    restart: unless-stopped
+
   web:
     build: apps/web
     depends_on:
       - api
+      - mcp
     ports:
       - "8088:80"  # 8080은 이 머신의 다른 프로젝트(kgraph)가 사용 중
     restart: unless-stopped
