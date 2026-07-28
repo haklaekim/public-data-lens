@@ -75,6 +75,35 @@ def test_grounding_removes_hallucinated_ids():
     assert g["grounded"] == 1 and len(g["removed"]) == 2
 
 
+def test_grounding_filters_insight_and_pipeline_refs():
+    """insights.evidence / pipeline.uses의 무근거 recordId 참조도 걸러진다(항목은 유지)."""
+    plan = {
+        "candidates": [{"recordId": "15101975", "role": "a", "reason": "r"}],
+        "insights": [{"title": "t", "detail": "d", "confidence": "high",
+                      "evidence": ["15101975", "99999999"]}],
+        "pipeline": [{"step": "s", "detail": "d", "uses": ["88888888"]}],
+    }
+    out, g = cz._enforce_grounding(plan, seen_ids={"15101975"})
+    assert out["insights"][0]["evidence"] == ["15101975"]
+    assert out["pipeline"][0]["uses"] == []
+    assert len(out["insights"]) == 1 and len(out["pipeline"]) == 1  # 항목 자체는 유지
+    assert g["removedRefs"] == 2
+
+
+def test_collect_references_excludes_candidates():
+    """근거 참조 인덱스: 후보가 아닌 evidence/uses recordId만 제목 메타를 모은다."""
+    plan = {
+        "candidates": [{"recordId": "111"}],
+        "insights": [{"evidence": ["111", "222"]}],
+        "pipeline": [{"uses": ["333"]}],
+    }
+    seen = {"111": {"title": "후보", "listType": "FILE"},
+            "222": {"title": "참조A", "listType": "API"},
+            "333": {"title": "참조B", "listType": "FILE"}}
+    refs = cz._collect_references(plan, seen)
+    assert set(refs) == {"222", "333"} and refs["222"]["title"] == "참조A"
+
+
 def test_parse_plan_fallback():
     plan, warn = cz._parse_plan("그냥 서술형 답변입니다")
     assert warn is not None and plan["candidates"] == []
@@ -82,6 +111,15 @@ def test_parse_plan_fallback():
     assert warn2 is None and plan2["answer"] == "ok"
     plan3, _ = cz._parse_plan('```json\n{"answer": "x", "candidates": []}\n```')
     assert plan3["answer"] == "x"
+    # 서두 문장 + 코드펜스 + 후미 문장, 문자열 안 중괄호까지 섞인 실제 관측 패턴
+    plan4, warn4 = cz._parse_plan(
+        '자료를 수집했습니다. 정리하겠습니다. ```json\n'
+        '{"answer": "괄호 {포함} 문자열", "candidates": [], "insights": [{"title": "t"}]}\n'
+        '``` 이상입니다.')
+    assert warn4 is None and plan4["answer"] == "괄호 {포함} 문자열"
+    # 출력이 중간에 잘린 미완결 JSON은 파싱 실패로 강등된다
+    plan5, warn5 = cz._parse_plan('{"answer": "잘림", "candidates": [{"recordId": "1')
+    assert warn5 is not None and plan5["candidates"] == []
 
 
 def test_system_prompt_has_defense_and_grounding_rules():

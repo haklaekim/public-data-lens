@@ -23,6 +23,12 @@ export default function App() {
   const [status, setStatus] = useState(null)
   const [profileId, setProfileId] = useState(null)
   const [compareIds, setCompareIds] = useState([])
+  const [searchSeed, setSearchSeed] = useState(null) // 컨시어지 보완 노드 → 검색 프리필
+
+  const seedSearch = (q) => {
+    setSearchSeed({ q, t: Date.now() })
+    setTab('search')
+  }
 
   useEffect(() => {
     api.status().then(setStatus).catch(() => setStatus(null))
@@ -78,6 +84,7 @@ export default function App() {
             onOpen={setProfileId}
             compareIds={compareIds}
             onToggleCompare={toggleCompare}
+            seed={searchSeed}
           />
         )}
         {tab === 'compare' && (
@@ -89,11 +96,22 @@ export default function App() {
         )}
         {tab === 'changes' && <ChangesView onOpen={setProfileId} />}
         {tab === 'cases' && <CasesView onOpen={setProfileId} />}
-        {tab === 'concierge' && <ConciergeView onOpen={setProfileId} />}
+        {tab === 'concierge' && <ConciergeView onOpen={setProfileId} onSearch={seedSearch} />}
       </main>
 
       {profileId && (
         <DatasetProfile recordId={profileId} onClose={() => setProfileId(null)} />
+      )}
+
+      {tab !== 'concierge' && (
+        <button
+          className="frap"
+          title="AI 컨시어지"
+          aria-label="AI 컨시어지 열기"
+          onClick={() => setTab('concierge')}
+        >
+          AI
+        </button>
       )}
 
       <footer className="footer">

@@ -110,6 +110,10 @@ cd ../web && npm install && npm run dev   # http://localhost:5173
 - **M3 생성형 컨시어지 구현됨(상한 운영, §9·§11)**: 서버 측 LLM(기본 `claude-haiku-4-5`)이
   첫 번째 MCP 클라이언트로 build_data_plan 수행. `ANTHROPIC_API_KEY` 설정 + API 서버 재시작으로 활성화.
   캡 3종(세션 5회/일 50회/월 20만 원 — 환경변수 조정), 무근거 recordId 자동 제거, 주입 방어.
+  응답 스키마 v1.1: 핵심 발견(insights — 신뢰도·근거 recordId), 분석 파이프라인(pipeline),
+  후속 질문(followUps) 포함. 무근거 검증은 insights·pipeline의 recordId 참조까지 적용되며,
+  웹은 결과를 시각 대시보드(요약 밴드·완전성/최신성 게이지·공유 키워드 기반 데이터 연결 지도·
+  신뢰도 배지 발견 카드·실행 계획 스테퍼·라이브 추론 타임라인)로 렌더링한다.
   라이브 검증: `python scripts/concierge_smoke.py` (무근거 생성 0 + 주입 방어 판정).
   코어 완료를 차단하지 않는 별도 트랙이며 오류 코드 `CONCIERGE_UNAVAILABLE`(503)은 부속 명세 v1.1 대상
 - **§7 정본 URI 디레퍼런싱**: `/projects/datanav/{dataset/{목록키}, catalog/current(+aird-assessment·files/벌크),

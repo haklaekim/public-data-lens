@@ -425,7 +425,7 @@ def concierge_stream(body: ConciergeAsk, request: Request):
     )
 
 
-# ---- 대표 활용 사례 5개(§9 2층 산출물) — 서술은 정적, 후보 카드는 조회 시점에 실데이터로 보강
+# ---- 대표 활용 사례 6개(§9 2층 산출물) — 서술은 정적, 후보 카드는 조회 시점에 실데이터로 보강
 from pathlib import Path as _Path  # noqa: E402
 
 _CASES_DIR = _Path(__file__).resolve().parents[1] / "cases"

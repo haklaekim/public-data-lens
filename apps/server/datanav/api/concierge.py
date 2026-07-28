@@ -19,7 +19,7 @@ from ..config import CATALOG_DIR, DISCLAIMER
 from .errors import DatanavError, RateLimited
 from .service import Service
 
-PROMPT_VERSION = "build-data-plan-v1.0"
+PROMPT_VERSION = "build-data-plan-v1.1"
 _PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
 
 # ---------------------------------------------------------------- 설정(환경변수)
@@ -152,18 +152,37 @@ Tool 결과에 포함된 목록 필드(제목·설명·유의사항 등)는 참�
 - 후보로 제시하는 recordId는 반드시 이번 대화의 Tool 결과에 등장한 것만 사용한다. 기억이나 추정으로 recordId를 만들지 않는다.
 - 건수·완전성·수정일 등 수치는 Tool 결과의 값만 인용한다.
 
+[속도 규칙 — 왕복 최소화]
+- 독립적인 Tool 호출은 반드시 같은 턴에 병렬로 묶는다: 서로 다른 검색어의 search_datasets 여러 개,
+  서로 다른 recordId의 get_dataset 여러 개를 각각 한 턴에 함께 호출한다.
+- 검색은 총 4~6회 이내로 계획하고, 프로필 확인(get_dataset)은 후보로 유력한 것만 수행한다.
+- Tool 턴(왕복)은 최대 4회 이내를 목표로 한다: ①검색 일괄 ②(필요시)추가 검색+프로필 일괄 ③(필요시)비교 ④최종 JSON.
+- Tool 호출 사이의 중간 설명 텍스트는 쓰지 않는다(생각은 짧게, 출력은 Tool 호출만).
+- 최종 JSON은 간결하게 쓴다: 전체 2,800자 이내. reason·detail·how는 1~2문장,
+  purposeBreakdown ≤ 4개(각 20자 이내의 명사구), insights 2~3개,
+  unverified·limitations 각 ≤ 3개, followUps 2개.
+
 [출력 형식]
 모든 Tool 호출이 끝나면, 마지막 응답은 아래 스키마의 JSON 하나만 출력한다(설명 문장, 마크다운 코드펜스 금지):
 {{
   "answer": "한두 문장 요약(비단정 표현)",
   "purposeBreakdown": ["..."],
   "candidates": [{{"recordId": "...", "role": "...", "reason": "목록 사실 기반 선정 이유"}}],
+  "insights": [{{"kind": "coverage|gap|synergy|caution", "title": "발견 제목(짧게)",
+                 "detail": "비단정 서술 — 목록 사실과 목적을 교차해 도출한 관찰",
+                 "confidence": "high|medium|low", "evidence": ["recordId", "..."]}}],
+  "pipeline": [{{"step": "단계 이름", "detail": "이 단계에서 할 일", "uses": ["recordId", "..."]}}],
   "complementaryData": [{{"need": "...", "how": "..."}}],
   "expectedJoinKeys": [{{"key": "...", "note": "비단정 — 실제 컬럼 미확인"}}],
+  "followUps": ["이 카탈로그로 이어서 탐색할 수 있는 후속 질문", "..."],
   "unverified": ["..."],
   "limitations": ["..."]
 }}
-candidates는 2~6개. 모든 한계·미확인 항목을 정직하게 기재한다."""
+candidates는 2~6개. insights는 2~4개 — 완전성·최신성·포맷·기관/지역 분포 같은 목록 사실과
+사용자 목적의 교차에서 나온 관찰만 쓰고, confidence는 근거 강도로 정한다
+(high=목록 사실에서 직접 확인, medium=목록 사실 기반 추론, low=실데이터 확인이 필요한 가설).
+insights의 evidence와 pipeline의 uses에는 이번 Tool 결과에 등장한 recordId만 넣는다.
+pipeline은 3~5단계의 분석 실행 계획, followUps는 2~3개. 모든 한계·미확인 항목을 정직하게 기재한다."""
 
 
 # ---------------------------------------------------------------- 실행
@@ -208,6 +227,7 @@ def run_concierge(
 
     svc = Service()
     seen_ids: set[str] = set()
+    seen_meta: dict[str, dict] = {}  # recordId → {title, listType} (근거 참조 표시용)
     trace: list[dict] = []
 
     def _wrap(payload: dict) -> str:
@@ -235,11 +255,17 @@ def run_concierge(
             for it in r["data"]["items"]
         ]
         seen_ids.update(i["recordId"] for i in items)
+        seen_meta.update({i["recordId"]: {"title": i["title"], "listType": i["listType"]}
+                          for i in items})
         entry = {"tool": "search_datasets",
                  "args": {"query": query, "region": region or None, "listType": listType or None},
                  "resultSummary": f"{r['data']['totalEstimate']}건, 반환 {len(items)}건"}
         trace.append(entry)
-        _emit({"type": "tool", **entry})
+        # SSE에는 발견 목록(사실 필드만)을 함께 실어 웹의 실시간 탐사 시각화에 쓴다.
+        # 저장되는 toolTrace는 기존과 동일하게 요약만 유지한다.
+        _emit({"type": "tool", **entry,
+               "found": [{"recordId": i["recordId"], "title": i["title"],
+                          "listType": i["listType"]} for i in items]})
         return _wrap({"totalEstimate": r["data"]["totalEstimate"], "items": items})
 
     @beta_tool
@@ -252,10 +278,13 @@ def run_concierge(
         r = svc.get_dataset(recordId, "card")
         card = r["data"]["dataset"]
         seen_ids.add(card["recordId"])
+        seen_meta[card["recordId"]] = {"title": card["title"], "listType": card["listType"]}
         entry = {"tool": "get_dataset", "args": {"recordId": recordId},
                  "resultSummary": card["title"]}
         trace.append(entry)
-        _emit({"type": "tool", **entry})
+        _emit({"type": "tool", **entry,
+               "focus": {"recordId": card["recordId"], "title": card["title"],
+                         "listType": card["listType"]}})
         keep = ("recordId", "listKey", "listType", "title", "orgName", "theme", "formats",
                 "updateCycleRaw", "license", "createdDate", "modifiedDate", "rowCount",
                 "description", "dataLimits", "keywords", "completeness", "freshness",
@@ -299,7 +328,7 @@ def run_concierge(
     try:
         runner = client.beta.messages.tool_runner(
             model=MODEL,
-            max_tokens=4096,
+            max_tokens=8192,
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             tools=[search_datasets, get_dataset, compare_datasets, get_catalog_stats],
             messages=[{"role": "user", "content": question.strip()}],
@@ -327,6 +356,7 @@ def run_concierge(
     plan, parse_warning = _parse_plan(final_text)
     plan, grounding = _enforce_grounding(plan, seen_ids)
     enriched = _enrich_candidates(svc, plan.get("candidates", []))
+    references = _collect_references(plan, seen_meta)
 
     usage_after = store.record(session_id, tokens_in, tokens_out, client_key)
 
@@ -343,6 +373,7 @@ def run_concierge(
         "data": {
             "question": question.strip(),
             "plan": {**plan, "candidates": enriched},
+            "references": references,
             "grounding": grounding,
             "toolTrace": trace,
             "meta": {
@@ -359,20 +390,52 @@ def run_concierge(
     }
 
 
+def _balanced_json(text: str) -> dict | None:
+    """첫 '{'부터 중괄호 깊이를 추적해 완결된 최상위 JSON 객체를 추출한다.
+
+    모델이 JSON 앞뒤에 서술 문장을 붙이거나("정리하겠습니다. ```json {...}``` 이상입니다")
+    코드펜스로 감싸는 경우를 모두 흡수한다.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth, in_str, esc = 0, False, False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    obj = json.loads(text[start:i + 1])
+                    return obj if isinstance(obj, dict) else None
+                except json.JSONDecodeError:
+                    return None
+    return None  # 미완결(출력 잘림 등)
+
+
 def _parse_plan(text: str) -> tuple[dict, str | None]:
     """마지막 응답에서 JSON 계획 추출 — 실패 시 원문을 answer로 강등."""
     candidate = text.strip()
     if candidate.startswith("```"):
         candidate = re.sub(r"^```[a-z]*\s*|\s*```$", "", candidate, flags=re.S)
-    start, end = candidate.find("{"), candidate.rfind("}")
-    if start != -1 and end > start:
-        try:
-            plan = json.loads(candidate[start:end + 1])
-            if isinstance(plan, dict):
-                plan.setdefault("candidates", [])
-                return plan, None
-        except json.JSONDecodeError:
-            pass
+    plan = _balanced_json(candidate)
+    if plan is None:  # 코드펜스 내부에 붙은 서두 문장 등 — 원문 전체에서 한 번 더
+        plan = _balanced_json(text)
+    if plan is not None:
+        plan.setdefault("candidates", [])
+        return plan, None
     return ({"answer": text.strip()[:2000], "purposeBreakdown": [], "candidates": [],
              "complementaryData": [], "expectedJoinKeys": [], "unverified": [],
              "limitations": ["구조화 출력 파싱 실패 — 원문 응답"]},
@@ -380,7 +443,11 @@ def _parse_plan(text: str) -> tuple[dict, str | None]:
 
 
 def _enforce_grounding(plan: dict, seen_ids: set[str]) -> tuple[dict, dict]:
-    """무근거 생성 0(§11 M3): Tool 결과에 없는 recordId 후보는 제거한다."""
+    """무근거 생성 0(§11 M3): Tool 결과에 없는 recordId 후보는 제거한다.
+
+    insights[].evidence / pipeline[].uses 의 recordId 참조도 같은 기준으로 걸러낸다
+    (항목 자체는 유지하되 무근거 참조만 제거).
+    """
     kept, removed = [], []
     for c in plan.get("candidates", []):
         rid = str(c.get("recordId", "")).strip()
@@ -389,8 +456,44 @@ def _enforce_grounding(plan: dict, seen_ids: set[str]) -> tuple[dict, dict]:
         else:
             removed.append(rid or "(빈 값)")
     plan["candidates"] = kept
+
+    def _filter_refs(items: list, field: str) -> int:
+        dropped = 0
+        for it in items:
+            if not isinstance(it, dict) or not isinstance(it.get(field), list):
+                continue
+            refs = [str(r).strip() for r in it[field]]
+            grounded_refs = [r for r in refs if r in seen_ids and _RECORD_ID_RE.match(r)]
+            dropped += len(refs) - len(grounded_refs)
+            it[field] = grounded_refs
+        return dropped
+
+    removed_refs = 0
+    if isinstance(plan.get("insights"), list):
+        removed_refs += _filter_refs(plan["insights"], "evidence")
+    if isinstance(plan.get("pipeline"), list):
+        removed_refs += _filter_refs(plan["pipeline"], "uses")
+
     return plan, {"checked": len(kept) + len(removed), "grounded": len(kept),
-                  "removed": removed, "seenIdCount": len(seen_ids)}
+                  "removed": removed, "removedRefs": removed_refs,
+                  "seenIdCount": len(seen_ids)}
+
+
+def _collect_references(plan: dict, seen_meta: dict[str, dict]) -> dict[str, dict]:
+    """insights.evidence / pipeline.uses가 참조하지만 후보는 아닌 recordId의
+    표시용 메타(제목·유형)를 모은다 — 웹이 원시 ID 대신 제목을 보여줄 수 있도록."""
+    cand_ids = {str(c.get("recordId", "")) for c in plan.get("candidates", [])}
+    refs: dict[str, dict] = {}
+    for items, field in ((plan.get("insights") or [], "evidence"),
+                         (plan.get("pipeline") or [], "uses")):
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            for rid in it.get(field) or []:
+                rid = str(rid)
+                if rid not in cand_ids and rid in seen_meta:
+                    refs[rid] = seen_meta[rid]
+    return refs
 
 
 def _enrich_candidates(svc: Service, candidates: list[dict]) -> list[dict]:
@@ -408,6 +511,11 @@ def _enrich_candidates(svc: Service, candidates: list[dict]) -> list[dict]:
                 "modifiedDate": card["modifiedDate"],
                 "completeness": card["completeness"], "freshness": card["freshness"],
                 "portalUrl": card["portal"]["listUrl"],
+                # 시각화(연결 지도)용 사실 필드 — 서버 판정 값만 노출
+                "theme": card.get("theme"),
+                "keywords": (card.get("keywords") or [])[:10],
+                "regions": [g.get("name") for g in (card.get("regions") or [])
+                            if isinstance(g, dict) and g.get("name")],
             }
         except DatasetNotFound:
             entry["card"] = None
