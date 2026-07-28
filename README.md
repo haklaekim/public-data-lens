@@ -7,6 +7,7 @@
 ![datasets](https://img.shields.io/badge/%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%85%8B-96%2C056%EA%B1%B4-informational)
 ![contract](https://img.shields.io/badge/MCP%20%EA%B3%84%EC%95%BD-v1.0.0%20%EB%8F%99%EA%B2%B0-success)
 ![status](https://img.shields.io/badge/%EC%83%81%ED%83%9C-v1.0%20beta-orange)
+![license](https://img.shields.io/badge/license-MIT-green)
 
 > 본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을
 > 보증하지 않습니다. 공공데이터포털을 대체하지 않으며 모든 원문 접근은 포털로 연결합니다.
@@ -226,8 +227,8 @@ cd apps/server
 
 - **데이터 출처**: 행정안전부 [공공데이터포털](https://www.data.go.kr) 목록개방현황(월간).
   본 저장소는 목록 **메타데이터의 가공물**만 포함하며 실데이터를 재배포하지 않습니다.
-- **코드 라이선스**: _(확정 예정 — LICENSE 파일 추가 전까지 모든 권리 유보)_
-- **공개 산출물**(매핑표·판정 규칙·JSON-LD Context·SHACL): _(확정 예정 — CC BY 4.0 검토 중)_
+- **라이선스**: [MIT](LICENSE) — 코드와 저장소에 포함된 공개 산출물(매핑표·판정 규칙·
+  JSON-LD Context·SHACL)에 모두 적용됩니다. 연구·재사용 시 출처 표기를 권장합니다.
 - **인용**: 연구·보고서에서 인용 시 `CITATION.cff`(추가 예정)를 참조하거나 저장소 URL을
   명시해 주세요.
 - **문의**: GitHub Issue 또는 _(연구실 대표 연락처 — 확정 예정)_
