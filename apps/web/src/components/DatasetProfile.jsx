@@ -8,6 +8,15 @@ const VIEWS = [
   ['jsonld', 'JSON-LD'],
 ]
 
+// 완전성 점검 필드의 한글 표기 — 점수(기재 n/16)의 분해 근거 체크리스트용
+const FIELD_LABEL = {
+  title: '제목', theme: '분류', org_name: '제공기관', update_cycle: '갱신주기',
+  keywords: '키워드', description: '설명', license: '이용허락', created_date: '등록일',
+  modified_date: '수정일', list_url: '원문 URL', spatial: '공간범위', temporal: '시간범위',
+  data_limits: '이용제한', format: '포맷', row_count: '행 수', file_data_name: '파일명',
+  api_type: 'API 유형', traffic: '트래픽',
+}
+
 const FRESH_LABEL = {
   FRESH: { text: '최신', cls: 'fresh' },
   POSSIBLY_STALE: { text: '갱신 지연 가능', cls: 'stale' },
@@ -90,14 +99,29 @@ function CardView({ ds }) {
           className="completeness large"
           title={`${ds.completeness.profile} 프로파일 · ${ds.completeness.rule}`}
         >
-          완전성 {(ds.completeness.score * 100).toFixed(0)}%
-          <small> ({ds.completeness.profile} 프로파일 기준)</small>
+          목록 기재 {ds.completeness.filledFields}/{ds.completeness.totalFields}
+          <small>
+            {' '}({ds.completeness.profile} 프로파일 ·{' '}
+            {ds.completeness.typical
+              ? `동일 유형의 ${ds.completeness.typicalShare}%와 같은 표준 수준`
+              : `유형 내 상위 ${ds.completeness.topPercent}%`})
+          </small>
         </span>
         <span className={`freshness ${fresh.cls}`} title={ds.freshness?.note || ''}>
           {fresh.text}
           {ds.freshness?.ageDays != null && <small> · 수정 후 {ds.freshness.ageDays}일</small>}
         </span>
       </div>
+
+      {ds.completeness.fields && (
+        <div className="field-checklist">
+          {Object.entries(ds.completeness.fields).map(([f, filled]) => (
+            <span key={f} className={filled ? 'fc filled' : 'fc missing'}>
+              {filled ? '✓' : '—'} {FIELD_LABEL[f] || f}
+            </span>
+          ))}
+        </div>
+      )}
 
       {ds.description && (
         <>

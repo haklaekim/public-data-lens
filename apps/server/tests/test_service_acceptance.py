@@ -14,7 +14,8 @@ pytestmark = requires_catalog
 def _envelope_ok(body):
     assert set(body) == {"data", "meta", "warnings"}
     assert body["meta"]["sourceSnapshot"]
-    assert body["meta"]["schemaVersion"] == "1.0.0"
+    from datanav.config import SCHEMA_VERSION
+    assert body["meta"]["schemaVersion"] == SCHEMA_VERSION
     assert isinstance(body["meta"]["ruleVersions"], list)
     assert any("보증하지 않습니다" in w for w in body["warnings"])  # 면책 고지
 

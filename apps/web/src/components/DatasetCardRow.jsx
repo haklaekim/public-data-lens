@@ -5,6 +5,29 @@ const EVIDENCE_LABEL = {
   INFERRED_FROM_DESCRIPTION: '설명 추론',
 }
 
+/* 완전성 표시(v1.1.0): 점수 막대 대신 "무엇이 기재됐는가".
+   대부분(FILE의 89%)이 동일 점수라 %는 변별력이 없고, 실제 차이는
+   판단 직결 3필드(공간·시간범위, 이용제한)의 기재 여부에서 나온다.
+   기재된 것만 칩으로 보여주고(미기재가 기본이므로), 없으면 기재 수·표준 수준만 옅게 표기. */
+const KEY_FIELD_LABEL = { spatial: '공간범위', temporal: '기간', dataLimits: '이용제한 명시' }
+
+function CompletenessBadges({ c }) {
+  const keys = Object.entries(c.keyFields || {}).filter(([, v]) => v)
+  const title = `목록 메타데이터 기재 ${c.filledFields}/${c.totalFields} (${c.profile} 프로파일, ${c.rule})`
+      + (c.typical ? ` — 동일 유형의 ${c.typicalShare}%가 같은 수준` : ` — 상위 ${c.topPercent}%`)
+  return (
+    <span className="completeness" title={title}>
+      {keys.map(([k]) => (
+        <span key={k} className="key-field">{KEY_FIELD_LABEL[k]} ✓</span>
+      ))}
+      <span className="fill-count">
+        기재 {c.filledFields}/{c.totalFields}
+        {c.typical ? ' · 표준 수준' : c.topPercent <= 10 ? ` · 상위 ${c.topPercent}%` : ''}
+      </span>
+    </span>
+  )
+}
+
 export default function DatasetCardRow({ item, onOpen, compared, compareFull, onToggleCompare }) {
   return (
     <li className="card-row">
@@ -20,15 +43,7 @@ export default function DatasetCardRow({ item, onOpen, compared, compareFull, on
           {item.modifiedDate && <span>수정 {item.modifiedDate}</span>}
         </div>
         <div className="card-badges">
-          <span
-            className="completeness"
-            title={`목록 메타데이터 완전성 (${item.completeness.profile} 프로파일, ${item.completeness.rule})`}
-          >
-            <span className="bar">
-              <span className="fill" style={{ width: `${item.completeness.score * 100}%` }} />
-            </span>
-            {(item.completeness.score * 100).toFixed(0)}%
-          </span>
+          <CompletenessBadges c={item.completeness} />
           {item.regions?.map((r) => (
             <span
               key={r.code}

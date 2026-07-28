@@ -26,6 +26,13 @@ _CHECKS = {
 }
 
 
+def field_status(rec: dict) -> dict:
+    """프로파일 점검 필드별 기재 여부 — 카드 뷰 체크리스트용(점수의 분해 근거)."""
+    profile = rec["list_type"] if rec["list_type"] in RULE_COMPLETENESS else "FILE"
+    fields = rule(RULE_COMPLETENESS[profile])["fields"]
+    return {f: bool(_CHECKS[f](rec)) for f in fields}
+
+
 def compute_completeness(rec: dict) -> dict:
     """응답 예(§3.2): {score, profile, rule}."""
     profile = rec["list_type"] if rec["list_type"] in RULE_COMPLETENESS else "FILE"

@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from datanav.api.rest import app
 from datanav.config import BASE_URI
+from datanav.spec import SPEC_VERSION
 from tests.conftest import requires_catalog
 
 client = TestClient(app)
@@ -27,7 +28,7 @@ def test_rules_and_spec_resolve():
     rules = client.get(f"{CANON}/rules/catalog/1.0")
     assert rules.status_code == 200 and "rules" in rules.json()
     spec = client.get(f"{CANON}/spec/tools/1.0")
-    assert spec.status_code == 200 and spec.json()["specVersion"] == "1.0.0"
+    assert spec.status_code == 200 and spec.json()["specVersion"] == SPEC_VERSION
 
 
 def test_shapes_and_prompt_media_types():

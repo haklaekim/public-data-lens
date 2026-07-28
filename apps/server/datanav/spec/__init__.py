@@ -8,7 +8,7 @@ schemaVersion은 응답 봉투 meta.schemaVersion으로 전달된다.
 """
 from __future__ import annotations
 
-SPEC_VERSION = "1.0.0"
+SPEC_VERSION = "1.1.0"
 
 # ---------------------------------------------------------------- $defs
 DEFS = {
@@ -57,6 +57,26 @@ DEFS = {
             "score": {"type": "number", "minimum": 0, "maximum": 1},
             "profile": {"enum": ["FILE", "API", "STD"]},
             "rule": {"type": "string"},
+            "filledFields": {"type": "integer", "minimum": 0},
+            "totalFields": {"type": "integer", "minimum": 1},
+            "keyFields": {
+                "type": "object",
+                "description": "판단 직결 3필드(공간·시간범위, 이용제한)의 기재 여부 — v1.1.0 추가",
+                "required": ["spatial", "temporal", "dataLimits"],
+                "properties": {
+                    "spatial": {"type": "boolean"},
+                    "temporal": {"type": "boolean"},
+                    "dataLimits": {"type": "boolean"},
+                },
+            },
+            "topPercent": {"type": "number", "description": "유형 내 이 점수보다 높은 비율(%) — 낮을수록 상위. v1.1.0 추가"},
+            "typical": {"type": "boolean", "description": "유형 내 최빈 점수와 동일(대다수와 같은 수준). v1.1.0 추가"},
+            "typicalShare": {"type": "number", "description": "유형 내 최빈 점수 비중(%). v1.1.0 추가"},
+            "fields": {
+                "type": "object",
+                "description": "card 뷰 전용 — 프로파일 점검 필드별 기재 여부(점수의 분해 근거). v1.1.0 추가",
+                "additionalProperties": {"type": "boolean"},
+            },
         },
     },
     "region": {

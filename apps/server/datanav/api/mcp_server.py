@@ -239,7 +239,7 @@ def prompt_doc() -> str:
 @mcp.resource(f"{BASE_URI}/spec/tools/1.0", name="부속 명세(Tool JSON Schema)", mime_type="application/json")
 def tool_spec() -> str:
     """부속 명세(승인·동결) — Tool별 input/output JSON Schema 전문 + 공통 계약(v1.0.0, 2026-07-17 동결)."""
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0.0.json"
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.1.0.json"
     return spec_path.read_text(encoding="utf-8")
 
 

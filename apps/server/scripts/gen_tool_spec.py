@@ -16,7 +16,7 @@ from jsonschema import Draft202012Validator  # noqa: E402
 from datanav.config import BASE_URI, MAX_COMPARE, MAX_PAGE_SIZE, MAX_QUERY_LENGTH  # noqa: E402
 from datanav.spec import OUTPUT_SCHEMAS, SPEC_VERSION  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.0.0.json"
+OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.1.0.json"
 
 
 async def collect_input_schemas() -> dict[str, dict]:
@@ -81,7 +81,7 @@ def main() -> int:
     )
     spec = {
         "specVersion": SPEC_VERSION,
-        "status": "APPROVED — 공개 계약 동결(2026-07-17, 운영 주체 승인). 이후 변경은 semver로 관리하며 breaking은 재승인 필요",
+        "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness에 keyFields·topPercent·typical·fields 등 하위 호환 필드 추가. breaking은 재승인 필요",
         "generatedAt": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "baseUri": BASE_URI,
         "compatibilityPolicy": (

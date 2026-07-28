@@ -203,7 +203,16 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 .type-API { background: var(--ceramic); color: var(--green-house); }
 .type-STD { background: var(--green-house); color: #fff; }
 
-.completeness { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.completeness { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.completeness .key-field {
+  padding: 2px 8px; border-radius: var(--radius-pill);
+  background: var(--green-light); color: var(--green-uplift); font-weight: 600;
+}
+.completeness .fill-count { color: var(--muted); }
+.field-checklist { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 10px 0 4px; }
+.field-checklist .fc { font-size: 12px; padding: 2px 8px; border-radius: var(--radius-card); border: 1px solid var(--line); }
+.field-checklist .fc.filled { color: var(--text); background: var(--card); }
+.field-checklist .fc.missing { color: var(--muted); background: var(--ceramic); border-style: dashed; }
 .completeness .bar {
   width: 64px; height: 6px; border-radius: 3px; background: var(--ceramic);
   overflow: hidden; display: inline-block;

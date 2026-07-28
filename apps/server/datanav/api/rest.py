@@ -252,7 +252,7 @@ def resource_privacy():
 @app.get("/api/resources/spec/tools")
 def resource_tool_spec():
     from pathlib import Path
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.0.0.json"
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.1.0.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
 
 

@@ -16,6 +16,7 @@ from ..config import (
     current_db_path,
     read_current_pointer,
 )
+from ..pipeline.completeness import compute_completeness, field_status
 from ..pipeline.jsonld import dataset_jsonld
 from ..rules import (
     RULE_CARD,
@@ -71,6 +72,7 @@ class Service:
         self.snapshot: str = meta.get("snapshot", "unknown")
         self.processed_at: str = meta.get("processedAt", "")
         self.release: str = meta.get("release", "")
+        self._comp_dist_cache: dict | None = None  # 유형별 완전성 분포(지연 계산, 릴리스 불변)
 
     @property
     def conn(self) -> sqlite3.Connection:
@@ -253,6 +255,42 @@ class Service:
         ] if issues else []
         return envelope({"view": view, "dataset": data}, self.snapshot, rules, warnings)
 
+    def _comp_dist(self) -> dict:
+        """유형별 완전성 점수 분포 — 상대 위치(topPercent)·최빈값(typical) 판정용.
+        릴리스 DB는 불변이므로 1회 계산해 캐시한다(경합해도 같은 값이라 무해)."""
+        if self._comp_dist_cache is None:
+            dist: dict = {}
+            rows = self.conn.execute(
+                "SELECT completeness_profile p, completeness_score s, COUNT(*) n "
+                "FROM datasets GROUP BY p, s"
+            ).fetchall()
+            for r in rows:
+                d = dist.setdefault(r["p"], {"total": 0, "mode": (None, 0), "scores": []})
+                d["total"] += r["n"]
+                d["scores"].append((r["s"], r["n"]))
+                if r["n"] > d["mode"][1]:
+                    d["mode"] = (r["s"], r["n"])
+            self._comp_dist_cache = dist
+        return self._comp_dist_cache
+
+    def _completeness(self, rec: dict) -> dict:
+        """완전성 표현 확장(v1.1.0, 하위 호환 필드 추가): 무엇이 비었는지(keyFields)와
+        유형 내 상대 위치(topPercent·typical)를 동반한다 — 점수만으로는 89%가 동일 값(0.8125)이라
+        변별·해석이 불가능하다는 관찰(§6)에 따른 표현 개선."""
+        comp = compute_completeness(rec)
+        comp["keyFields"] = {
+            "spatial": bool(rec["spatial_raw"]),
+            "temporal": bool(rec["temporal_raw"]),
+            "dataLimits": bool(rec["data_limits"]),
+        }
+        d = self._comp_dist().get(comp["profile"])
+        if d and d["total"]:
+            higher = sum(n for s, n in d["scores"] if s > comp["score"])
+            comp["topPercent"] = round(higher / d["total"] * 100, 1)
+            comp["typical"] = comp["score"] == d["mode"][0]
+            comp["typicalShare"] = round(d["mode"][1] / d["total"] * 100, 1)
+        return comp
+
     def _summary(self, rec: dict) -> dict:
         return {
             "recordId": rec["record_id"],
@@ -264,17 +302,14 @@ class Service:
             "formats": rec["formats"],
             "updateCycle": rec["update_cycle"],
             "modifiedDate": rec["modified_date"],
-            "completeness": {
-                "score": rec["completeness_score"],
-                "profile": rec["completeness_profile"],
-                "rule": rec["completeness_rule"],
-            },
+            "completeness": self._completeness(rec),
             "regions": rec["regions"],
             "portalUrl": rec["list_url"],
         }
 
     def _card(self, rec: dict) -> dict:
         card = self._summary(rec)
+        card["completeness"]["fields"] = field_status(rec)  # 점수의 분해 근거(체크리스트)
         card.update({
             "keywords": rec["keywords"],
             "description": rec["description"],
