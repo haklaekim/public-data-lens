@@ -1,7 +1,6 @@
-# 공공데이터 내비게이터 (datanav)
+# 공공데이터 렌즈 (Public Data Lens)
 
-> **하고 싶은 일을 말하면, 사용할 공공데이터와 그 선택 이유, 함께 필요한 데이터,
-> 확인해야 할 한계를 알려주는 AI 공공데이터 내비게이터.**
+> **하고 싶은 일을 말하면 AI Ready 관점으로 정밀하게 투영하는 공공데이터 초점 레이어**
 
 ![snapshot](https://img.shields.io/badge/%EC%8A%A4%EB%83%85%EC%83%B7-2026--06-blue)
 ![datasets](https://img.shields.io/badge/%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%85%8B-96%2C056%EA%B1%B4-informational)
@@ -9,15 +8,15 @@
 ![status](https://img.shields.io/badge/%EC%83%81%ED%83%9C-v1.0%20beta-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-> 본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을
+> 본 결과는 공공데이터포털 목록 개방 데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을
 > 보증하지 않습니다. 공공데이터포털을 대체하지 않으며 모든 원문 접근은 포털로 연결합니다.
 
-**English** — *datanav* is a discovery-and-judgement layer for Korea's open data portal
+**English** — *Public Data Lens* is a discovery-and-judgment layer for Korea's open data portal
 ([data.go.kr](https://www.data.go.kr)). It turns the portal's monthly catalog (~96k dataset
 listings) into a canonical JSON-LD/DCAT layer with versioned, deterministic quality rules
 (SHACL-validated, DQV/PROV issue observations), and exposes search / compare / diff tools to
 AI hosts via the **Model Context Protocol**. It also serves as a research testbed for the
-AIRD (AI-Ready Data) standard: every judgement carries a rule version and evidence level,
+AIRD (AI-Ready Data) standard: every judgment carries a rule version and evidence level,
 and canonical URIs dereference to their JSON-LD representations.
 
 ## 빠른 시작 — Claude에 연결하기
@@ -67,12 +66,12 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 
 이 프로젝트는 이중 정체성을 갖습니다.
 
-- **서비스로서** — 공공데이터포털이 공식 유통 기반이라면, datanav는 그 위의
+- **서비스로서** — 공공데이터포털이 공식 유통 기반이라면, Public Data Lens는 그 위의
   **탐색·판단 계층**입니다. 어떤 데이터가 존재하고 어떤 후보가 검토할 가치가 있는지를
   근거와 함께 제시하며, 포털을 대체하지 않습니다.
-- **연구로서** — 대학 연구실이 운영하는 **AIRD(AI-Ready Data) 표준 실증** 프로젝트입니다.
+- **연구로서** — 중앙대학교 HIKE 연구실이 운영하는 **AIRD(AI-Ready Data) 표준 실증** 프로젝트입니다.
   월간 목록을 정본 JSON-LD(DCAT)로 정규화하고, SHACL 검증·버전 관리되는 판정 규칙
-  레지스트리·DQV/PROV 이슈 관찰로 "표준이 실제로 동작함"을 보입니다. 1차 목적은 표준의
+  레지스트리·DQV/PROV 이슈 관찰로 "표준이 실제로 동작함"을 보여줍니다. 1차 목적은 표준의
   제정·확산이며, 서비스는 그 실증 수단입니다.
 
 ```
@@ -99,7 +98,7 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 - **검색어에 개인정보를 입력하지 마세요.** 검색어 원문은 품질 개선 목적으로 익명 로그에
   기록될 수 있습니다.
 - **공정 사용**: IP당 2 req/s(순간 20회 버스트)로 제한됩니다. 대량 분석이 필요하면 벌크
-  정본(`.ndjson.gz`)을 내려받아 사용하세요.
+  파일(`.ndjson.gz`)을 내려받아 사용하세요.
 - **로그와 옵트아웃**: 원 IP를 저장하지 않는 익명 이용 로그를 기록하며, 브라우저 DNT/GPC
   신호 또는 `X-Datanav-No-Log: 1` 헤더가 있으면 전혀 기록하지 않습니다.
   전문: [개인정보·이용 로그 고지](docs/개인정보_로그_고지_v1.0.md)

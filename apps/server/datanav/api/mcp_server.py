@@ -50,7 +50,7 @@ def _transport_security() -> TransportSecuritySettings | None:
 mcp = FastMCP(
     "datanav",
     instructions=(
-        "공공데이터 내비게이터 MCP 서버. 공공데이터포털 목록 메타데이터를 근거로 "
+        "공공데이터 렌즈(Public Data Lens) MCP 서버. 공공데이터포털 목록 메타데이터를 근거로 "
         "어떤 데이터가 존재하며 어떤 후보를 검토할 가치가 있는지 근거와 함께 제공한다. "
         f"{DISCLAIMER} {UNTRUSTED_NOTE} "
         "모든 원문 접근은 공공데이터포털로 연결한다."
@@ -168,7 +168,7 @@ def get_context() -> dict:
         status = svc.get_status()
         registry = load_registry()
         status["data"]["service"] = {
-            "definition": "하고 싶은 일을 말하면, 사용할 공공데이터와 그 선택 이유, 함께 필요한 데이터, 확인해야 할 한계를 알려주는 AI 공공데이터 내비게이터.",
+            "definition": "하고 싶은 일을 말하면 AI Ready 관점으로 정밀하게 투영하는 공공데이터 초점 레이어.",
             "baseUri": BASE_URI,
             "rules": [
                 {"ruleId": r["ruleId"], "title": r["title"]} for r in registry["rules"]

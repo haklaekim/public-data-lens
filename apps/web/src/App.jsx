@@ -15,6 +15,10 @@ const DISCLAIMER =
 const SURFACE = import.meta.env.VITE_SURFACE || 'all'
 const HAS_CONCIERGE = SURFACE !== 'core'
 
+// 표면별 테마 스위치(styles.css의 :root[data-surface] 토큰 블록과 짝):
+// core(A) = 구글 톤(화이트·블루·절제), concierge/all(B·로컬) = 그린 시스템
+document.documentElement.dataset.surface = SURFACE
+
 const ALL_TABS = [
   { id: 'search', label: '검색' },
   { id: 'concierge', label: 'AI 컨시어지' },
@@ -58,10 +62,9 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div>
-          <h1>공공데이터 내비게이터</h1>
+          <h1>공공데이터 렌즈</h1>
           <p className="tagline">
-            하고 싶은 일을 말하면, 사용할 공공데이터와 그 선택 이유, 함께 필요한
-            데이터, 확인해야 할 한계를 알려주는 AI 공공데이터 내비게이터
+            하고 싶은 일을 말하면 AI Ready 관점으로 정밀하게 투영하는 공공데이터 초점 레이어
           </p>
         </div>
         {status && (

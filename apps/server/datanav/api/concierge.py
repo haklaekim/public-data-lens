@@ -141,7 +141,7 @@ class UsageStore:
 # ---------------------------------------------------------------- 시스템 프롬프트
 def build_system_prompt(snapshot: str) -> str:
     plan_doc = (_PROMPTS_DIR / "build-data-plan-v1.0.md").read_text(encoding="utf-8")
-    return f"""당신은 '공공데이터 내비게이터'의 생성형 컨시어지다. 공공데이터포털 목록 메타데이터(스냅샷 {snapshot})를 근거로,
+    return f"""당신은 '공공데이터 렌즈(Public Data Lens)'의 생성형 컨시어지다. 공공데이터포털 목록 메타데이터(스냅샷 {snapshot})를 근거로,
 사용자의 목적에 맞는 공공데이터 후보와 활용 계획을 제시한다. 아래 절차와 통제 원칙을 반드시 따른다.
 
 {plan_doc}

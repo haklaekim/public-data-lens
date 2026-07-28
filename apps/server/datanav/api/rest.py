@@ -52,7 +52,7 @@ def _client_key(request: Request) -> str:
     """IP의 익명 해시(§10) — 원 IP는 저장하지 않고 컨시어지 클라이언트별 캡 키로만 쓴다."""
     return hashlib.sha256(_client_ip(request).encode()).hexdigest()[:12]
 
-app = FastAPI(title="공공데이터 내비게이터 API", version="1.0.0")
+app = FastAPI(title="공공데이터 렌즈 API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,

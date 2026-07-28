@@ -800,3 +800,52 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
   .header { flex-direction: column; }
   .prop-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Core 표면 테마 (A: MCP 배포 동반 코어 웹) — 구글 톤
+   화이트 캔버스 · Google Blue(#1a73e8) · 절제된 라운드와 은은한 그림자.
+   기본(그린) 토큰은 B(컨시어지)·로컬(all)이 그대로 쓰고,
+   여기서는 App.jsx가 찍는 data-surface='core'일 때만 값을 덮어쓴다.
+   ============================================================ */
+:root[data-surface='core'] {
+  /* 브랜드 — 그린 역할군을 블루 계열로 재매핑 */
+  --green-starbucks: #1a73e8; /* 제목·브랜드 순간 */
+  --green-accent: #1a73e8;    /* CTA·링크 */
+  --green-house: #202124;     /* 다크 밴드 → 잉크 */
+  --green-uplift: #174ea6;    /* 진한 보조 블루 */
+  --green-light: #e8f0fe;     /* 연한 블루 워시 */
+
+  --gold: #f9ab00;
+  --gold-light: #fde293;
+  --gold-lightest: #fef7e0;
+
+  /* 표면 — 웜 크림 대신 화이트/그레이 */
+  --bg: #ffffff;
+  --ceramic: #f8f9fa;
+  --card: #ffffff;
+  --neutral-cool: #f8f9fa;
+
+  --text: #202124;
+  --muted: #5f6368;
+
+  --line: #dadce0;
+  --input-border: #dadce0;
+
+  --valid-tint: rgba(26, 115, 232, 0.08);
+
+  --shadow-card: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --shadow-nav: 0 1px 2px rgba(60, 64, 67, 0.15);
+  --shadow-frap: 0 1px 3px rgba(60, 64, 67, 0.3);
+  --shadow-frap-active: 0 1px 2px rgba(60, 64, 67, 0.3);
+
+  /* 형태 — 필 대신 8px 라운드, 프레스 스케일 없음 */
+  --radius-card: 8px;
+  --radius-pill: 8px;
+  --button-active-scale: none;
+}
+
+:root[data-surface='core'] body {
+  font-family: 'Roboto', 'Google Sans Text', 'Pretendard', 'Apple SD Gothic Neo',
+    'Noto Sans KR', system-ui, sans-serif;
+  letter-spacing: 0;
+}
