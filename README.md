@@ -36,9 +36,33 @@ docker compose up -d --build  # 웹+API: http://localhost:8088 (API는 nginx 프
 scripts/monthly_update.sh <목록개방현황.csv> <YYYY-MM>
 ```
 
-클라우드 배포 시: `docker-compose.yml`에서 api의 `ports` 매핑을 제거하고(웹 8088만 노출),
-`.env`의 `DATANAV_CORS_ORIGINS`를 서비스 도메인으로 제한한다. TLS는 클라우드 LB/프록시 계층에서 종단한다.
-rate limit·사용량 캡은 단일 api 컨테이너 전제이므로 워커·복제 수는 1로 유지한다.
+위 스택은 **로컬·데모용(웹 포함)** 이다. 외부 공개 배포는 아래의 MCP 전용 스택을 사용한다.
+
+## 공개 배포 (MCP 전용 — docker-compose.prod.yml)
+
+웹 UI 없이 **gateway(리버스 프록시+랜딩) + mcp + api(정본 URI 해소)** 만 노출하는 공개 구성.
+공개 표면은 `/`(안내 랜딩) · `/mcp` · `/projects/datanav/**`(§7 정본) · `/api/status` ·
+`/privacy`(§10 고지)뿐이며, 웹용 REST와 생성형 컨시어지는 라우팅하지 않는다(`ANTHROPIC_API_KEY` 불필요).
+웹·REST 공개는 [차기 기능 백로그](docs/차기_기능_백로그_v1.0.md)에서 별도 스펙으로 관리한다.
+
+```bash
+cp .env.example .env   # GATEWAY_REAL_IP_FROM(LB 대역), DATANAV_MCP_ALLOWED_HOSTS(도메인) 설정
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 월간 카탈로그 갱신 (prod 스택 지정)
+COMPOSE_FILE=docker-compose.prod.yml scripts/monthly_update.sh <목록개방현황.csv> <YYYY-MM>
+```
+
+운영 전제:
+
+- **TLS는 LB/프록시 계층에서 종단**한다(커스텀 커넥터는 https 필수). 도메인은 `BASE_URI`와
+  동일한 `data.datahub.kr`이어야 정본 URI 디레퍼런싱이 성립한다.
+- **`GATEWAY_REAL_IP_FROM`에 LB 내부 대역(CIDR)을 반드시 지정**한다 — 미지정 시 모든
+  사용자가 LB IP 하나로 묶여 IP당 rate limit(MCP 2 req/s 등)이 서비스 전체 한도가 된다.
+- 카탈로그는 배포 전에 빌드되어 있어야 한다(api healthcheck가 미빌드 상태를 unhealthy로 표시).
+- 게이트웨이 접근 로그는 §10 고지에 맞춰 **원 IP를 기록하지 않는 익명 형식**이고,
+  컨테이너 로그는 크기 기반 로테이션으로 보존을 제한한다.
+- rate limit·사용량 캡은 단일 프로세스 전제이므로 api·mcp 복제 수는 1로 유지한다.
 
 ## 개발 환경 (venv — 테스트·MCP stdio용)
 

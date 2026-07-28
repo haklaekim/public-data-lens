@@ -1,0 +1,82 @@
+# 공개 게이트웨이(MCP 전용 배포) — 정적 웹 없이 /mcp·정본 URI·상태·고지만 노출한다.
+# TLS는 상위 LB/프록시에서 종단한다(커스텀 커넥터는 https 필수).
+# ${GATEWAY_REAL_IP_FROM}: 신뢰할 LB/프록시 대역(CIDR). LB가 붙인 X-Forwarded-For에서
+# 실제 클라이언트 IP를 복원해야 IP당 rate limit이 사용자 단위로 동작한다.
+# 직접 노출(LB 없음) 시 기본값 127.0.0.1은 아무 것도 신뢰하지 않는 no-op이다.
+set_real_ip_from ${GATEWAY_REAL_IP_FROM};
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+
+# §10 개인정보 고지 준수: 원 IP를 저장하지 않는 익명 접근 로그(시각·요청·상태·크기·처리시간만).
+log_format datanav_anon '$time_iso8601 "$request" $status $body_bytes_sent $request_time';
+
+limit_req_zone $binary_remote_addr zone=mcp_zone:10m rate=2r/s;
+limit_req_zone $binary_remote_addr zone=general_zone:10m rate=5r/s;
+
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    access_log /var/log/nginx/access.log datanav_anon;
+    # 한도 초과 메시지에는 클라이언트 IP가 포함되므로 notice로 내려 error 로그(warn 이상)에서 제외한다.
+    limit_req_log_level notice;
+    error_log /var/log/nginx/error.log warn;
+
+    add_header X-Content-Type-Options nosniff always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # 원격 MCP(streamable HTTP) — 호스트 앱 커넥터 등록 URL: https://<도메인>/mcp
+    location /mcp {
+        limit_req zone=mcp_zone burst=20 nodelay;
+        proxy_pass http://mcp:8300;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+    }
+
+    # §7 정본 URI 디레퍼런싱 — data.datahub.kr/projects/datanav/... 를 API가 해소한다
+    location /projects/datanav/ {
+        limit_req zone=general_zone burst=20 nodelay;
+        proxy_pass http://api:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # real_ip 복원 후의 $remote_addr — API의 DATANAV_TRUST_PROXY=1과 짝
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # REST는 비공개가 원칙(공개 계약은 MCP) — 상태 페이지와 개인정보 고지만 예외로 연다.
+    location = /api/status {
+        limit_req zone=general_zone burst=10 nodelay;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location = /api/resources/privacy {
+        limit_req zone=general_zone burst=10 nodelay;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # 친화 경로 별칭 — 고지문 정본 경로(/api/resources/privacy)로 전달
+    location = /privacy {
+        limit_req zone=general_zone burst=10 nodelay;
+        rewrite ^ /api/resources/privacy break;
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # 랜딩(안내 한 장) 외 나머지는 404 — SPA 아님 ($uri/는 /의 index 처리용)
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

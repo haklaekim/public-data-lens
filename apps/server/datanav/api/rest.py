@@ -63,6 +63,7 @@ app.add_middleware(
 _service: Service | None = None
 _service_release: str | None = None
 _hits: dict[str, deque] = defaultdict(deque)
+_hits_last_sweep = 0.0
 
 
 def _svc() -> Service:
@@ -130,6 +131,7 @@ async def usage_log(request: Request, call_next):
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
+    global _hits_last_sweep
     ip = _client_ip(request)
     now = time.monotonic()
     q = _hits[ip]
@@ -140,6 +142,11 @@ async def rate_limit(request: Request, call_next):
                           {"limitPerMinute": RATE_LIMIT_PER_MIN})
         return JSONResponse(err.to_dict(), status_code=429)
     q.append(now)
+    # 공개 배포에서 IP별 항목이 무한히 누적되지 않도록 만료 키를 주기적으로 정리
+    if now - _hits_last_sweep > 300:
+        _hits_last_sweep = now
+        for k in [k for k, v in _hits.items() if k != ip and (not v or now - v[-1] > 60)]:
+            del _hits[k]
     return await call_next(request)
 
 

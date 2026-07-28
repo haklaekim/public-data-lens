@@ -44,4 +44,7 @@ def decode_cursor(cursor: str, expected_snapshot: str) -> dict:
             "cursor가 현재 스냅샷과 일치하지 않습니다 — 처음부터 다시 조회하세요",
             {"cursorSnapshot": payload.get("s"), "currentSnapshot": expected_snapshot},
         )
+    offset = payload.get("o", 0)
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        raise InvalidArgument("cursor 형식이 올바르지 않습니다", {"cursor": cursor})
     return payload

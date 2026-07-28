@@ -75,8 +75,11 @@ class UsageStore:
                 "daily": {}, "sessions": {}, "clients": {}}
 
     def _save(self, data: dict) -> None:
+        # 원자적 쓰기 — 중단 시 파일이 깨져 사용량 캡이 리셋되는 것을 방지
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp = self.path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, self.path)
 
     def snapshot(self) -> dict:
         with self._lock:
