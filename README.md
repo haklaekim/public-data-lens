@@ -76,7 +76,7 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
   제정·확산이며, 서비스는 그 실증 수단입니다.
 
 ```
-[3층: 판단·경험]  호스트 에이전트(Claude 등) · 웹 UI(별도 서비스 예정)
+[3층: 판단·경험]  호스트 에이전트(Claude 등) · 코어 웹(A: 비생성형) · 컨시어지 웹(B: 별도 서비스)
         ↑ MCP (Tools·Prompts·Resources)
 [2층: 인터페이스]  MCP 서버 — 결정론적 Tool, Prompt, Resource
         ↑
@@ -107,11 +107,14 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
   기재 등)을 발견하면 GitHub Issue로 알려주세요 — 검토를 거쳐 데이터 제공 기관에 환류하는
   것이 이 프로젝트 설계(§6)의 일부입니다.
 
-## 셀프 호스팅 (공개 배포 스택)
+## 셀프 호스팅 — 두 개의 배포 단위
 
-웹 UI 없이 **gateway(리버스 프록시+랜딩) + mcp + api(정본 URI 해소)** 만 노출하는 구성.
-공개 표면은 `/`(안내 랜딩) · `/mcp` · `/projects/datanav/**`(§7 정본) · `/api/status` ·
-`/privacy`뿐이며, LLM API 키가 필요 없습니다.
+생성형 컨시어지는 MCP 배포와 **분리된 별도 서비스**입니다(§2·§11, 부속 명세 명문화).
+
+**A. MCP 배포** (`docker-compose.prod.yml`) — gateway + mcp + api + **코어 웹**(검색·비교·
+변경 피드·활용 사례, 컨시어지 없음). 공개 표면: `/`(코어 웹) · `/mcp` ·
+`/projects/datanav/**`(§7 정본) · `/api/**`(비생성형 GET 전용, 컨시어지는 404) · `/privacy`.
+**LLM API 키 불필요.**
 
 ```bash
 cp .env.example .env   # GATEWAY_REAL_IP_FROM(LB 대역), DATANAV_MCP_ALLOWED_HOSTS(도메인) 설정
@@ -119,6 +122,14 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 # 월간 카탈로그 갱신 (빌드→수용검사→원자적 배포→재기동→로그 정리 일괄)
 COMPOSE_FILE=docker-compose.prod.yml scripts/monthly_update.sh <목록개방현황.csv> <YYYY-MM>
+```
+
+**B. 생성형 컨시어지 서비스** (`docker-compose.concierge.yml`) — 컨시어지 웹(대시보드) +
+api. `ANTHROPIC_API_KEY` 필수, 캡 4겹(세션/IP/일일/월 예산) 운영. 별도 서버·도메인 배포를
+전제하며, 같은 호스트에서는 카탈로그 볼륨을 공유합니다(다른 서버면 월간 갱신을 양쪽에 반영).
+
+```bash
+docker compose -p datanav-concierge -f docker-compose.concierge.yml up -d --build   # http://<호스트>:8890
 ```
 
 운영 전제:
@@ -144,7 +155,7 @@ apps/server/            # Python — 1층 파이프라인 + 2층 MCP + REST
   datanav/api/          #   공용 Service + MCP 서버 + REST(FastAPI) + 컨시어지
   tests/                #   §11 수용 기준 테스트
 apps/gateway/           # 공개 배포용 리버스 프록시 + 랜딩
-apps/web/               # React/Vite — 비생성형 웹(별도 서비스로 분리 예정)
+apps/web/               # React/Vite — 표면 플래그 빌드(VITE_SURFACE: core|concierge|all)
 data/catalog/releases/  # 불변 릴리스 + current.json 포인터 (git 미포함)
 ```
 
@@ -221,7 +232,8 @@ cd apps/server
 
 **공개 배포 이후** ([백로그](docs/차기_기능_백로그_v1.0.md) 상세):
 
-- 웹 UI 별도 서비스 재배포 (검색 화면 + 생성형 컨시어지, 예산 캡 운영)
+- ~~웹 분리~~ → 반영됨: 코어 웹은 MCP 배포에 동반, 생성형 컨시어지는 별도 스택(`docker-compose.concierge.yml`)
+- 컨시어지의 원격 MCP 소비 전환(카탈로그 동기화 제거 — "첫 번째 MCP 클라이언트"의 문자적 완성)
 - REST API의 공개 계약 승격 (수요 확인 후)
 - MCP 채널 사용 지표(§12) — 앱 레벨 익명 로깅
 - 이슈 관찰 환류 자동화 (B트랙 — NIA·제공 기관 전달)

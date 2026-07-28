@@ -10,16 +10,26 @@ import DatasetProfile from './components/DatasetProfile.jsx'
 const DISCLAIMER =
   '본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을 보증하지 않습니다.'
 
-const TABS = [
+// 배포 표면(빌드 시 결정): 'core' = MCP 배포 동반 웹(비생성형만),
+// 'concierge' = 별도 컨시어지 서비스(컨시어지 중심 + 보조 검색), 'all' = 로컬 개발 기본
+const SURFACE = import.meta.env.VITE_SURFACE || 'all'
+const HAS_CONCIERGE = SURFACE !== 'core'
+
+const ALL_TABS = [
   { id: 'search', label: '검색' },
   { id: 'concierge', label: 'AI 컨시어지' },
   { id: 'compare', label: '비교' },
   { id: 'changes', label: '변경 피드' },
   { id: 'cases', label: '활용 사례' },
 ]
+const TABS = ALL_TABS.filter((t) =>
+  SURFACE === 'core' ? t.id !== 'concierge'
+  : SURFACE === 'concierge' ? ['concierge', 'search'].includes(t.id)
+  : true,
+)
 
 export default function App() {
-  const [tab, setTab] = useState('search')
+  const [tab, setTab] = useState(SURFACE === 'concierge' ? 'concierge' : 'search')
   const [status, setStatus] = useState(null)
   const [profileId, setProfileId] = useState(null)
   const [compareIds, setCompareIds] = useState([])
@@ -103,7 +113,7 @@ export default function App() {
         <DatasetProfile recordId={profileId} onClose={() => setProfileId(null)} />
       )}
 
-      {tab !== 'concierge' && (
+      {HAS_CONCIERGE && tab !== 'concierge' && (
         <button
           className="frap"
           title="AI 컨시어지"

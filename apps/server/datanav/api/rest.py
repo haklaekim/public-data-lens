@@ -364,7 +364,19 @@ def canon_bulk(snapshot: str, filename: str):
 
 
 # ---- M3 생성형 컨시어지(§9 3층) — 상한 운영, 코어(비생성형)와 분리(§11)
+# 배포 분리: MCP·코어 웹 배포(A)는 DATANAV_CONCIERGE_ENABLED=0으로 이 표면을 끄고,
+# 생성형 컨시어지는 별도 서비스(B)로만 노출한다. 계약상 컨시어지는 웹 REST 전용이다.
 from pydantic import BaseModel as _BaseModel  # noqa: E402
+
+CONCIERGE_ENABLED = os.environ.get("DATANAV_CONCIERGE_ENABLED", "1") == "1"
+
+
+def _require_concierge() -> None:
+    if not CONCIERGE_ENABLED:
+        from .concierge import ConciergeUnavailable
+        raise ConciergeUnavailable(
+            "이 배포에는 생성형 컨시어지가 포함되지 않습니다 — 별도 컨시어지 서비스를 이용하세요. 검색·비교 등 비생성형 기능은 정상 동작합니다."
+        )
 
 
 class ConciergeAsk(_BaseModel):
@@ -375,19 +387,27 @@ class ConciergeAsk(_BaseModel):
 @app.get("/api/concierge/status")
 def concierge_status():
     from .concierge import MODEL, PROMPT_VERSION, UsageStore
-    enabled = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+    has_key = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+    enabled = CONCIERGE_ENABLED and has_key
+    if not CONCIERGE_ENABLED:
+        note = "이 배포에는 생성형 컨시어지가 포함되지 않습니다(별도 서비스) — 비생성형 기능은 정상"
+    elif not has_key:
+        note = "ANTHROPIC_API_KEY 미설정 — 생성형 컨시어지 비활성(비생성형 기능은 정상)"
+    else:
+        note = None
     return {
         "enabled": enabled,
         "model": MODEL,
         "promptVersion": PROMPT_VERSION,
         "usage": UsageStore().snapshot(),
-        "note": None if enabled else "ANTHROPIC_API_KEY 미설정 — 생성형 컨시어지 비활성(비생성형 기능은 정상)",
+        "note": note,
     }
 
 
 @app.post("/api/concierge")
 def concierge_ask(body: ConciergeAsk, request: Request):
     from .concierge import run_concierge
+    _require_concierge()
     return run_concierge(body.question, body.sessionId, client_key=_client_key(request))
 
 
@@ -400,6 +420,8 @@ def concierge_stream(body: ConciergeAsk, request: Request):
     from fastapi.responses import StreamingResponse
 
     from .concierge import run_concierge
+
+    _require_concierge()
 
     q: queue.Queue = queue.Queue()
     ckey = _client_key(request)

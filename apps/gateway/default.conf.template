@@ -51,17 +51,18 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    # REST는 비공개가 원칙(공개 계약은 MCP) — 상태 페이지와 개인정보 고지만 예외로 연다.
-    location = /api/status {
-        limit_req zone=general_zone burst=10 nodelay;
-        proxy_pass http://api:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+    # 생성형 컨시어지는 이 배포에 포함되지 않는다(별도 서비스) —
+    # 서버 플래그(DATANAV_CONCIERGE_ENABLED=0)와 게이트웨이 차단의 이중 방어.
+    location /api/concierge {
+        return 404;
     }
 
-    location = /api/resources/privacy {
-        limit_req zone=general_zone burst=10 nodelay;
+    # 코어 웹용 REST(비생성형·읽기 전용) — 공개 계약은 여전히 MCP이며 REST는 웹 전용 표면이다.
+    location /api/ {
+        limit_req zone=general_zone burst=30 nodelay;
+        limit_except GET { deny all; }
         proxy_pass http://api:8000;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
@@ -75,8 +76,11 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    # 랜딩(안내 한 장) 외 나머지는 404 — SPA 아님 ($uri/는 /의 index 처리용)
+    # 코어 웹(비생성형 SPA — 검색·비교·변경 피드·활용 사례)
     location / {
-        try_files $uri $uri/ =404;
+        limit_req zone=general_zone burst=30 nodelay;
+        proxy_pass http://web:80;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
     }
 }

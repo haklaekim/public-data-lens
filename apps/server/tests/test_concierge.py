@@ -192,3 +192,23 @@ def test_run_concierge_emit_hook_isolated():
         _cz.run_concierge("q", "s", usage_store=FullStore(path=None) if False else FullStore(),
                           on_event=calls.append)
     assert calls == []  # 캡 검사 전에는 어떤 이벤트도 방출되지 않음
+
+
+def test_concierge_disabled_surface(monkeypatch):
+    """배포 분리: DATANAV_CONCIERGE_ENABLED=0(MCP·코어 웹 배포)에서는 컨시어지 표면이 닫힌다."""
+    from fastapi.testclient import TestClient
+    from datanav.api import rest
+
+    monkeypatch.setattr(rest, "CONCIERGE_ENABLED", False)
+    client = TestClient(rest.app)
+
+    s = client.get("/api/concierge/status").json()
+    assert s["enabled"] is False
+    assert "별도" in s["note"]  # 별도 서비스 안내
+
+    r = client.post("/api/concierge", json={"question": "테스트"})
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == "CONCIERGE_UNAVAILABLE"
+
+    r2 = client.post("/api/concierge/stream", json={"question": "테스트"})
+    assert r2.status_code == 503

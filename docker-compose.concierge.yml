@@ -1,0 +1,54 @@
+# 생성형 컨시어지 — MCP 배포(docker-compose.prod.yml)와 분리된 별도 서비스(B).
+#
+# 실행:  docker compose -p datanav-concierge -f docker-compose.concierge.yml up -d --build
+#        (-p 필수: MCP 배포와 같은 디렉터리라 프로젝트명을 분리해야 컨테이너가 충돌하지 않는다)
+# 전제:  .env에 ANTHROPIC_API_KEY 필수. 카탈로그(data/)는 MCP 배포와 동일 산출물을 사용한다
+#        — 같은 호스트면 볼륨 공유, 서버가 다르면 월간 갱신을 양쪽에 반영한다.
+#        (v1.1 백로그: 컨시어지가 A의 공개 MCP를 원격 소비하도록 전환하면 동기화 불필요)
+#
+# 공개 표면: 컨시어지 웹(대시보드) + /api/** (컨시어지 SSE 포함, 웹 전용 REST).
+# MCP·정본 URI는 여기서 노출하지 않는다 — 그것은 A의 몫이다.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  api:
+    build: apps/server
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?컨시어지 서비스에는 ANTHROPIC_API_KEY가 필요합니다}
+      DATANAV_TRUST_PROXY: "1"
+      DATANAV_CORS_ORIGINS: ${DATANAV_CORS_ORIGINS:-}
+      DATANAV_RATE_LIMIT_PER_MIN: ${DATANAV_RATE_LIMIT_PER_MIN:-120}
+      # 캡(§9): 세션/일일/클라이언트별/월 예산 — .env로 조정
+      DATANAV_CONCIERGE_SESSION_LIMIT: ${DATANAV_CONCIERGE_SESSION_LIMIT:-5}
+      DATANAV_CONCIERGE_DAILY_LIMIT: ${DATANAV_CONCIERGE_DAILY_LIMIT:-50}
+      DATANAV_CONCIERGE_CLIENT_DAILY_LIMIT: ${DATANAV_CONCIERGE_CLIENT_DAILY_LIMIT:-10}
+      DATANAV_CONCIERGE_MONTHLY_BUDGET_KRW: ${DATANAV_CONCIERGE_MONTHLY_BUDGET_KRW:-200000}
+    volumes:
+      - ./data:/app/data
+      - ./docs:/app/docs:ro
+    logging: *logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/status', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  web:
+    build:
+      context: apps/web
+      args:
+        VITE_SURFACE: concierge
+        NGINX_CONF: nginx.concierge.conf  # B에는 mcp 서비스가 없다
+    depends_on:
+      - api
+    ports:
+      - "${CONCIERGE_PORT:-8890}:80"
+    logging: *logging
+    restart: unless-stopped
