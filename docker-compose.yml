@@ -35,5 +35,5 @@ services:
       - api
       - mcp
     ports:
-      - "8088:80"  # 8080은 이 머신의 다른 프로젝트(kgraph)가 사용 중
+      - "8088:80"
     restart: unless-stopped
