@@ -184,7 +184,10 @@ cd apps/server
   `aird-assessment-{월}.jsonld`, `catalog.jsonld`
 - SHACL은 카탈로그 노드 + 표본 검증(기본 500건, `DATANAV_SHACL_SAMPLE=0`으로 전수)
 - **M3 생성형 컨시어지**(웹 스택 전용, 상한 운영): 서버 측 LLM이 첫 번째 MCP 클라이언트로
-  build_data_plan 수행. 캡 3종 + 클라이언트별 일일 캡, 무근거 recordId 자동 제거, 주입 방어
+  build_data_plan 수행. 캡 3종 + 클라이언트별 일일 캡, 무근거 recordId 자동 제거, 주입 방어.
+  응답 스키마 v1.1: insights(신뢰도·근거 recordId)·pipeline·followUps — 무근거 검증이 참조
+  recordId까지 적용. 웹은 시각 대시보드(요약 밴드·게이지·데이터 연결 지도·발견 카드·실행
+  계획 스테퍼·라이브 정찰 타임라인)로 렌더링
 - **§7 정본 URI 디레퍼런싱**: dataset/catalog/context/rules/shapes/spec/prompts가 실제 정본
   표현으로 해소(JSON-LD 등, 브라우저는 포털로 303) — Cool URIs 충족
 - **§10 익명 사용 로그**: 원 IP 미저장(난수 ID 또는 단방향 해시), DNT/GPC/X-Datanav-No-Log

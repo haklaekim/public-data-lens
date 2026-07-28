@@ -26,7 +26,7 @@ const CYCLES = [
 
 const FORMATS = ['', 'CSV', 'JSON', 'XML', 'XLSX', 'PDF', 'SHP']
 
-export default function SearchView({ onOpen, compareIds, onToggleCompare }) {
+export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }) {
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({
     listType: '', region: '', includeInferred: true, updateCycle: '', format: '',
@@ -66,6 +66,14 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare }) {
     runSearch() // 초기: 최신 수정순 목록
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 컨시어지 보완 노드에서 넘어온 프리필 질의
+  useEffect(() => {
+    if (!seed?.q) return
+    setQuery(seed.q)
+    runSearch(null, seed.q, filters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.t])
 
   const submit = (e) => {
     e.preventDefault()

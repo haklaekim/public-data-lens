@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      // DATANAV_API_PROXY로 대상 API를 바꿀 수 있다(기본: 로컬 8000)
+      '/api': process.env.DATANAV_API_PROXY || 'http://127.0.0.1:8000',
     },
   },
 })
