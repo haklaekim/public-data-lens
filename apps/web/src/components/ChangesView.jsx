@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { CHANGE_STATUS_LABEL, CHANGE_STATUS_NOTE } from '../labels.js'
 
-const STATUSES = [
-  ['', '전체'],
-  ['ADDED', '신규'],
-  ['MODIFIED', '변경'],
-  ['MISSING_FROM_SNAPSHOT', '스냅샷 부재'],
-  ['REAPPEARED', '재등장'],
-  ['POSSIBLE_IDENTITY_CHANGE', '정체성 변경 의심'],
-  ['OFFICIALLY_WITHDRAWN', '공식 폐기'],
-]
+const STATUSES = [['', '전체'], ...Object.entries(CHANGE_STATUS_LABEL)]
 
 export default function ChangesView({ onOpen }) {
   const [status, setStatus] = useState('')
@@ -59,7 +52,9 @@ export default function ChangesView({ onOpen }) {
           <li key={`${c.status}-${c.recordId}`} className="card-row">
             <div className="card-main" onClick={() => onOpen(c.recordId)}>
               <div className="card-title-line">
-                <span className={`change-status s-${c.status}`}>{c.status}</span>
+                <span className={`change-status s-${c.status}`} title={CHANGE_STATUS_NOTE[c.status] || ''}>
+                  {CHANGE_STATUS_LABEL[c.status] || c.status}
+                </span>
                 <strong>{c.title}</strong>
               </div>
               <div className="card-sub">

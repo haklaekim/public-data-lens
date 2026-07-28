@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { cycleLabel, licenseLabel } from '../labels.js'
 
 const FIELD_LABEL = {
   listType: '목록유형', orgName: '제공기관', theme: '분류체계', formats: '포맷',
@@ -8,9 +9,11 @@ const FIELD_LABEL = {
   completenessScore: '완전성 점수', keywords: '키워드', fee: '비용', apiType: 'API 유형',
 }
 
-function fmt(v) {
+function fmt(v, field) {
   if (v === null || v === undefined) return '—'
   if (Array.isArray(v)) return v.length ? v.join(', ') : '—'
+  if (field === 'updateCycle') return cycleLabel(String(v))
+  if (field === 'license') return licenseLabel(String(v))
   return String(v)
 }
 
@@ -70,7 +73,7 @@ export default function CompareView({ ids, onRemove, onOpen }) {
                   <tr key={diff.field} className="diff">
                     <td>{FIELD_LABEL[diff.field] || diff.field}</td>
                     {datasets.map((d) => (
-                      <td key={d.recordId}>{fmt(diff.values[d.recordId])}</td>
+                      <td key={d.recordId}>{fmt(diff.values[d.recordId], diff.field)}</td>
                     ))}
                   </tr>
                 ))}
@@ -78,7 +81,7 @@ export default function CompareView({ ids, onRemove, onOpen }) {
                   body.data.sharedFields.map((s) => (
                     <tr key={s.field} className="shared">
                       <td>{FIELD_LABEL[s.field] || s.field}</td>
-                      <td colSpan={datasets.length}>{fmt(s.value)} (공통)</td>
+                      <td colSpan={datasets.length}>{fmt(s.value, s.field)} (공통)</td>
                     </tr>
                   ))}
               </tbody>
