@@ -205,19 +205,45 @@ def _load_asset(conn: sqlite3.Connection, key: tuple, rows: list[dict],
             order.append(sheet)
         tables[sheet].append(r)
 
-    # 구조 해시(스키마 변경 이력 비교 키) — 원본명·순서만 사용
-    structure = [
-        [sheet or "", [( _to_int(r[_COL["ordinal"]]) or 0, r[_COL["name"]] or "") for r in trows]]
-        for sheet, trows in ((s, tables[s]) for s in order)
-    ]
-    structure_hash = _sha(json.dumps(structure, ensure_ascii=False, sort_keys=False))
-    observation_id = _sha(f"{asset_id}|nohash|{TOOL_VERSION}|{','.join(RULE_BUNDLE)}")[:16]
+    # 테이블 사전 검증 — 자산 상태는 검증 결과의 집계다(리뷰 지적 1)
+    valid_sheets: list[str | None] = []
+    failure_code: str | None = None
+    for sheet in order:
+        ordinals = sorted(_to_int(r[_COL["ordinal"]]) or 0 for r in tables[sheet])
+        if ordinals == list(range(1, len(ordinals) + 1)):
+            valid_sheets.append(sheet)
+        else:
+            failure_code = "ordinal-not-contiguous"
+            report.reject(f"ordinal-not-contiguous:{list_key}")
 
     conn.execute(
         "INSERT OR REPLACE INTO source_assets VALUES (?,?,?,?,?,?,?,?,?)",
         (asset_id, list_key, "FILE", file_name, container, ext, shape, zip_count,
          f"https://www.data.go.kr/data/{list_key}/fileData.do"),
     )
+    report.assets += 1
+
+    if not valid_sheets:
+        # 전부 실패: 관측을 생성하지 않는다 — 해시·컬럼 없는 '관측'은 존재하지 않는다(v2.2 §3)
+        conn.execute(
+            "INSERT OR REPLACE INTO asset_coverage VALUES (?,?,?,?,?,?)",
+            (asset_id, "COLLECTION_FAILED", failure_code, observed_at, None, None),
+        )
+        return
+
+    # 구조 해시(스키마 변경 이력 비교 키) — 유효 테이블의 원본명·순서만 사용
+    structure = [
+        [sheet or "", [(_to_int(r[_COL["ordinal"]]) or 0, r[_COL["name"]] or "")
+                       for r in tables[sheet]]]
+        for sheet in valid_sheets
+    ]
+    structure_hash = _sha(json.dumps(structure, ensure_ascii=False, sort_keys=False))
+    # 해시 부재 시 구조·관측 시점을 앵커로 사용(리뷰 지적 2) — 자산 구조가 바뀌거나
+    # 재관측하면 새 observation_id가 된다. 예시값(원문·해시)은 ID에 포함하지 않는다.
+    source_anchor = f"nohash:{structure_hash}:{observed_at}"
+    observation_id = _sha(f"{asset_id}|{source_anchor}|{TOOL_VERSION}|{','.join(RULE_BUNDLE)}")[:16]
+
+    status = "AVAILABLE" if len(valid_sheets) == len(order) else "PARTIAL"
     conn.execute(
         "INSERT OR REPLACE INTO observations VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (observation_id, asset_id, None, "UNVERIFIED_SOURCE", observed_at,
@@ -226,21 +252,15 @@ def _load_asset(conn: sqlite3.Connection, key: tuple, rows: list[dict],
     )
     conn.execute(
         "INSERT OR REPLACE INTO asset_coverage VALUES (?,?,?,?,?,?)",
-        (asset_id, "AVAILABLE", None, observed_at, observation_id, None),
+        (asset_id, status, failure_code, observed_at, observation_id, None),
     )
-    report.assets += 1
 
-    for t_index, sheet in enumerate(order):
+    for t_index, sheet in enumerate(valid_sheets):
         trows = tables[sheet]
         rows_scanned = _to_int(trows[0].get(_COL["rows"]))
         table_id = _sha(f"{observation_id}|{file_name}|{sheet or ''}|{t_index}")[:16]
         # ZIP 멤버 경로: 파일데이터명이 컨테이너 내부 경로를 담는 실측 관행(A.6)
         source_path = file_name if (shape or "").startswith("ZIP") else None
-
-        ordinals = sorted(_to_int(r[_COL["ordinal"]]) or 0 for r in trows)
-        if ordinals != list(range(1, len(ordinals) + 1)):
-            report.reject(f"ordinal-not-contiguous:{list_key}")
-            continue
 
         conn.execute(
             "INSERT OR REPLACE INTO data_tables VALUES (?,?,?,?,?,?,?,?,?)",

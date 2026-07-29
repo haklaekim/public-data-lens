@@ -28,12 +28,12 @@ def _write(tmp_path, lines):
     return p
 
 
-def _ingest(tmp_path, lines, licenses=None):
+def _ingest(tmp_path, lines, licenses=None, observed_at="2026-07-29T00:00:00Z"):
     csv_path = _write(tmp_path, lines)
     db = tmp_path / "obs.db"
     report = ingest_profile_csv(
         csv_path, db, licenses or {"15000001": "NO_RESTRICTION"},
-        observed_at="2026-07-29T00:00:00Z",
+        observed_at=observed_at,
     )
     return sqlite3.connect(db), report
 
@@ -121,6 +121,59 @@ def test_example_status_variants(tmp_path):
     raw = open(tmp_path / "obs.db", "rb").read().decode("utf-8", "ignore")
     assert "미완성" not in raw
     assert report.parse_failed == 1
+
+
+def test_all_tables_fail_marks_collection_failed(tmp_path):
+    """전 테이블 검증 실패: 관측 미생성, 상태 COLLECTION_FAILED, 실패 코드 기록."""
+    lines = [_row(ordinal="1"), _row(name="b", ordinal="3")]  # 1,3 — 불연속
+    conn, report = _ingest(tmp_path, lines)
+    cov = conn.execute(
+        "SELECT status, failure_reason, current_observation_id FROM asset_coverage").fetchone()
+    assert cov[0] == "COLLECTION_FAILED"
+    assert cov[1] == "ordinal-not-contiguous"  # 기계 판독 실패 코드
+    assert cov[2] is None                      # 관측 참조 없음
+    assert conn.execute("SELECT COUNT(*) FROM observations").fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM data_tables").fetchone()[0] == 0
+    assert report.tables == 0
+
+
+def test_partial_when_some_tables_fail(tmp_path):
+    """복수 테이블 중 일부만 실패: PARTIAL + 유효 테이블만 관측에 포함."""
+    lines = [
+        _row(file="t.xlsx", shape="XLSX", sheet="정상", ordinal="1"),
+        _row(file="t.xlsx", shape="XLSX", sheet="불량", ordinal="2"),  # 단독 ordinal 2 — 불연속
+    ]
+    conn, report = _ingest(tmp_path, lines)
+    cov = conn.execute(
+        "SELECT status, failure_reason, current_observation_id FROM asset_coverage").fetchone()
+    assert cov[0] == "PARTIAL" and cov[1] == "ordinal-not-contiguous"
+    assert cov[2] is not None                  # 유효분 관측은 존재
+    sheets = [r[0] for r in conn.execute("SELECT sheet_name FROM data_tables")]
+    assert sheets == ["정상"]
+    assert report.tables == 1
+
+
+def _first_obs_id(conn):
+    return conn.execute("SELECT observation_id FROM observations").fetchone()[0]
+
+
+def test_observation_id_distinguishes_structure_and_time(tmp_path):
+    """해시 부재 관측: 구조 변경·재관측 시점이 다르면 다른 ID, 동일 입력·시점이면 같은 ID."""
+    base = [_row()]
+    conn, _ = _ingest(tmp_path, base)
+    id_base = _first_obs_id(conn)
+
+    (tmp_path / "obs.db").unlink()
+    conn, _ = _ingest(tmp_path, [_row(name="다른컬럼명")])   # 구조 변경
+    assert _first_obs_id(conn) != id_base
+
+    (tmp_path / "obs.db").unlink()
+    conn, _ = _ingest(tmp_path, base, observed_at="2026-08-15T00:00:00Z")  # 재관측 시점
+    assert _first_obs_id(conn) != id_base
+
+    (tmp_path / "obs.db").unlink()
+    conn, _ = _ingest(tmp_path, base)                        # 동일 입력·동일 시점
+    assert _first_obs_id(conn) == id_base
 
 
 def test_record_coverage_view(tmp_path):
