@@ -20,11 +20,12 @@ def _read_lines(tmp_path):
 
 def test_usage_log_written_anonymously(tmp_path, monkeypatch):
     monkeypatch.setenv("DATANAV_LOG_DIR", str(tmp_path))
-    client.get("/api/status", headers={"X-Datanav-Anon-Id": "test-anon-1"})
+    # 카탈로그 비의존 엔드포인트 사용 — 신선한 클론(카탈로그 미빌드)에서도 검증 가능해야 한다
+    client.get("/api/resources/rules", headers={"X-Datanav-Anon-Id": "test-anon-1"})
     lines = _read_lines(tmp_path)
     assert len(lines) == 1
     entry = lines[0]
-    assert entry["path"] == "/api/status" and entry["status"] == 200
+    assert entry["path"] == "/api/resources/rules" and entry["status"] == 200
     assert entry["anon"] == "test-anon-1"
     # 원 IP가 어떤 필드에도 저장되지 않는다
     assert "127.0.0.1" not in json.dumps(entry) and "testclient" not in json.dumps(entry)
