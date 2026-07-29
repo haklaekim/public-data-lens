@@ -24,3 +24,4 @@ nohup.out
 data/catalog/concierge_usage.json
 .env
 data/logs/
+data/observations/
