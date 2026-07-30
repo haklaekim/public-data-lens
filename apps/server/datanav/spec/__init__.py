@@ -8,7 +8,7 @@ schemaVersion은 응답 봉투 meta.schemaVersion으로 전달된다.
 """
 from __future__ import annotations
 
-SPEC_VERSION = "1.1.0"
+SPEC_VERSION = "1.2.0"
 
 # ---------------------------------------------------------------- $defs
 DEFS = {
@@ -112,6 +112,7 @@ DEFS = {
             "completeness": {"$ref": "#/$defs/completeness"},
             "regions": {"type": "array", "items": {"$ref": "#/$defs/region"}},
             "portalUrl": {"type": ["string", "null"]},
+            "structureAvailable": {"type": "boolean", "description": "데이터 구조 관측 존재 여부(get_dataset_structure로 조회). v1.2.0 추가"},
             "score": {"type": "number", "description": "query 있을 때만 — BM25 점수(낮을수록 상위)"},
         },
     },
@@ -288,6 +289,80 @@ OUTPUT_SCHEMAS: dict[str, dict] = {
                 }}},
             },
         ],
+    }),
+    "get_dataset_structure": _envelope({
+        "type": "object",
+        "required": ["recordId", "listKey", "distributionType", "coverageStatus", "examplesPublic"],
+        "properties": {
+            "recordId": {"type": "string"},
+            "listKey": {"type": "string"},
+            "distributionType": {"enum": ["FILE", "API", "STD"]},
+            "coverageStatus": {
+                "enum": ["AVAILABLE", "PARTIAL", "NOT_COLLECTED", "QUEUED", "COLLECTING",
+                         "SOURCE_UNAVAILABLE", "UNSUPPORTED_FORMAT", "ACCESS_RESTRICTED",
+                         "COLLECTION_FAILED", "API_STRUCTURE_NOT_SUPPORTED_YET"],
+                "description": "미수집·보류·차단은 오류가 아닌 정상 상태(v2.2 구조 관측 설계)",
+            },
+            "reason": {"type": "string"},
+            "evidenceLevel": {"const": "FILE_OBSERVATION"},
+            "examplesPublic": {"type": "boolean",
+                               "description": "false면 응답 정책상 예시값 비노출(S0-2 확인 전 보수 모드)"},
+            "portalUrl": {"type": ["string", "null"]},
+            "coverage": {
+                "type": "object",
+                "required": ["availableAssets", "totalAssets"],
+            },
+            "assets": {"type": "array", "items": {
+                "type": "object",
+                "required": ["fileName", "status"],
+                "properties": {
+                    "fileName": {"type": "string"},
+                    "containerName": {"type": ["string", "null"], "description": "ZIP 컨테이너"},
+                    "format": {"type": ["string", "null"]},
+                    "shape": {"type": ["string", "null"]},
+                    "status": {"type": "string"},
+                    "failureReason": {"type": ["string", "null"]},
+                    "observation": {
+                        "type": "object",
+                        "required": ["observationId", "observedAt", "provenance",
+                                     "scanScope", "licenseGate"],
+                    },
+                    "tables": {"type": "array", "items": {
+                        "type": "object",
+                        "required": ["tableIndex", "columnCount", "columns"],
+                        "properties": {
+                            "sheetName": {"type": ["string", "null"]},
+                            "sourcePath": {"type": ["string", "null"]},
+                            "tableIndex": {"type": "integer"},
+                            "scanScope": {"type": "string"},
+                            "rowsScanned": {"type": ["integer", "null"]},
+                            "columnCount": {"type": "integer"},
+                            "columns": {"type": "array", "items": {
+                                "type": "object",
+                                "required": ["ordinal", "sourceName", "exampleStatus"],
+                                "properties": {
+                                    "ordinal": {"type": "integer"},
+                                    "sourceName": {"type": "string",
+                                                   "description": "원본 컬럼명 그대로 — 정규화·번역 없음"},
+                                    "observedType": {"type": ["string", "null"]},
+                                    "distinctCount": {"type": ["integer", "null"]},
+                                    "distinctApprox": {"type": "boolean"},
+                                    "exampleStatus": {
+                                        "enum": ["AVAILABLE", "NO_NON_NULL_VALUES",
+                                                 "WITHHELD_BY_LICENSE", "WITHHELD_BY_SAFETY",
+                                                 "NOT_COLLECTED", "COLLECTION_FAILED"]},
+                                    "safetyStatus": {"type": "string"},
+                                    "examples": {"type": "array", "maxItems": 10,
+                                                 "items": {"type": "string"}},
+                                    "exampleMethod": {"type": ["string", "null"]},
+                                    "note": {"type": ["string", "null"]},
+                                },
+                            }},
+                        },
+                    }},
+                },
+            }},
+        },
     }),
     "get_context": _envelope({
         "type": "object",

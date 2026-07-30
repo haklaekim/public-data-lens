@@ -71,6 +71,11 @@ export default function App() {
           <div className="status-chip" title={`릴리스 ${status.data.release}`}>
             <span>스냅샷 {status.data.currentSnapshot}</span>
             <span>{status.data.counts.datasets.toLocaleString()}건</span>
+            {status.data.structureCoverage && (
+              <span title="실제 파일에서 구조(원본 컬럼·예시값)가 관측된 FILE 데이터 수">
+                구조 확인 {status.data.structureCoverage.recordsAvailable.toLocaleString()}건
+              </span>
+            )}
             <span>분석 기준 {status.data.processedAt?.slice(0, 10)}</span>
           </div>
         )}

@@ -40,6 +40,7 @@ export const api = {
   status: () => get('/status'),
   search: (params) => get('/search', params),
   dataset: (id, view) => get(`/datasets/${encodeURIComponent(id)}`, { view }),
+  structure: (id) => get(`/datasets/${encodeURIComponent(id)}/structure`),
   compare: (ids) => get('/compare', { ids: ids.join(',') }),
   changes: (params) => get('/changes', params),
   stats: (axis, limit) => get('/stats', { axis, limit }),

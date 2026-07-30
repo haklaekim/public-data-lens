@@ -16,7 +16,7 @@ from jsonschema import Draft202012Validator  # noqa: E402
 from datanav.config import BASE_URI, MAX_COMPARE, MAX_PAGE_SIZE, MAX_QUERY_LENGTH  # noqa: E402
 from datanav.spec import OUTPUT_SCHEMAS, SPEC_VERSION  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.1.0.json"
+OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.2.0.json"
 
 
 async def collect_input_schemas() -> dict[str, dict]:
@@ -26,6 +26,26 @@ async def collect_input_schemas() -> dict[str, dict]:
     async with create_connected_server_and_client_session(mcp._mcp_server) as c:
         tools = (await c.list_tools()).tools
         return {t.name: {"description": t.description, "inputSchema": t.inputSchema} for t in tools}
+
+
+def _structure_samples(svc) -> list[dict]:
+    """구조 관측 표본: 커버리지 유/무 + API 유형 — 관측 스토어 부재 시 가용분만."""
+    samples = []
+    covered = uncovered = None
+    for it in svc.search_datasets(page_size=50)["data"]["items"]:
+        if it.get("structureAvailable") and covered is None:
+            covered = it["recordId"]
+        if not it.get("structureAvailable") and uncovered is None:
+            uncovered = it["recordId"]
+        if covered and uncovered:
+            break
+    for rid in (covered, uncovered):
+        if rid:
+            samples.append(svc.get_dataset_structure(rid))
+    api_items = svc.search_datasets(list_type="API", page_size=1)["data"]["items"]
+    if api_items:
+        samples.append(svc.get_dataset_structure(api_items[0]["recordId"]))
+    return samples
 
 
 def validate_against_live(spec: dict) -> list[str]:
@@ -49,6 +69,7 @@ def validate_against_live(spec: dict) -> list[str]:
         ],
         "get_catalog_stats": [svc.get_catalog_stats(a) for a in
                               ("theme", "org", "format", "completeness", "listType")],
+        "get_dataset_structure": _structure_samples(svc),
     }
     # get_context는 서비스 합성이 MCP 계층에 있어 MCP 경유 검증(아래 main에서 스키마만 확인)
     checked = []
@@ -81,7 +102,7 @@ def main() -> int:
     )
     spec = {
         "specVersion": SPEC_VERSION,
-        "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness에 keyFields·topPercent·typical·fields 등 하위 호환 필드 추가. breaking은 재승인 필요",
+        "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness 확장 / v1.2.0 minor(2026-07-30): get_dataset_structure Tool·summaryItem.structureAvailable 추가(데이터 구조 관측 v2.2). breaking은 재승인 필요",
         "generatedAt": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "baseUri": BASE_URI,
         "compatibilityPolicy": (

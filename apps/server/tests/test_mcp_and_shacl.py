@@ -18,6 +18,7 @@ def test_mcp_surface_and_calls():
             assert tools == {
                 "search_datasets", "get_dataset", "compare_datasets",
                 "get_catalog_changes", "get_catalog_stats", "get_context",
+                "get_dataset_structure",  # v1.2 — 데이터 구조 관측
             }
             prompts = {p.name for p in (await c.list_prompts()).prompts}
             assert prompts == {"build_data_plan", "compare_for_purpose"}

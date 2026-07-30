@@ -200,6 +200,15 @@ def dataset(record_id: str, view: str = "card"):
     return _svc().get_dataset(record_id, view)
 
 
+@app.get("/api/datasets/{record_id}/structure")
+def dataset_structure(
+    record_id: str,
+    includeExamples: bool = True,
+    maxExamples: int = Query(default=10, ge=1, le=10),
+):
+    return _svc().get_dataset_structure(record_id, includeExamples, maxExamples)
+
+
 @app.get("/api/compare")
 def compare(ids: str):
     record_ids = [i.strip() for i in ids.split(",") if i.strip()]
@@ -252,7 +261,7 @@ def resource_privacy():
 @app.get("/api/resources/spec/tools")
 def resource_tool_spec():
     from pathlib import Path
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.1.0.json"
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.2.0.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
 
 

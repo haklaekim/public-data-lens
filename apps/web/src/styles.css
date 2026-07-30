@@ -858,3 +858,27 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
     'Noto Sans KR', system-ui, sans-serif;
   letter-spacing: 0;
 }
+
+/* ---- 데이터 구조 탭(v1.2) ---- */
+.completeness .structure-chip { background: var(--green-uplift); color: #fff; }
+.structure-view { margin-top: 4px; }
+.coverage-note { font-size: 14px; margin-bottom: 12px; }
+.coverage-note .ex-policy { color: var(--warn-text); font-weight: 600; }
+.coverage-note.s-NOT_COLLECTED, .coverage-note.s-API_STRUCTURE_NOT_SUPPORTED_YET {
+  color: var(--muted); background: var(--ceramic);
+  padding: 10px 14px; border-radius: var(--radius-card);
+}
+.structure-asset { margin-bottom: 20px; }
+.structure-asset h3 { font-size: 14px; margin: 12px 0 4px; }
+.structure-asset h3 small { color: var(--muted); font-weight: 400; }
+.obs-meta, .table-meta, .sheet-name { font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
+.sheet-name { font-weight: 600; color: var(--text); margin-top: 10px; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-card); }
+.structure-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.structure-table th, .structure-table td {
+  padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--line);
+  white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis;
+}
+.structure-table th { background: var(--ceramic); font-weight: 600; position: sticky; top: 0; }
+.structure-table tr:last-child td { border-bottom: none; }
+.structure-table .ex-status { color: var(--muted); font-style: normal; }
