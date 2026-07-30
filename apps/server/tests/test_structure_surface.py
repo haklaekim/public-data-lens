@@ -18,7 +18,8 @@ def svc_with_obs(tmp_path, monkeypatch, service):
     csv_path.write_text(
         "﻿" + HEADER + "\n"
         + _row(list_key=lk, ordinal="1") + "\n"
-        + _row(list_key=lk, name="위도", samples="['37.5', '36.2']", ordinal="2") + "\n",
+        + _row(list_key=lk, name="위도", samples="['37.5', '36.2']", ordinal="2") + "\n"
+        + _row(list_key=lk, name="담당자 전화번호", samples="['010-1234-5678']", ordinal="3") + "\n",
         encoding="utf-8",
     )
     db = tmp_path / "obs.db"
@@ -39,7 +40,7 @@ def test_structure_available_with_conservative_mode(svc_with_obs, monkeypatch):
     assert d["evidenceLevel"] == "FILE_OBSERVATION"
     assert d["examplesPublic"] is False
     cols = d["assets"][0]["tables"][0]["columns"]
-    assert [c["sourceName"] for c in cols] == ["시설명", "위도"]
+    assert [c["sourceName"] for c in cols] == ["시설명", "위도", "담당자 전화번호"]
     assert all("examples" not in c for c in cols)          # 보수 모드: 값 비노출
     assert cols[0]["exampleStatus"] == "AVAILABLE"          # 저장 상태는 그대로 보고
     assert any("비공개" in w for w in body["warnings"])       # 정책 고지
@@ -56,6 +57,25 @@ def test_structure_examples_when_public(svc_with_obs, monkeypatch):
     assert cols[0]["examples"] == ["중앙경로당", "행복경로당"]
     d2 = svc.get_dataset_structure(rid, max_examples=1)["data"]
     assert d2["assets"][0]["tables"][0]["columns"][0]["examples"] == ["중앙경로당"]
+
+
+@requires_catalog
+def test_safety_withheld_never_leaks_via_public_gate(svc_with_obs, monkeypatch):
+    """이중 게이트 불변식(P1 회귀): 응답 게이트를 열어도(EXAMPLES_PUBLIC=1)
+    안전 차단 컬럼의 값은 나오지 않는다 — 저장 게이트가 이미 폐기했기 때문."""
+    import json as _json
+    svc, rid, _ = svc_with_obs
+    monkeypatch.setenv("DATANAV_EXAMPLES_PUBLIC", "1")
+    body = svc.get_dataset_structure(rid)
+    cols = {c["sourceName"]: c for c in body["data"]["assets"][0]["tables"][0]["columns"]}
+    blocked = cols["담당자 전화번호"]
+    assert blocked["exampleStatus"] == "WITHHELD_BY_SAFETY"
+    assert blocked["safetyStatus"] == "WITHHELD"
+    assert "examples" not in blocked
+    # 응답 전체 직렬화에도 차단 값이 존재하지 않는다(유출 경로 전무)
+    assert "010-1234-5678" not in _json.dumps(body, ensure_ascii=False)
+    # 동일 응답에서 CLEAR 컬럼은 정상 제공 — 게이트가 과차단으로 동작하는 것도 아님
+    assert cols["시설명"]["examples"] == ["중앙경로당", "행복경로당"]
 
 
 @requires_catalog
