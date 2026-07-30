@@ -70,8 +70,9 @@ _FREQUENCY_URI = {
 def _dcatkr_extension(rec: dict) -> dict:
     """DCAT-AP-KR 확장(어휘 매핑 확장 제안 v1.1) — 미매핑 항목의 무손실 기술.
 
-    dcatkr에 정의된 항목은 dcatkr로, 부재 항목(notes·제공형태·국가중점 등)은
-    kdp 임시 표기 후 DCAT-AP-KR 차기 버전 제안으로 환류한다(D4).
+    현행 dcatkr 정의 항목 + 신설 확정 용어(notes·provisionType·mediaType·reviewType·
+    isNationalCore·isStandardData·apiType·requestLimitNote — 발행 주체 승인, 어휘 문서
+    차기 업데이트 예정)를 모두 dcatkr로 기술한다. kdp는 판정·정규화 코드 계층에만 남는다.
     dept_phone(D1)·DCMI 병기(D3)는 결정 보류로 이번 범위 제외.
     """
     ext: dict = {
@@ -79,12 +80,12 @@ def _dcatkr_extension(rec: dict) -> dict:
         "dcatkr:legalBasis": rec["retention_basis"],
         "dcatkr:nextRegistrationDate": rec["next_registration_date"],
         "dcatkr:derivedSystem": rec["collection_method"],
-        "kdp:mediaType": rec["media_type"],
-        "kdp:provisionType": rec["provision_type"],
-        "kdp:notes": rec["notes"],
-        "kdp:reviewType": rec["review_type"],
-        "kdp:isNationalCore": bool(rec["is_national_core"]),
-        "kdp:isStandardData": bool(rec["is_standard"]),
+        "dcatkr:mediaType": rec["media_type"],
+        "dcatkr:provisionType": rec["provision_type"],
+        "dcatkr:notes": rec["notes"],
+        "dcatkr:reviewType": rec["review_type"],
+        "dcatkr:isNationalCore": bool(rec["is_national_core"]),
+        "dcatkr:isStandardData": bool(rec["is_standard"]),
     }
     if rec["dept_name"]:
         ext["dcatkr:maintainer"] = {"@type": "foaf:Agent", "foaf:name": rec["dept_name"]}
@@ -115,12 +116,12 @@ def _dcatkr_extension(rec: dict) -> dict:
     elif rec["list_type"] == "API":
         # 다운로드수 열은 API에서 활용신청 수를 담는다(포털 관행) — dcatkr가 도메인을 구분
         ext["dcatkr:numberOfRequest"] = rec["download_count"]
-        ext["kdp:apiType"] = rec["api_type"]  # 통제어휘 URI는 LINK·SOAP 추가 제안(D4) 후
+        ext["dcatkr:apiType"] = rec["api_type"]  # 통제어휘 URI 병기는 어휘 문서 갱신 후
         if rec["traffic"]:
             try:
                 ext["dcatkr:numberOfRequestLimit"] = int(str(rec["traffic"]).strip())
             except ValueError:
-                ext["kdp:traffic"] = rec["traffic"]  # 서술형 원문 보존
+                ext["dcatkr:requestLimitNote"] = rec["traffic"]  # 서술형 원문 보존
     return {k: v for k, v in ext.items() if v is not None}
 
 
