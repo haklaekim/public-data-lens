@@ -408,6 +408,79 @@ class Service:
         out["tables"] = tables
         return out
 
+    def search_by_columns(self, column_keywords: list[str], page_size: int = 20) -> dict:
+        """원본 컬럼명 기준 검색(계약 v1.3, S2). 모든 키워드가 각각 어떤 컬럼명에
+        부분 일치해야 한다(AND). 검색 대상은 구조가 관측된 레코드뿐이며 커버리지를
+        응답에 명시한다 — '없음'과 '미수집'을 구분하기 위함(v2.2 §12)."""
+        keywords = [k.strip() for k in (column_keywords or []) if k and k.strip()]
+        if not keywords:
+            raise InvalidArgument("columnKeywords가 비어 있습니다")
+        if len(keywords) > 5:
+            raise InvalidArgument("컬럼 키워드는 최대 5개", {"count": len(keywords)})
+        if any(len(k) > 50 for k in keywords):
+            raise InvalidArgument("컬럼 키워드는 각 50자 이하")
+        page_size = max(1, min(int(page_size), 100))
+
+        oc = self.obs_conn
+        coverage = {
+            "searchedRecords": len(self._structure_keys()),
+            "fileRecordsTotal": self.conn.execute(
+                "SELECT COUNT(*) FROM datasets WHERE list_type='FILE'").fetchone()[0],
+        }
+        matched: dict[str, dict[str, list[str]]] = {}
+        if oc:
+            per_kw = []
+            for kw in keywords:
+                rows = oc.execute(
+                    "SELECT list_key, source_name FROM record_column_index "
+                    "WHERE source_name LIKE '%' || ? || '%'", (kw,)).fetchall()
+                m: dict[str, list[str]] = {}
+                for r in rows:
+                    m.setdefault(r["list_key"], []).append(r["source_name"])
+                per_kw.append((kw, m))
+            keys = set(per_kw[0][1])
+            for _, m in per_kw[1:]:
+                keys &= set(m)
+            for lk in keys:
+                matched[lk] = {kw: sorted(m[lk])[:5] for kw, m in per_kw}
+
+        items = []
+        for lk in sorted(matched)[:page_size]:
+            row = self.conn.execute(
+                "SELECT * FROM datasets WHERE list_key = ? AND list_type = 'FILE' LIMIT 1",
+                (lk,)).fetchone()
+            if row is None:
+                continue  # 카탈로그 스냅샷과 관측의 시점 차 — 현재 목록에 없는 키는 제외
+            item = self._summary(row_to_record(row))
+            item["matchedColumns"] = [
+                {"keyword": kw, "columns": cols} for kw, cols in matched[lk].items()
+            ]
+            items.append(item)
+
+        warnings = [
+            f"이 검색은 구조가 관측된 {coverage['searchedRecords']:,}건(FILE "
+            f"{coverage['fileRecordsTotal']:,}건 중) 안에서만 수행되었습니다 — "
+            "결과에 없다고 해당 컬럼이 없는 것이 아닙니다(미수집일 수 있음).",
+            "일치 기준은 원본 컬럼명 부분 일치입니다 — 의미 동일성·결합 가능성은 확인되지 않았습니다.",
+        ]
+        data = {
+            "columnKeywords": keywords,
+            "items": items,
+            "totalEstimate": len(matched),
+            "hasMore": len(matched) > page_size,
+            "coverage": coverage,
+        }
+        return envelope(data, self.snapshot,
+                        ["structure-status-v1.0", RULE_IDENTITY], warnings)
+
+    def _structure_columns_for(self, list_key: str) -> list[str] | None:
+        oc = self.obs_conn
+        if not oc or list_key not in self._structure_keys():
+            return None
+        return [r["source_name"] for r in oc.execute(
+            "SELECT source_name FROM record_column_index WHERE list_key = ? "
+            "ORDER BY source_name", (list_key,))]
+
     def _comp_dist(self) -> dict:
         """유형별 완전성 점수 분포 — 상대 위치(topPercent)·최빈값(typical) 판정용.
         릴리스 DB는 불변이므로 1회 계산해 캐시한다(경합해도 같은 값이라 무해)."""
@@ -556,7 +629,25 @@ class Service:
             "sharedFields": shared,
             "note": "구조화된 사실 비교입니다. 목적별 의미 해석은 포함하지 않습니다(§4.1).",
         }
-        return envelope(data, self.snapshot, [RULE_CARD], [])
+        warnings = []
+
+        # 구조 비교(v1.3, S2) — 전원 관측된 경우에만. 원본 컬럼명 '정확 일치' 기준의 사실 비교
+        cols_by_rid = {r["record_id"]: self._structure_columns_for(r["list_key"]) for r in recs}
+        if all(v is not None for v in cols_by_rid.values()):
+            sets = {rid: set(v) for rid, v in cols_by_rid.items()}
+            common = sorted(set.intersection(*sets.values()))
+            data["structureComparison"] = {
+                "commonColumns": common[:50],
+                "onlyIn": {rid: sorted(s - set(common))[:20] for rid, s in sets.items()},
+                "columnCounts": {rid: len(s) for rid, s in sets.items()},
+                "note": "원본 컬럼명 정확 일치 기준입니다 — 명칭이 달라도 같은 의미일 수 있고, "
+                        "명칭이 같아도 의미 동일성·결합 가능성은 확인되지 않았습니다.",
+            }
+            data["structureComparisonRule"] = "structure-status-v1.0"
+        elif any(v is not None for v in cols_by_rid.values()):
+            warnings.append("일부 데이터셋만 구조가 관측되어 구조 비교는 생략되었습니다(미수집 ≠ 컬럼 없음).")
+
+        return envelope(data, self.snapshot, [RULE_CARD], warnings)
 
     # ------------------------------------------------------------ changes
     def get_catalog_changes(

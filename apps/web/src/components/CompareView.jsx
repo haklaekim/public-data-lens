@@ -44,6 +44,9 @@ export default function CompareView({ ids, onRemove, onOpen }) {
   return (
     <section>
       {error && <p className="error">{error}</p>}
+      {body?.warnings?.map((w, i) => (
+        !w.startsWith('본 결과는') && <p className="warning" key={i}>⚠ {w}</p>
+      ))}
       {!body && !error && <p className="loading">비교 중…</p>}
       {body && (
         <>
@@ -91,6 +94,23 @@ export default function CompareView({ ids, onRemove, onOpen }) {
             {showShared ? '공통 항목 접기' : `공통 항목 ${body.data.sharedFields.length}개 보기`}
           </button>
         </>
+      )}
+
+      {body?.data?.structureComparison && (
+        <div className="structure-compare">
+          <h3>원본 컬럼 구조 비교</h3>
+          <p className="obs-meta">{body.data.structureComparison.note}</p>
+          <p>
+            <strong>공통 컬럼 {body.data.structureComparison.commonColumns.length}개:</strong>{' '}
+            {body.data.structureComparison.commonColumns.join(', ') || '없음'}
+          </p>
+          {Object.entries(body.data.structureComparison.onlyIn).map(([rid, cols]) => (
+            <p key={rid}>
+              <strong>{rid}에만:</strong> {cols.length ? cols.join(', ') : '없음'}
+              {' '}(전체 {body.data.structureComparison.columnCounts[rid]}개)
+            </p>
+          ))}
+        </div>
       )}
     </section>
   )

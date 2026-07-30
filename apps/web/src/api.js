@@ -39,6 +39,8 @@ async function get(path, params) {
 export const api = {
   status: () => get('/status'),
   search: (params) => get('/search', params),
+  searchColumns: (keywords, pageSize = 20) =>
+    get('/search/columns', { keywords: keywords.join(','), pageSize }),
   dataset: (id, view) => get(`/datasets/${encodeURIComponent(id)}`, { view }),
   structure: (id) => get(`/datasets/${encodeURIComponent(id)}/structure`),
   compare: (ids) => get('/compare', { ids: ids.join(',') }),

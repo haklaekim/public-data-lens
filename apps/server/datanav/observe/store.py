@@ -73,6 +73,13 @@ CREATE TABLE IF NOT EXISTS file_columns (
   PRIMARY KEY (table_id, ordinal)
 );
 
+-- 컬럼 검색용 색인(S2): 레코드×원본 컬럼명 중복 제거 — 원본명 그대로(정규화 없음)
+CREATE TABLE IF NOT EXISTS record_column_index (
+  list_key    TEXT NOT NULL,
+  source_name TEXT NOT NULL,
+  PRIMARY KEY (list_key, source_name)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS asset_coverage (
   asset_id               TEXT PRIMARY KEY REFERENCES source_assets(asset_id),
   status                 TEXT NOT NULL,

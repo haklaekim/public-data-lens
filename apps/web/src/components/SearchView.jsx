@@ -80,6 +80,25 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
     runSearch()
   }
 
+  // 컬럼 기준 검색(v1.3) — 원본 컬럼명 부분 일치(AND), 구조 확인분 내에서만
+  const [colQuery, setColQuery] = useState('')
+  const runColumnSearch = async (e) => {
+    e?.preventDefault()
+    const kws = colQuery.split(',').map((k) => k.trim()).filter(Boolean)
+    if (!kws.length) return
+    setLoading(true)
+    setError(null)
+    try {
+      const body = await api.searchColumns(kws)
+      setResult(body)
+      setItems(body.data.items)
+    } catch (err) {
+      setError(`${err.code || ''} ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const setFilter = (k, v) => {
     const next = { ...filters, [k]: v }
     setFilters(next)
@@ -96,6 +115,16 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           maxLength={500}
         />
         <button type="submit" disabled={loading}>검색</button>
+      </form>
+
+      <form className="searchbar columns" onSubmit={runColumnSearch}>
+        <input
+          value={colQuery}
+          onChange={(e) => setColQuery(e.target.value)}
+          placeholder="컬럼으로 검색 — 쉼표 구분 (예: 위도, 경도)"
+          maxLength={200}
+        />
+        <button type="submit" disabled={loading}>컬럼 검색</button>
       </form>
 
       <div className="examples">
@@ -140,8 +169,13 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
       {result && (
         <>
           <p className="result-meta">
-            {result.data.totalEstimate.toLocaleString()}건 ·{' '}
-            랭킹 {result.data.ranking.method} ({result.data.ranking.version})
+            {result.data.totalEstimate.toLocaleString()}건
+            {result.data.ranking && (
+              <> · 랭킹 {result.data.ranking.method} ({result.data.ranking.version})</>
+            )}
+            {result.data.coverage && (
+              <> · 구조 확인 {result.data.coverage.searchedRecords.toLocaleString()}건 내 컬럼 검색</>
+            )}
           </p>
           {result.warnings
             .filter((w) => !w.startsWith('본 결과는'))
@@ -162,7 +196,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
         ))}
       </ul>
 
-      {result?.data.hasMore && (
+      {result?.data.nextCursor && result?.data.hasMore && (
         <button
           className="more"
           disabled={loading}
