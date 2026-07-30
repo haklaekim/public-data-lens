@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "공공데이터 내비게이터 — AIRD 정본 파이프라인 + MCP 서버 (설계서 v1.0)"
 requires-python = ">=3.11"
 dependencies = [
-    "mcp>=1.20",
+    "mcp>=1.20,<2",  # 2.0에서 mcp.server.fastmcp 경로 제거 — 검증된 1.x 고정
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "pydantic>=2.7",
