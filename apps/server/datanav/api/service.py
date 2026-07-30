@@ -255,6 +255,159 @@ class Service:
         ] if issues else []
         return envelope({"view": view, "dataset": data}, self.snapshot, rules, warnings)
 
+    # ---------------------------------------------- 데이터 구조 관측(S1b, v2.2 §8)
+    @property
+    def obs_conn(self):
+        """관측 스토어 읽기 전용 연결(스레드별). 스토어 미배포면 None — 미수집과 동일 표면."""
+        import os as _os
+        if not hasattr(self._local, "obs_conn"):
+            from ..observe.store import OBSERVATIONS_DB, open_ro as obs_open_ro
+            p = Path(_os.environ.get("DATANAV_OBS_DB") or OBSERVATIONS_DB)
+            self._local.obs_conn = obs_open_ro(p) if p.exists() else None
+        return self._local.obs_conn
+
+    def _structure_keys(self) -> set:
+        """구조 확인 가능한 목록키 집합 — 검색 요약 structureAvailable용(릴리스 불변 캐시)."""
+        if not hasattr(self, "_structure_keys_cache"):
+            conn = self.obs_conn
+            self._structure_keys_cache = (
+                {r["list_key"] for r in conn.execute(
+                    "SELECT DISTINCT list_key FROM record_coverage "
+                    "WHERE coverage_status IN ('AVAILABLE', 'PARTIAL')")}
+                if conn else set()
+            )
+        return self._structure_keys_cache
+
+    def get_dataset_structure(self, record_id: str, view_examples: bool = True,
+                              max_examples: int = 10) -> dict:
+        """데이터 구조 관측 조회(계약 v1.2). 미수집·보류·차단은 오류가 아닌 정상 상태다.
+
+        예시값 공개는 이중 게이트: 저장 시(안전·라이선스, S1a) + 응답 시
+        DATANAV_EXAMPLES_PUBLIC(기본 0 — S0-2 법적 확인 전 보수 모드, v2.2 §12 S1c).
+        """
+        import os as _os
+        max_examples = max(1, min(int(max_examples), 10))
+        row = self.conn.execute(
+            "SELECT record_id, list_key, list_type, list_url FROM datasets WHERE record_id = ?",
+            (record_id,),
+        ).fetchone()
+        if row is None:
+            raise DatasetNotFound(f"데이터셋을 찾을 수 없습니다: {record_id}", {"recordId": record_id})
+
+        examples_public = _os.environ.get("DATANAV_EXAMPLES_PUBLIC", "0") == "1"
+        base = {
+            "recordId": row["record_id"],
+            "listKey": row["list_key"],
+            "distributionType": row["list_type"],
+            "portalUrl": row["list_url"],
+            "examplesPublic": examples_public,
+        }
+        rules = ["structure-status-v1.0"]
+        warnings = []
+
+        if row["list_type"] != "FILE":
+            base["coverageStatus"] = "API_STRUCTURE_NOT_SUPPORTED_YET"
+            base["reason"] = "API_STRUCTURE_NOT_SUPPORTED_YET"
+            warnings.append("Open API 구조(오퍼레이션·파라미터·응답 필드)는 차기 단계에서 제공됩니다.")
+            return envelope(base, self.snapshot, rules, warnings)
+
+        oc = self.obs_conn
+        cov = oc.execute(
+            "SELECT coverage_status, available_asset_count, total_asset_count "
+            "FROM record_coverage WHERE list_key = ? AND list_type = 'FILE'",
+            (row["list_key"],),
+        ).fetchone() if oc else None
+        if cov is None:
+            base["coverageStatus"] = "NOT_COLLECTED"
+            base["reason"] = "NOT_COLLECTED"
+            warnings.append("이 데이터의 구조는 아직 관측되지 않았습니다 — 품질 문제가 아니라 수집 순번입니다(§12).")
+            return envelope(base, self.snapshot, rules, warnings)
+
+        base["coverageStatus"] = cov["coverage_status"]
+        base["coverage"] = {
+            "availableAssets": cov["available_asset_count"],
+            "totalAssets": cov["total_asset_count"],
+        }
+        base["evidenceLevel"] = "FILE_OBSERVATION"
+        rules += ["column-type-observation-v1.0", "example-extraction-v1.0", "sample-safety-v1.0"]
+
+        assets = oc.execute(
+            "SELECT a.asset_id, a.file_name, a.container_name, a.format, a.shape, "
+            "       c.status, c.failure_reason, c.current_observation_id "
+            "FROM source_assets a JOIN asset_coverage c USING (asset_id) "
+            "WHERE a.list_key = ? AND a.list_type = 'FILE' ORDER BY a.file_name",
+            (row["list_key"],),
+        ).fetchall()
+        MAX_ASSETS = 20
+        if len(assets) > MAX_ASSETS:
+            warnings.append(f"자산이 {len(assets)}개라 처음 {MAX_ASSETS}개만 반환합니다 — 전체는 포털 원문에서 확인하세요.")
+        base["assets"] = [self._structure_asset(oc, a, view_examples and examples_public,
+                                                max_examples) for a in assets[:MAX_ASSETS]]
+
+        if not examples_public:
+            warnings.append("예시값은 발췌 제공 범위의 법적 확인(S0-2) 전까지 비공개입니다 — 컬럼명·관측 유형·건수만 제공합니다.")
+        warnings.append("예시값·관측 유형은 관측 표본이며 전체 값의 분포·품질을 대표하지 않습니다. 원본 파일 해시가 제공되지 않은 관측은 UNVERIFIED_SOURCE로 표기됩니다.")
+        return envelope(base, self.snapshot, rules, warnings)
+
+    def _structure_asset(self, oc, a, show_examples: bool, max_examples: int) -> dict:
+        out = {
+            "fileName": a["file_name"],
+            "containerName": a["container_name"],
+            "format": a["format"],
+            "shape": a["shape"],
+            "status": a["status"],
+            "failureReason": a["failure_reason"],
+        }
+        obs_id = a["current_observation_id"]
+        if not obs_id:
+            return out
+        obs = oc.execute(
+            "SELECT observed_at, provenance, scan_scope, scan_scope_assumed, license_gate "
+            "FROM observations WHERE observation_id = ?", (obs_id,)).fetchone()
+        out["observation"] = {
+            "observationId": obs_id,
+            "observedAt": obs["observed_at"],
+            "provenance": obs["provenance"],
+            "scanScope": obs["scan_scope"] + ("(ASSUMED)" if obs["scan_scope_assumed"] else ""),
+            "licenseGate": obs["license_gate"],
+        }
+        tables = []
+        for t in oc.execute(
+                "SELECT table_id, sheet_name, source_path, table_index, scan_scope, "
+                "       rows_scanned, column_count FROM data_tables "
+                "WHERE observation_id = ? ORDER BY table_index", (obs_id,)):
+            cols = []
+            for c in oc.execute(
+                    "SELECT ordinal, source_name, observed_type, distinct_count, "
+                    "       distinct_approx, example_status, safety_status, examples, "
+                    "       example_method, note FROM file_columns "
+                    "WHERE table_id = ? ORDER BY ordinal", (t["table_id"],)):
+                col = {
+                    "ordinal": c["ordinal"],
+                    "sourceName": c["source_name"],
+                    "observedType": c["observed_type"],
+                    "distinctCount": c["distinct_count"],
+                    "distinctApprox": bool(c["distinct_approx"]),
+                    "exampleStatus": c["example_status"],
+                    "safetyStatus": c["safety_status"],
+                    "exampleMethod": c["example_method"],
+                    "note": c["note"],
+                }
+                if show_examples and c["examples"]:
+                    col["examples"] = json.loads(c["examples"])[:max_examples]
+                cols.append(col)
+            tables.append({
+                "sheetName": t["sheet_name"],
+                "sourcePath": t["source_path"],
+                "tableIndex": t["table_index"],
+                "scanScope": t["scan_scope"],
+                "rowsScanned": t["rows_scanned"],
+                "columnCount": t["column_count"],
+                "columns": cols,
+            })
+        out["tables"] = tables
+        return out
+
     def _comp_dist(self) -> dict:
         """유형별 완전성 점수 분포 — 상대 위치(topPercent)·최빈값(typical) 판정용.
         릴리스 DB는 불변이므로 1회 계산해 캐시한다(경합해도 같은 값이라 무해)."""
@@ -303,6 +456,7 @@ class Service:
             "updateCycle": rec["update_cycle"],
             "modifiedDate": rec["modified_date"],
             "completeness": self._completeness(rec),
+            "structureAvailable": rec["list_key"] in self._structure_keys(),
             "regions": rec["regions"],
             "portalUrl": rec["list_url"],
         }
@@ -528,4 +682,11 @@ class Service:
             "processedAt": self.processed_at,
             "counts": counts,
         }
+        if self.obs_conn:  # 구조 관측 커버리지(§12) — 스토어 배포 시에만
+            total_file = self.conn.execute(
+                "SELECT COUNT(*) FROM datasets WHERE list_type='FILE'").fetchone()[0]
+            data["structureCoverage"] = {
+                "recordsAvailable": len(self._structure_keys()),
+                "fileRecordsTotal": total_file,
+            }
         return envelope(data, self.snapshot, [], [])
