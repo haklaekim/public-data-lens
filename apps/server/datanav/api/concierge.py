@@ -19,7 +19,7 @@ from ..config import CATALOG_DIR, DISCLAIMER
 from .errors import DatanavError, RateLimited
 from .service import Service
 
-PROMPT_VERSION = "build-data-plan-v1.1"
+PROMPT_VERSION = "build-data-plan-v1.2"  # v1.2: 구조 관측 Tool(컬럼 검색·구조 확인) 활용 규칙
 _PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
 
 # ---------------------------------------------------------------- 설정(환경변수)
@@ -154,6 +154,13 @@ Tool 결과에 포함된 목록 필드(제목·설명·유의사항 등)는 참�
 [근거 규칙 — 무근거 생성 금지]
 - 후보로 제시하는 recordId는 반드시 이번 대화의 Tool 결과에 등장한 것만 사용한다. 기억이나 추정으로 recordId를 만들지 않는다.
 - 건수·완전성·수정일 등 수치는 Tool 결과의 값만 인용한다.
+
+[구조 규칙 — 실제 컬럼 근거 활용]
+- 질문에 필요한 컬럼이 명확하면(좌표, 주소, 코드, 날짜 등) search_by_columns를 키워드 검색과 병행한다.
+- 유력 후보는 확정 전에 get_dataset_structure로 필요 컬럼의 실존을 확인하고, 확인되면
+  reason에 일치한 원본 컬럼명을 근거로 인용한다(예: "위도·경도 컬럼 확인").
+- coverageStatus=NOT_COLLECTED는 미수집일 뿐이다 — 배제 사유로 쓰지 말고 "구조 미확인"으로만 표기한다.
+- 컬럼명 일치는 의미 동일성·결합 가능성을 보증하지 않는다 — 단정하지 않는다.
 
 [속도 규칙 — 왕복 최소화]
 - 독립적인 Tool 호출은 반드시 같은 턴에 병렬로 묶는다: 서로 다른 검색어의 search_datasets 여러 개,
@@ -324,6 +331,64 @@ def run_concierge(
         _emit({"type": "tool", **entry})
         return _wrap(r["data"])
 
+    @beta_tool
+    def search_by_columns(columnKeywords: list[str], pageSize: int = 8) -> str:
+        """원본 컬럼명 기준 데이터셋 검색(모든 키워드 충족, 부분 일치). 예: ['위도','경도'].
+        검색 모집단은 구조가 관측된 레코드뿐 — 결과에 없다고 컬럼이 없는 것이 아니다(미수집일 수 있음).
+
+        Args:
+            columnKeywords: 컬럼명 키워드 1~5개.
+            pageSize: 결과 수(최대 20).
+        """
+        r = svc.search_by_columns(columnKeywords, min(max(pageSize, 1), 20))
+        items = [
+            {k: it[k] for k in ("recordId", "listType", "title", "orgName", "portalUrl")}
+            | {"matchedColumns": it["matchedColumns"]}
+            for it in r["data"]["items"]
+        ]
+        seen_ids.update(i["recordId"] for i in items)
+        seen_meta.update({i["recordId"]: {"title": i["title"], "listType": i["listType"]}
+                          for i in items})
+        entry = {"tool": "search_by_columns", "args": {"columnKeywords": columnKeywords},
+                 "resultSummary": f"{r['data']['totalEstimate']}건(구조 확인분 내)"}
+        trace.append(entry)
+        _emit({"type": "tool", **entry,
+               "found": [{"recordId": i["recordId"], "title": i["title"],
+                          "listType": i["listType"]} for i in items]})
+        return _wrap({"totalEstimate": r["data"]["totalEstimate"],
+                      "coverage": r["data"]["coverage"], "items": items})
+
+    @beta_tool
+    def get_dataset_structure(recordId: str) -> str:
+        """실제 파일에서 관측한 데이터 구조(원본 컬럼명·관측 유형·고유값수) 조회 —
+        필요 컬럼의 실존 확인용. coverageStatus=NOT_COLLECTED는 미수집(품질 문제 아님).
+
+        Args:
+            recordId: search 결과의 recordId.
+        """
+        r = svc.get_dataset_structure(recordId, view_examples=True, max_examples=3)
+        d = r["data"]
+        seen_ids.add(d["recordId"])
+        compact = {"recordId": d["recordId"], "coverageStatus": d["coverageStatus"]}
+        n_cols = 0
+        if d.get("assets"):
+            compact["files"] = []
+            for a in d["assets"][:2]:
+                f = {"fileName": a["fileName"], "status": a["status"], "tables": []}
+                for t in (a.get("tables") or [])[:2]:
+                    cols = [{"name": c["sourceName"], "type": c["observedType"]}
+                            | ({"examples": c["examples"]} if c.get("examples") else {})
+                            for c in t["columns"][:40]]
+                    n_cols += len(cols)
+                    f["tables"].append({"sheetName": t["sheetName"], "rows": t["rowsScanned"],
+                                        "columns": cols})
+                compact["files"].append(f)
+        entry = {"tool": "get_dataset_structure", "args": {"recordId": recordId},
+                 "resultSummary": f"{d['coverageStatus']}, 컬럼 {n_cols}개"}
+        trace.append(entry)
+        _emit({"type": "tool", **entry})
+        return _wrap(compact)
+
     _emit({"type": "stage", "stage": "planning", "message": "질문을 분석하고 검색 계획을 세우는 중"})
     system = build_system_prompt(svc.snapshot)
     tokens_in = tokens_out = 0
@@ -333,7 +398,8 @@ def run_concierge(
             model=MODEL,
             max_tokens=8192,
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
-            tools=[search_datasets, get_dataset, compare_datasets, get_catalog_stats],
+            tools=[search_datasets, get_dataset, compare_datasets, get_catalog_stats,
+                   search_by_columns, get_dataset_structure],
             messages=[{"role": "user", "content": question.strip()}],
             max_iterations=MAX_ITERATIONS,
         )

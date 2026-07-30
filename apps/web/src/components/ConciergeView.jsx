@@ -34,6 +34,13 @@ function stepInfo(ev) {
       }
     case 'get_catalog_stats':
       return { title: '분포 통계', detail: `get_catalog_stats(${ev.args.axis})` }
+    case 'search_by_columns':
+      return {
+        title: '컬럼 기준 탐색',
+        detail: `search_by_columns(${(ev.args.columnKeywords || []).join(', ')}) → ${ev.resultSummary}`,
+      }
+    case 'get_dataset_structure':
+      return { title: '데이터 구조 확인', detail: `get_dataset_structure → ${ev.resultSummary}` }
     default:
       return { title: ev.tool, detail: ev.resultSummary || null }
   }
