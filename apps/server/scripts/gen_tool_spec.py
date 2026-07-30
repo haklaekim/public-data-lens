@@ -16,7 +16,7 @@ from jsonschema import Draft202012Validator  # noqa: E402
 from datanav.config import BASE_URI, MAX_COMPARE, MAX_PAGE_SIZE, MAX_QUERY_LENGTH  # noqa: E402
 from datanav.spec import OUTPUT_SCHEMAS, SPEC_VERSION  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.2.0.json"
+OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.3.0.json"
 
 
 async def collect_input_schemas() -> dict[str, dict]:
@@ -70,6 +70,10 @@ def validate_against_live(spec: dict) -> list[str]:
         "get_catalog_stats": [svc.get_catalog_stats(a) for a in
                               ("theme", "org", "format", "completeness", "listType")],
         "get_dataset_structure": _structure_samples(svc),
+        "search_by_columns": [
+            svc.search_by_columns(["위도", "경도"], 5),
+            svc.search_by_columns(["존재하지않는컬럼명이다"], 5),
+        ],
     }
     # get_context는 서비스 합성이 MCP 계층에 있어 MCP 경유 검증(아래 main에서 스키마만 확인)
     checked = []
@@ -102,7 +106,7 @@ def main() -> int:
     )
     spec = {
         "specVersion": SPEC_VERSION,
-        "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness 확장 / v1.2.0 minor(2026-07-30): get_dataset_structure Tool·summaryItem.structureAvailable 추가(데이터 구조 관측 v2.2). breaking은 재승인 필요",
+        "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness 확장 / v1.2.0 minor(2026-07-30): 구조 관측 Tool / v1.3.0 minor(2026-07-30): search_by_columns Tool·compare structureComparison 추가(S2). breaking은 재승인 필요",
         "generatedAt": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "baseUri": BASE_URI,
         "compatibilityPolicy": (

@@ -18,7 +18,7 @@ CURRENT_POINTER = CATALOG_DIR / "current.json"
 # §7 확정 네임스페이스 (영구 불변)
 BASE_URI = "https://data.datahub.kr/projects/datanav"
 
-SCHEMA_VERSION = "1.2.0"
+SCHEMA_VERSION = "1.3.0"
 
 DISCLAIMER = (
     "본 결과는 공공데이터포털 목록 메타데이터 기반이며 "

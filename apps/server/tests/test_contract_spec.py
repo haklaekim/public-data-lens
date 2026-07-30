@@ -15,7 +15,7 @@ from datanav.spec import OUTPUT_SCHEMAS
 from tests.conftest import requires_catalog
 
 SPEC_PATH = (
-    Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.2.0.json"
+    Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.3.0.json"
 )
 
 

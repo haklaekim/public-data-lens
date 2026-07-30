@@ -882,3 +882,11 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 .structure-table th { background: var(--ceramic); font-weight: 600; position: sticky; top: 0; }
 .structure-table tr:last-child td { border-bottom: none; }
 .structure-table .ex-status { color: var(--muted); font-style: normal; }
+
+/* ---- S2: 컬럼 검색·구조 비교 ---- */
+.searchbar.columns { margin-top: 8px; }
+.searchbar.columns input { font-size: 13px; }
+.matched-columns { font-size: 12px; color: var(--green-uplift); margin: 2px 0; }
+.structure-compare { margin-top: 20px; padding: 14px; background: var(--ceramic);
+  border-radius: var(--radius-card); font-size: 13px; }
+.structure-compare h3 { margin: 0 0 6px; font-size: 14px; }

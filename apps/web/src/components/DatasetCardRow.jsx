@@ -42,6 +42,11 @@ export default function DatasetCardRow({ item, onOpen, compared, compareFull, on
           {item.formats?.length > 0 && <span>{item.formats.join(' · ')}</span>}
           {item.modifiedDate && <span>수정 {item.modifiedDate}</span>}
         </div>
+        {item.matchedColumns && (
+          <p className="matched-columns">
+            일치 컬럼: {item.matchedColumns.map((m) => m.columns.join(', ')).join(' · ')}
+          </p>
+        )}
         <div className="card-badges">
           {item.structureAvailable && (
             <span className="key-field structure-chip" title="실제 파일에서 원본 컬럼·유형이 관측됨 — 프로필의 '데이터 구조' 탭에서 확인">

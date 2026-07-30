@@ -276,6 +276,10 @@ def _load_asset(conn: sqlite3.Connection, key: tuple, rows: list[dict],
             "INSERT OR REPLACE INTO file_columns VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             col_rows,
         )
+        conn.executemany(  # 컬럼 검색 색인(S2) — 원본명 그대로
+            "INSERT OR IGNORE INTO record_column_index VALUES (?,?)",
+            [(list_key, c[2]) for c in col_rows],
+        )
         report.columns += len(col_rows)
 
 

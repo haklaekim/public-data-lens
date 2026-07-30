@@ -8,7 +8,7 @@ schemaVersion은 응답 봉투 meta.schemaVersion으로 전달된다.
 """
 from __future__ import annotations
 
-SPEC_VERSION = "1.2.0"
+SPEC_VERSION = "1.3.0"
 
 # ---------------------------------------------------------------- $defs
 DEFS = {
@@ -245,6 +245,19 @@ OUTPUT_SCHEMAS: dict[str, dict] = {
                 "items": {"type": "object", "required": ["field", "value"]},
             },
             "note": {"type": "string"},
+            "structureComparison": {
+                "type": "object",
+                "description": "전 대상의 구조가 관측된 경우에만 — 원본 컬럼명 정확 일치 기준 사실 비교(v1.3.0 추가)",
+                "required": ["commonColumns", "onlyIn", "columnCounts", "note"],
+                "properties": {
+                    "commonColumns": {"type": "array", "maxItems": 50, "items": {"type": "string"}},
+                    "onlyIn": {"type": "object",
+                               "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+                    "columnCounts": {"type": "object", "additionalProperties": {"type": "integer"}},
+                    "note": {"type": "string"},
+                },
+            },
+            "structureComparisonRule": {"type": "string"},
         },
     }),
     "get_catalog_changes": _envelope({
@@ -289,6 +302,43 @@ OUTPUT_SCHEMAS: dict[str, dict] = {
                 }}},
             },
         ],
+    }),
+    "search_by_columns": _envelope({
+        "type": "object",
+        "required": ["columnKeywords", "items", "totalEstimate", "hasMore", "coverage"],
+        "properties": {
+            "columnKeywords": {"type": "array", "items": {"type": "string"}},
+            "items": {"type": "array", "items": {
+                "allOf": [{"$ref": "#/$defs/summaryItem"}],
+                "type": "object",
+                "required": ["matchedColumns"],
+                "properties": {
+                    "matchedColumns": {
+                        "type": "array",
+                        "description": "검색 근거 — 키워드별로 일치한 원본 컬럼명(최대 5개씩)",
+                        "items": {
+                            "type": "object",
+                            "required": ["keyword", "columns"],
+                            "properties": {
+                                "keyword": {"type": "string"},
+                                "columns": {"type": "array", "items": {"type": "string"}},
+                            },
+                        },
+                    },
+                },
+            }},
+            "totalEstimate": {"type": "integer", "minimum": 0},
+            "hasMore": {"type": "boolean"},
+            "coverage": {
+                "type": "object",
+                "description": "검색 모집단 명시 — 미수집과 '컬럼 없음'을 구분(v2.2 §12)",
+                "required": ["searchedRecords", "fileRecordsTotal"],
+                "properties": {
+                    "searchedRecords": {"type": "integer"},
+                    "fileRecordsTotal": {"type": "integer"},
+                },
+            },
+        },
     }),
     "get_dataset_structure": _envelope({
         "type": "object",

@@ -200,6 +200,15 @@ def dataset(record_id: str, view: str = "card"):
     return _svc().get_dataset(record_id, view)
 
 
+@app.get("/api/search/columns")
+def search_columns(
+    keywords: str,
+    pageSize: int = Query(default=20, ge=1, le=100),
+):
+    kws = [k.strip() for k in keywords.split(",") if k.strip()]
+    return _svc().search_by_columns(kws, pageSize)
+
+
 @app.get("/api/datasets/{record_id}/structure")
 def dataset_structure(
     record_id: str,
@@ -261,7 +270,7 @@ def resource_privacy():
 @app.get("/api/resources/spec/tools")
 def resource_tool_spec():
     from pathlib import Path
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.2.0.json"
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.3.0.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
 
 

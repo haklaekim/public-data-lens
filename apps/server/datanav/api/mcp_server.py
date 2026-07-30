@@ -160,6 +160,18 @@ def get_catalog_stats(
 
 
 @mcp.tool(annotations=_RO)
+def search_by_columns(
+    columnKeywords: Annotated[list[str], Field(description="원본 컬럼명에 부분 일치할 키워드(1~5개, 각 50자 이하) — 모두 충족하는 데이터셋만 반환(AND)", min_length=1, max_length=5)],
+    pageSize: Annotated[int, Field(description="반환 개수(1~100)", ge=1, le=100)] = 20,
+) -> dict:
+    """원본 컬럼 기준 데이터셋 검색(v1.3) — 예: ['위도','경도'], ['사업자등록번호'].
+    결과의 matchedColumns가 검색 근거(일치한 원본 컬럼명)다. 검색 모집단은 구조가
+    관측된 레코드뿐이며 coverage로 명시된다 — 결과에 없다고 컬럼이 없는 것이 아니다
+    (미수집일 수 있음). 일치는 원본 컬럼명 부분 일치이며 의미 동일성은 확인되지 않는다."""
+    return _guard(lambda: _svc().search_by_columns(columnKeywords, pageSize))
+
+
+@mcp.tool(annotations=_RO)
 def get_dataset_structure(
     recordId: Annotated[str, Field(description="search_datasets 결과의 recordId(원칙적으로 목록키)")],
     includeExamples: Annotated[bool, Field(description="true면 컬럼별 예시값 포함(공개 정책·안전·라이선스 게이트 통과분만)")] = True,
@@ -253,7 +265,7 @@ def prompt_doc() -> str:
 @mcp.resource(f"{BASE_URI}/spec/tools/1.0", name="부속 명세(Tool JSON Schema)", mime_type="application/json")
 def tool_spec() -> str:
     """부속 명세(승인·동결) — Tool별 input/output JSON Schema 전문 + 공통 계약(v1.0.0, 2026-07-17 동결)."""
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.2.0.json"
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.3.0.json"
     return spec_path.read_text(encoding="utf-8")
 
 
