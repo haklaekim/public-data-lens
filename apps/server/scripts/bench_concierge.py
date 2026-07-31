@@ -25,7 +25,9 @@ os.environ.setdefault("DATANAV_CONCIERGE_CLIENT_DAILY_LIMIT", "1000")
 
 from datanav.api.concierge import run_concierge  # noqa: E402
 
-QUESTION_TEMPLATE = "{purpose}을(를) 하려고 합니다. 어떤 공공데이터를 써야 할지, 결합 방법과 한계까지 포함해 계획해 주세요."
+# 골든셋 purpose는 명사구("공중위생 인프라")라 서술어 없이 자연스러운 틀을 쓴다 —
+# 비문이면 컨시어지가 (규칙대로) 명료화 질문을 되돌려 벤치가 성립하지 않는다(v0 실측 교훈)
+QUESTION_TEMPLATE = "{purpose}에 필요한 공공데이터를 찾고, 결합 방법과 한계까지 포함해 활용 계획을 세워 주세요."
 
 
 def main() -> None:

@@ -68,6 +68,8 @@ def score_one(svc: Service, golden_q: dict, r: dict) -> dict:
     return {
         "id": r["id"],
         "failed": False,
+        # 후보·도구 호출이 모두 없으면 명료화 응답(질문 되물음) — 벤치 질문 품질 진단용
+        "clarificationOnly": not cands and not r.get("toolTrace"),
         "candidates": len(cands),
         "precisionAt3": rel / 3,
         "structureCitedAt3": cited / 3,
@@ -83,6 +85,7 @@ def aggregate(rows: list[dict]) -> dict:
     return {
         "questions": len(rows),
         "failures": sum(x["failed"] for x in rows),
+        "clarificationOnly": sum(x.get("clarificationOnly", False) for x in ok),
         "precisionAt3": round(sum(x["precisionAt3"] for x in ok) / n, 3),
         "structureCitedAt3": round(sum(x["structureCitedAt3"] for x in ok) / n, 3),
         "limitsStatedRate": round(sum(x["limitsStated"] for x in ok) / n, 3),

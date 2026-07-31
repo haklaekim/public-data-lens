@@ -2,7 +2,7 @@
   "summary": {
     "goldenVersion": "v0-draft",
     "snapshot": "2026-06",
-    "indexVersion": "2026-06_20260717T081320Z",
+    "indexVersion": "2026-06_20260717T133925Z",
     "ranking": "ranking-bm25-v1.0",
     "queries": 50,
     "queriesWithRelevant": 50,
