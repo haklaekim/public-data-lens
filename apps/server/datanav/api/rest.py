@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
+import secrets
 import threading
 import time
 from collections import defaultdict, deque
@@ -48,9 +50,14 @@ def _client_ip(request: Request) -> str:
     return ip
 
 
+# 익명 식별자 HMAC 키(§10) — 단순 SHA-256(IP)은 IPv4 전수 사전 대입으로 역산 가능하므로
+# 비밀키 기반 HMAC을 쓴다. 미지정 시 프로세스별 임시 키(재시작마다 회전 — 원 IP 복원 불가 유지).
+_ANON_HMAC_KEY = (os.environ.get("DATANAV_ANON_HMAC_KEY") or "").encode() or secrets.token_bytes(32)
+
+
 def _client_key(request: Request) -> str:
-    """IP의 익명 해시(§10) — 원 IP는 저장하지 않고 컨시어지 클라이언트별 캡 키로만 쓴다."""
-    return hashlib.sha256(_client_ip(request).encode()).hexdigest()[:12]
+    """IP의 익명 HMAC(§10) — 원 IP는 저장하지 않고 캡·지표 키로만 쓴다."""
+    return hmac.new(_ANON_HMAC_KEY, _client_ip(request).encode(), hashlib.sha256).hexdigest()[:12]
 
 app = FastAPI(title="공공데이터 렌즈 API", version="1.0.0")
 app.add_middleware(
@@ -94,6 +101,26 @@ def _opted_out(request: Request) -> bool:
     return h.get("dnt") == "1" or h.get("sec-gpc") == "1" or h.get("x-datanav-no-log") == "1"
 
 
+_RETENTION_DAYS = 365
+_last_prune_day = ""
+
+
+def _prune_old_logs(today: str) -> None:
+    """§10 보존(12개월) 집행 — 월간 빌드 성공 여부와 무관하게 서비스가 스스로 지운다.
+    하루 한 번, 로그 기록 경로에서 지연 실행(별도 cron 불필요)."""
+    global _last_prune_day
+    if today == _last_prune_day:
+        return
+    _last_prune_day = today
+    cutoff = time.time() - _RETENTION_DAYS * 86400
+    try:
+        for p in _log_dir().glob("usage-*.jsonl"):
+            if p.stat().st_mtime < cutoff:
+                p.unlink(missing_ok=True)
+    except OSError:
+        pass  # 정리 실패가 본 응답을 막지 않는다
+
+
 def _write_usage_log(request: Request, status_code: int, ms: int) -> None:
     path = request.url.path
     if not (path.startswith("/api/") or path.startswith("/projects/datanav/")):
@@ -115,6 +142,7 @@ def _write_usage_log(request: Request, status_code: int, ms: int) -> None:
     with _log_lock:
         with p.open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        _prune_old_logs(day)
 
 
 @app.middleware("http")

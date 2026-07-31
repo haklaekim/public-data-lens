@@ -34,7 +34,8 @@ UNTRUSTED_NOTE = (
 
 def _transport_security() -> TransportSecuritySettings | None:
     """공개 배포 시 DATANAV_MCP_ALLOWED_HOSTS(쉼표 구분 도메인)를 지정하면
-    Host 헤더 검증(DNS 리바인딩 보호)을 켠다. 미지정이면 SDK 기본 동작(로컬만 자동 보호).
+    Host 헤더 검증(DNS 리바인딩 보호)을 켠다. 미지정이면 SDK는 검증을 끈다
+    (TransportSecurityMiddleware가 settings=None일 때 보호 비활성 — 신뢰 게이트웨이 뒤 전제).
     Origin 부재 요청은 통과하므로 서버형 커넥터(Claude 등)는 영향받지 않는다."""
     hosts = [h.strip() for h in os.environ.get("DATANAV_MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
     if not hosts:
@@ -61,6 +62,9 @@ mcp = FastMCP(
     streamable_http_path="/mcp",
     # 무상태: 읽기 전용 Tool뿐이라 세션 유지가 불필요 — LB·프록시 뒤에서 안전
     stateless_http=True,
+    # 응답을 SSE 스트림이 아닌 단일 JSON으로 반환 — 모든 Tool이 즉답형(중간 알림 없음)이라
+    # 스트리밍이 불필요하고, 상위 LB의 버퍼링·타임아웃 설정과 무관해진다(배포 설명서 §운영).
+    json_response=True,
     transport_security=_transport_security(),
 )
 

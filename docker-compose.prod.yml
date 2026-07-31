@@ -29,9 +29,20 @@ services:
       # 웹은 같은 게이트웨이 뒤(동일 출처) — 기본은 CORS 비허용(교차 출처 호출 차단)
       DATANAV_CORS_ORIGINS: ${DATANAV_CORS_ORIGINS:-}
       DATANAV_RATE_LIMIT_PER_MIN: ${DATANAV_RATE_LIMIT_PER_MIN:-120}
+      # 관측 예시값 공개(S0-2 법적 확인 후 .env에서 1로) — api·mcp 양쪽에 전달해야 한다
+      DATANAV_EXAMPLES_PUBLIC: ${DATANAV_EXAMPLES_PUBLIC:-0}
+      # §10 익명 사용 로그(기본 켬)와 익명 식별자 HMAC 키(미지정 시 프로세스별 임시 키)
+      DATANAV_USAGE_LOG: ${DATANAV_USAGE_LOG:-1}
+      DATANAV_ANON_HMAC_KEY: ${DATANAV_ANON_HMAC_KEY:-}
+      # 월간 빌드 시 SHACL 검증 표본 수(0=전수) — docker compose run api 빌드에도 적용
+      DATANAV_SHACL_SAMPLE: ${DATANAV_SHACL_SAMPLE:-500}
     volumes:
       - ./data:/app/data
       - ./docs:/app/docs:ro  # 개인정보 고지문 서빙용
+    # 루트FS 쓰기 봉쇄 — 쓰기는 데이터 볼륨과 /tmp(tmpfs)로만 한정한다
+    read_only: true
+    tmpfs:
+      - /tmp
     logging: *logging
     restart: unless-stopped
     healthcheck:
@@ -49,9 +60,16 @@ services:
       DATANAV_MCP_HOST: 0.0.0.0
       DATANAV_MCP_PORT: "8300"
       # 서비스 도메인 지정 시 DNS 리바인딩 보호(Host 헤더 검증) 활성화 — 예: data.datahub.kr
+      # 미지정이면 Host 검증 비활성(신뢰 게이트웨이 뒤 전제) — 공개 배포에서는 반드시 지정
       DATANAV_MCP_ALLOWED_HOSTS: ${DATANAV_MCP_ALLOWED_HOSTS:-}
+      # 관측 예시값 공개 — api와 동일 값으로 유지(판정 이중화 금지)
+      DATANAV_EXAMPLES_PUBLIC: ${DATANAV_EXAMPLES_PUBLIC:-0}
     volumes:
       - ./data:/app/data:ro  # 읽기 전용 — MCP는 카탈로그를 조회만 한다
+    # 루트FS 쓰기 봉쇄 — MCP는 어떤 쓰기도 하지 않는다(/tmp만 tmpfs)
+    read_only: true
+    tmpfs:
+      - /tmp
     logging: *logging
     restart: unless-stopped
     healthcheck:

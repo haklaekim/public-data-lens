@@ -22,6 +22,7 @@ from .jsonld import (
     issue_annotation_jsonld,
 )
 from .normalize import detect_issues, normalize_row
+from . import parse
 from .parse import parse_snapshot_csv
 
 
@@ -37,31 +38,32 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def preserve_snapshot(source_csv: Path, snapshot: str) -> tuple[Path, str]:
-    """원본 스냅샷 보존 + 해시·행수 메타(§8). 이미 보존돼 있으면 해시 검증만."""
+def preserve_snapshot(source_csv: Path, snapshot: str) -> tuple[Path, str, str]:
+    """원본 스냅샷 보존 + 해시·행수·인코딩 메타(§8). 이미 보존돼 있으면 해시 검증만."""
     raw_dir = config.RAW_DIR / snapshot
     raw_dir.mkdir(parents=True, exist_ok=True)
     target = raw_dir / f"public_data_{snapshot}.csv"
     if not target.exists():
         shutil.copy2(source_csv, target)
     digest = _sha256(target)
+    encoding = parse.detect_encoding(target)
     meta_path = raw_dir / "meta.json"
     if meta_path.exists():
         prev = json.loads(meta_path.read_text(encoding="utf-8"))
         if prev["sha256"] != digest:
             raise BuildError(f"보존된 스냅샷 해시 불일치: {snapshot}")
     else:
-        with open(target, encoding="utf-8-sig", newline="") as f:
+        with open(target, encoding=encoding, newline="") as f:
             line_count = sum(1 for _ in f)
         meta_path.write_text(
             json.dumps(
                 {"snapshot": snapshot, "sha256": digest, "bytes": target.stat().st_size,
-                 "physicalLines": line_count, "preservedAt": _now()},
+                 "physicalLines": line_count, "encoding": encoding, "preservedAt": _now()},
                 ensure_ascii=False, indent=2,
             ),
             encoding="utf-8",
         )
-    return target, digest
+    return target, digest, encoding
 
 
 def _now() -> str:
@@ -71,7 +73,7 @@ def _now() -> str:
 def build_release(source_csv: Path, snapshot: str, min_rows: int = 1000) -> Path:
     """릴리스 디렉터리를 새로 빌드한다. 성공 시에만 current 포인터 교체."""
     started = _now()
-    csv_path, source_sha = preserve_snapshot(source_csv, snapshot)
+    csv_path, source_sha, source_encoding = preserve_snapshot(source_csv, snapshot)
 
     base_name = f"{snapshot}_{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     release_name, n = base_name, 1
@@ -84,7 +86,7 @@ def build_release(source_csv: Path, snapshot: str, min_rows: int = 1000) -> Path
     conn = store.create_db(db_path)
 
     # 1) 파싱·정규화·적재 — 목록키 중복은 record-identity-v1.0으로 해소
-    parsed = list(parse_snapshot_csv(csv_path))
+    parsed = list(parse_snapshot_csv(csv_path, encoding=source_encoding))
     source_rows = len(parsed)
     if source_rows < min_rows:
         raise BuildError(f"행수 급감 감지: {source_rows} < {min_rows}")
@@ -209,6 +211,7 @@ def build_release(source_csv: Path, snapshot: str, min_rows: int = 1000) -> Path
         "startedAt": started,
         "finishedAt": _now(),
         "sourceSha256": source_sha,
+        "sourceEncoding": source_encoding,
         "sourceRows": source_rows,
         "insertedRows": inserted,
         "duplicateListKeys": len(dup_records) // 2 if dup_records else 0,
