@@ -17,7 +17,7 @@ from ..config import (
     read_current_pointer,
 )
 from ..pipeline.completeness import compute_completeness, field_status
-from ..pipeline.jsonld import dataset_jsonld
+from ..pipeline.jsonld import catalog_record_jsonld, dataset_jsonld
 from ..rules import (
     RULE_CARD,
     RULE_COMPLETENESS,
@@ -49,6 +49,17 @@ _CHANGE_STATUSES = (
     "POSSIBLE_IDENTITY_CHANGE", "OFFICIALLY_WITHDRAWN",
 )
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_LIKE_ESCAPE = "\\"
+
+
+def _escape_like_literal(value: str) -> str:
+    """SQLite LIKE pattern fragment for a literal user substring."""
+    return (
+        value
+        .replace(_LIKE_ESCAPE, _LIKE_ESCAPE + _LIKE_ESCAPE)
+        .replace("%", _LIKE_ESCAPE + "%")
+        .replace("_", _LIKE_ESCAPE + "_")
+    )
 
 
 class Service:
@@ -255,6 +266,16 @@ class Service:
         ] if issues else []
         return envelope({"view": view, "dataset": data}, self.snapshot, rules, warnings)
 
+    def get_catalog_record(self, record_id: str) -> dict:
+        """CatalogRecord 정본 표현 — Dataset 정체성과 월별 목록 기술을 분리한다."""
+        row = self.conn.execute(
+            "SELECT * FROM datasets WHERE record_id = ?", (record_id,)
+        ).fetchone()
+        if row is None:
+            raise DatasetNotFound(f"데이터셋을 찾을 수 없습니다: {record_id}", {"recordId": record_id})
+        rec = row_to_record(row)
+        return catalog_record_jsonld(rec, self.snapshot)
+
     # ---------------------------------------------- 데이터 구조 관측(S1b, v2.2 §8)
     @property
     def obs_conn(self):
@@ -288,7 +309,7 @@ class Service:
         import os as _os
         max_examples = max(1, min(int(max_examples), 10))
         row = self.conn.execute(
-            "SELECT record_id, list_key, list_type, list_url FROM datasets WHERE record_id = ?",
+            "SELECT record_id, list_key, list_type, list_url, row_count FROM datasets WHERE record_id = ?",
             (record_id,),
         ).fetchone()
         if row is None:
@@ -302,6 +323,8 @@ class Service:
             "portalUrl": row["list_url"],
             "examplesPublic": examples_public,
         }
+        if "row_count" in row.keys() and row["row_count"] is not None:
+            base["rowCountListed"] = row["row_count"]
         rules = ["structure-status-v1.0"]
         warnings = []
 
@@ -374,7 +397,7 @@ class Service:
         tables = []
         for t in oc.execute(
                 "SELECT table_id, sheet_name, source_path, table_index, scan_scope, "
-                "       rows_scanned, column_count FROM data_tables "
+                "       rows_scanned, row_count_total, column_count FROM data_tables "
                 "WHERE observation_id = ? ORDER BY table_index", (obs_id,)):
             cols = []
             for c in oc.execute(
@@ -402,6 +425,7 @@ class Service:
                 "tableIndex": t["table_index"],
                 "scanScope": t["scan_scope"],
                 "rowsScanned": t["rows_scanned"],
+                "rowCountObserved": t["row_count_total"],
                 "columnCount": t["column_count"],
                 "columns": cols,
             })
@@ -431,9 +455,10 @@ class Service:
         if oc:
             per_kw = []
             for kw in keywords:
+                pattern = f"%{_escape_like_literal(kw)}%"
                 rows = oc.execute(
                     "SELECT list_key, source_name FROM record_column_index "
-                    "WHERE source_name LIKE '%' || ? || '%'", (kw,)).fetchall()
+                    "WHERE source_name LIKE ? ESCAPE '\\'", (pattern,)).fetchall()
                 m: dict[str, list[str]] = {}
                 for r in rows:
                     m.setdefault(r["list_key"], []).append(r["source_name"])

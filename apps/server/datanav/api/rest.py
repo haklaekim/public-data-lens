@@ -363,6 +363,14 @@ def canon_aird(snapshot: str):
     return _ld(json.loads(p.read_text(encoding="utf-8")))
 
 
+@app.get(_CANON + "/catalog/{snapshot}/record/{record_id}")
+def canon_catalog_record(snapshot: str, record_id: str):
+    """CatalogRecord 정본 URI 해소 — JSON-LD가 발행하는 @id와 동일한 REST 표면."""
+    svc = _svc()
+    _release_dir(svc, snapshot)
+    return _ld(svc.get_catalog_record(record_id))
+
+
 @app.get(_CANON + "/catalog/{snapshot}/files/{filename}")
 def canon_bulk(snapshot: str, filename: str):
     """벌크 정본(NDJSON+gzip 등) 내려받기 — 릴리스 디렉터리의 산출물만 허용."""

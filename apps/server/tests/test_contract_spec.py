@@ -12,7 +12,6 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from datanav.spec import OUTPUT_SCHEMAS
-from tests.conftest import requires_catalog
 
 SPEC_PATH = (
     Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.3.0.json"
@@ -42,7 +41,6 @@ def test_input_schemas_match_live_server():
         assert live_schemas[name] == tool["inputSchema"], f"{name} 입력 스키마 변경됨 — 명세 재생성·재승인 필요"
 
 
-@requires_catalog
 @pytest.mark.parametrize("tool,call", [
     ("search_datasets", lambda s: s.search_datasets(query="도서관", page_size=5)),
     ("search_datasets", lambda s: s.search_datasets(page_size=1)),
@@ -50,21 +48,19 @@ def test_input_schemas_match_live_server():
     ("get_catalog_stats", lambda s: s.get_catalog_stats("completeness")),
     ("get_catalog_stats", lambda s: s.get_catalog_stats("theme")),
 ])
-def test_live_output_conforms(service, tool, call):
-    Draft202012Validator(OUTPUT_SCHEMAS[tool]).validate(call(service))
+def test_live_output_conforms(catalog_service, tool, call):
+    Draft202012Validator(OUTPUT_SCHEMAS[tool]).validate(call(catalog_service))
 
 
-@requires_catalog
-def test_live_dataset_views_conform(service):
-    rid = service.search_datasets(page_size=1)["data"]["items"][0]["recordId"]
+def test_live_dataset_views_conform(catalog_service):
+    rid = catalog_service.search_datasets(page_size=1)["data"]["items"][0]["recordId"]
     v = Draft202012Validator(OUTPUT_SCHEMAS["get_dataset"])
     for view in ("card", "normalized", "source", "jsonld"):
-        v.validate(service.get_dataset(rid, view))
+        v.validate(catalog_service.get_dataset(rid, view))
 
 
-@requires_catalog
-def test_live_compare_conforms(service):
-    items = service.search_datasets(page_size=2)["data"]["items"]
+def test_live_compare_conforms(catalog_service):
+    items = catalog_service.search_datasets(page_size=2)["data"]["items"]
     Draft202012Validator(OUTPUT_SCHEMAS["compare_datasets"]).validate(
-        service.compare_datasets([i["recordId"] for i in items])
+        catalog_service.compare_datasets([i["recordId"] for i in items])
     )

@@ -112,6 +112,8 @@ DEFS = {
             "completeness": {"$ref": "#/$defs/completeness"},
             "regions": {"type": "array", "items": {"$ref": "#/$defs/region"}},
             "portalUrl": {"type": ["string", "null"]},
+            "rowCountListed": {"type": "integer",
+                               "description": "목록 메타데이터에 기재된 전체 행수"},
             "structureAvailable": {"type": "boolean", "description": "데이터 구조 관측 존재 여부(get_dataset_structure로 조회). v1.2.0 추가"},
             "score": {"type": "number", "description": "query 있을 때만 — BM25 점수(낮을수록 상위)"},
         },
@@ -386,6 +388,8 @@ OUTPUT_SCHEMAS: dict[str, dict] = {
                             "tableIndex": {"type": "integer"},
                             "scanScope": {"type": "string"},
                             "rowsScanned": {"type": ["integer", "null"]},
+                            "rowCountObserved": {"type": ["integer", "null"],
+                                                 "description": "관측 결과 알 수 있는 전체 행수. 알 수 없으면 null"},
                             "columnCount": {"type": "integer"},
                             "columns": {"type": "array", "items": {
                                 "type": "object",
