@@ -50,9 +50,32 @@ def _client_ip(request: Request) -> str:
     return ip
 
 
-# 익명 식별자 HMAC 키(§10) — 단순 SHA-256(IP)은 IPv4 전수 사전 대입으로 역산 가능하므로
-# 비밀키 기반 HMAC을 쓴다. 미지정 시 프로세스별 임시 키(재시작마다 회전 — 원 IP 복원 불가 유지).
-_ANON_HMAC_KEY = (os.environ.get("DATANAV_ANON_HMAC_KEY") or "").encode() or secrets.token_bytes(32)
+# 익명 식별자 HMAC 키(§10) — 단순 SHA-256(IP)은 IPv4 전수 대입으로 역산 가능하므로
+# 비밀키 기반 HMAC을 쓴다. 키 우선순위: 환경변수 > 데이터 볼륨에 1회 생성·영속(재시작에도
+# 캡·지표 연속) > 프로세스 임시 키(볼륨이 읽기 전용일 때 — 재시작 시 캡 카운터 리셋).
+def _anon_hmac_key() -> bytes:
+    env = os.environ.get("DATANAV_ANON_HMAC_KEY")
+    if env:
+        return env.encode()
+    from .. import config
+    p = config.DATA_DIR / "anon_hmac.key"
+    try:
+        key = p.read_bytes()
+        if key:
+            return key
+    except OSError:
+        pass
+    key = secrets.token_bytes(32)
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(key)
+        p.chmod(0o600)
+    except OSError:
+        pass  # 기록 불가 환경 — 임시 키로 동작
+    return key
+
+
+_ANON_HMAC_KEY = _anon_hmac_key()
 
 
 def _client_key(request: Request) -> str:

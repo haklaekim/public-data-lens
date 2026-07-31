@@ -28,9 +28,18 @@ services:
       DATANAV_CONCIERGE_DAILY_LIMIT: ${DATANAV_CONCIERGE_DAILY_LIMIT:-50}
       DATANAV_CONCIERGE_CLIENT_DAILY_LIMIT: ${DATANAV_CONCIERGE_CLIENT_DAILY_LIMIT:-10}
       DATANAV_CONCIERGE_MONTHLY_BUDGET_KRW: ${DATANAV_CONCIERGE_MONTHLY_BUDGET_KRW:-200000}
+      # 관측 예시값 공개(S0-2 법적 확인 후 1로) — A 배포와 같은 값 유지(판정 이중화 금지)
+      DATANAV_EXAMPLES_PUBLIC: ${DATANAV_EXAMPLES_PUBLIC:-0}
+      # §10 익명 사용 로그와 익명 식별자 HMAC 키(미지정 시 프로세스별 임시 키)
+      DATANAV_USAGE_LOG: ${DATANAV_USAGE_LOG:-1}
+      DATANAV_ANON_HMAC_KEY: ${DATANAV_ANON_HMAC_KEY:-}
     volumes:
       - ./data:/app/data
       - ./docs:/app/docs:ro
+    # 루트FS 쓰기 봉쇄 — 쓰기는 데이터 볼륨과 /tmp(tmpfs)로만 한정한다
+    read_only: true
+    tmpfs:
+      - /tmp
     logging: *logging
     restart: unless-stopped
     healthcheck:
@@ -46,6 +55,10 @@ services:
       args:
         VITE_SURFACE: concierge
         NGINX_CONF: nginx.concierge.conf  # B에는 mcp 서비스가 없다
+    environment:
+      # B는 게이트웨이 없이 이 nginx가 공개 진입점 — LB 뒤라면 LB 대역(CIDR)을 지정해야
+      # IP당 rate limit·익명 식별자가 사용자 단위로 동작한다(기본 127.0.0.1은 no-op)
+      WEB_REAL_IP_FROM: ${CONCIERGE_REAL_IP_FROM:-127.0.0.1}
     depends_on:
       - api
     ports:

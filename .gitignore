@@ -25,3 +25,4 @@ data/catalog/concierge_usage.json
 .env
 data/logs/
 data/observations/
+data/anon_hmac.key

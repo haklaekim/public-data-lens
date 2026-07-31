@@ -1,0 +1,598 @@
+{
+ "note": "결정적 채점 — 관련성=골든셋 titleRegex, 컬럼 인용=관측 스토어 대조",
+ "catalogOnly": {
+  "summary": {
+   "questions": 25,
+   "failures": 0,
+   "clarificationOnly": 0,
+   "precisionAt3": 0.56,
+   "structureCitedAt3": 0.373,
+   "limitsStatedRate": 1.0,
+   "groundingRemovedTotal": 8,
+   "meanElapsedSec": 48.6
+  },
+  "perQuestion": [
+   {
+    "id": "G01",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 53.6
+   },
+   {
+    "id": "G03",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 44.8
+   },
+   {
+    "id": "G05",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 51.2
+   },
+   {
+    "id": "G07",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 42.7
+   },
+   {
+    "id": "G09",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 52.8
+   },
+   {
+    "id": "G11",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 44.4
+   },
+   {
+    "id": "G13",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 0,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 52.1
+   },
+   {
+    "id": "G15",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 60.1
+   },
+   {
+    "id": "G17",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 50.5
+   },
+   {
+    "id": "G19",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 45.9
+   },
+   {
+    "id": "G21",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 58.2
+   },
+   {
+    "id": "G23",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 49.1
+   },
+   {
+    "id": "G25",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 45.0
+   },
+   {
+    "id": "G27",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 58.1
+   },
+   {
+    "id": "G29",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 48.1
+   },
+   {
+    "id": "G31",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 38.1
+   },
+   {
+    "id": "G33",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 45.4
+   },
+   {
+    "id": "G35",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 39.3
+   },
+   {
+    "id": "G37",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 8,
+    "elapsedSec": 51.5
+   },
+   {
+    "id": "G39",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 46.7
+   },
+   {
+    "id": "G41",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 51.3
+   },
+   {
+    "id": "G43",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 51.4
+   },
+   {
+    "id": "G45",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 42.8
+   },
+   {
+    "id": "G47",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 45.1
+   },
+   {
+    "id": "G49",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 46.1
+   }
+  ]
+ },
+ "withStructure": {
+  "summary": {
+   "questions": 25,
+   "failures": 0,
+   "clarificationOnly": 0,
+   "precisionAt3": 0.653,
+   "structureCitedAt3": 0.613,
+   "limitsStatedRate": 1.0,
+   "groundingRemovedTotal": 0,
+   "meanElapsedSec": 49.5
+  },
+  "perQuestion": [
+   {
+    "id": "G01",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 48.9
+   },
+   {
+    "id": "G03",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 46.3
+   },
+   {
+    "id": "G05",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 54.6
+   },
+   {
+    "id": "G07",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 51.7
+   },
+   {
+    "id": "G09",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 50.6
+   },
+   {
+    "id": "G11",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 50.7
+   },
+   {
+    "id": "G13",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 49.1
+   },
+   {
+    "id": "G15",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 53.1
+   },
+   {
+    "id": "G17",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 50.4
+   },
+   {
+    "id": "G19",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 44.7
+   },
+   {
+    "id": "G21",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 50.3
+   },
+   {
+    "id": "G23",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 54.8
+   },
+   {
+    "id": "G25",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 55.2
+   },
+   {
+    "id": "G27",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 48.9
+   },
+   {
+    "id": "G29",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 42.7
+   },
+   {
+    "id": "G31",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 38.9
+   },
+   {
+    "id": "G33",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 76.0
+   },
+   {
+    "id": "G35",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 1.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 43.1
+   },
+   {
+    "id": "G37",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 45.2
+   },
+   {
+    "id": "G39",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.0,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 50.1
+   },
+   {
+    "id": "G41",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 51.3
+   },
+   {
+    "id": "G43",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.6666666666666666,
+    "structureCitedAt3": 0.0,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 43.1
+   },
+   {
+    "id": "G45",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.3333333333333333,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 46.0
+   },
+   {
+    "id": "G47",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 1.0,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 50.1
+   },
+   {
+    "id": "G49",
+    "failed": false,
+    "clarificationOnly": false,
+    "candidates": 3,
+    "precisionAt3": 0.3333333333333333,
+    "structureCitedAt3": 0.6666666666666666,
+    "limitsStated": true,
+    "groundingRemoved": 0,
+    "elapsedSec": 42.7
+   }
+  ]
+ },
+ "needsHumanReview": [
+  {
+   "id": "G09",
+   "purpose": "자전거 이동 환경",
+   "why": "상위 3 관련성 0 — 인간 검수 필요"
+  },
+  {
+   "id": "G37",
+   "purpose": "건설 경기 분석",
+   "why": "상위 3 관련성 0 — 인간 검수 필요"
+  },
+  {
+   "id": "G39",
+   "purpose": "고용 정책 수립",
+   "why": "상위 3 관련성 0 — 인간 검수 필요"
+  }
+ ]
+}

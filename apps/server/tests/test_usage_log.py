@@ -53,3 +53,19 @@ def test_search_entry_annotated_for_metrics(tmp_path, monkeypatch):
     assert lines[0]["q"] == "도서관" and lines[0]["filters"] == ["theme"]
     assert lines[0]["zero"] is False
     assert lines[1]["zero"] is True  # 0건 비율(§12) 측정 가능
+
+
+def test_anon_hmac_key_persists_across_process_restart(tmp_path, monkeypatch):
+    """키 미지정 시 데이터 볼륨에 영속 — 재시작에도 캡·지표 연속(v0.5 회귀)."""
+    from datanav import config
+    from datanav.api import rest
+
+    monkeypatch.delenv("DATANAV_ANON_HMAC_KEY", raising=False)
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    k1 = rest._anon_hmac_key()
+    k2 = rest._anon_hmac_key()  # 프로세스 재시작 상당(모듈 상수 재계산)
+    assert k1 == k2 and len(k1) == 32
+    assert (tmp_path / "anon_hmac.key").exists()
+
+    monkeypatch.setenv("DATANAV_ANON_HMAC_KEY", "explicit-secret")
+    assert rest._anon_hmac_key() == b"explicit-secret"  # 환경변수가 우선
