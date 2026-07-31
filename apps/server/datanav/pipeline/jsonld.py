@@ -76,6 +76,7 @@ def _dcatkr_extension(rec: dict) -> dict:
     dept_phone(D1)·DCMI 병기(D3)는 결정 보류로 이번 범위 제외.
     """
     ext: dict = {
+        "dcatkr:numberOfRow": rec["row_count"],
         "dcatkr:numberOfView": rec["view_count"],
         "dcatkr:legalBasis": rec["retention_basis"],
         "dcatkr:nextRegistrationDate": rec["next_registration_date"],

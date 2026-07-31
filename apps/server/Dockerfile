@@ -7,12 +7,13 @@ ENV DATANAV_ROOT=/app \
 
 WORKDIR /app/apps/server
 
-COPY pyproject.toml ./
+COPY pyproject.toml requirements.lock ./
 COPY datanav ./datanav
 COPY scripts ./scripts
 
 # editable 설치: 패키지 내 데이터 파일(shapes/prompts/cases/spec)을 소스 경로 그대로 사용
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -r requirements.lock \
+    && pip install --no-cache-dir --no-deps -e .
 
 EXPOSE 8000
 

@@ -84,3 +84,55 @@ def test_compare_structure_section(svc_two_obs):
     body2 = svc.compare_datasets([a["recordId"], uncovered["recordId"]])
     assert "structureComparison" not in body2["data"]
     assert any("일부" in w for w in body2["warnings"])
+
+
+@pytest.fixture()
+def svc_wildcard_obs(tmp_path, monkeypatch, catalog_service):
+    csv_path = tmp_path / "profile.csv"
+    csv_path.write_text(
+        "﻿" + HEADER + "\n"
+        + _row(list_key="list-001", name="일반컬럼", ordinal="1") + "\n"
+        + _row(list_key="list-002", name="진짜%컬럼", ordinal="1") + "\n"
+        + _row(list_key="list-003", name="진짜_컬럼", ordinal="1") + "\n"
+        + _row(list_key="list-003", name=r"역슬래시\\컬럼", ordinal="2") + "\n",
+        encoding="utf-8",
+    )
+    db = tmp_path / "obs.db"
+    ingest_profile_csv(
+        csv_path,
+        db,
+        {"list-001": "NO_RESTRICTION", "list-002": "NO_RESTRICTION", "list-003": "NO_RESTRICTION"},
+        observed_at="2026-07-29T00:00:00Z",
+    )
+    monkeypatch.setenv("DATANAV_OBS_DB", str(db))
+    from datanav.api.service import Service
+    return Service(catalog_service._db_path)
+
+
+def test_column_search_treats_percent_as_literal(svc_wildcard_obs):
+    d = svc_wildcard_obs.search_by_columns(["%"])["data"]
+    assert d["totalEstimate"] == 1
+    assert d["items"][0]["listKey"] == "list-002"
+    assert d["items"][0]["matchedColumns"][0]["columns"] == ["진짜%컬럼"]
+
+
+def test_column_search_treats_underscore_as_literal(svc_wildcard_obs):
+    d = svc_wildcard_obs.search_by_columns(["_"])["data"]
+    assert d["totalEstimate"] == 1
+    assert d["items"][0]["listKey"] == "list-003"
+    assert d["items"][0]["matchedColumns"][0]["columns"] == ["진짜_컬럼"]
+
+
+def test_column_search_treats_escape_character_as_literal(svc_wildcard_obs):
+    d = svc_wildcard_obs.search_by_columns([r"\\"])["data"]
+    assert d["totalEstimate"] == 1
+    assert d["items"][0]["listKey"] == "list-003"
+    assert d["items"][0]["matchedColumns"][0]["columns"] == [r"역슬래시\\컬럼"]
+
+
+def test_column_search_keeps_normal_and_injection_like_inputs(svc_wildcard_obs):
+    normal = svc_wildcard_obs.search_by_columns(["컬럼"])["data"]
+    assert normal["totalEstimate"] == 3
+
+    injected = svc_wildcard_obs.search_by_columns(["%' OR 1=1 --"])["data"]
+    assert injected["totalEstimate"] == 0

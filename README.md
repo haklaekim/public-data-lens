@@ -4,7 +4,7 @@
 
 ![snapshot](https://img.shields.io/badge/%EC%8A%A4%EB%83%85%EC%83%B7-2026--06-blue)
 ![datasets](https://img.shields.io/badge/%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%85%8B-96%2C056%EA%B1%B4-informational)
-![contract](https://img.shields.io/badge/MCP%20%EA%B3%84%EC%95%BD-v1.0.0%20%EB%8F%99%EA%B2%B0-success)
+![contract](https://img.shields.io/badge/MCP%20%EA%B3%84%EC%95%BD-v1.0.0%20%EB%8F%99%EA%B2%B0%20%2B%20v1.3.0%20additive-success)
 ![status](https://img.shields.io/badge/%EC%83%81%ED%83%9C-v1.0%20beta-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
@@ -57,7 +57,7 @@ Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 | Prompt | `build_data_plan` / `compare_for_purpose` | 활용 계획 수립 / 목적 관점 비교의 절차 표준화 |
 | Resource | 판정 규칙 레지스트리 · JSON-LD Context · SHACL 셰이프 · Prompt 공개 문서 · Tool 스키마 명세 | 정본은 §7 URI로도 해소 |
 
-**공통 계약** (부속 명세 v1.0.0, 2026-07-17 동결): 응답 봉투
+**공통 계약** — 기반 v1.0.0(2026-07-17 동결), 현행 확장 명세 v1.3.0(v1.1~1.3은 additive minor — 기존 필드·오류 불변): 응답 봉투
 `{ data, meta: { sourceSnapshot, processedAt, schemaVersion, ruleVersions[] }, warnings[] }`,
 일관된 오류 모델(INVALID_ARGUMENT / DATASET_NOT_FOUND / RATE_LIMITED 등 9종), 모든 판정에
 rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
@@ -160,13 +160,17 @@ data/catalog/releases/  # 불변 릴리스 + current.json 포인터 (git 미포�
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -e "apps/server[dev]"
+.venv/bin/pip install -r apps/server/requirements.lock
+.venv/bin/pip install --no-deps -e "apps/server[dev]"
 
 cd apps/server
 ../../.venv/bin/python scripts/build_catalog.py <목록개방현황.csv> <YYYY-MM>   # 월간 빌드
 ../../.venv/bin/python -m pytest                                              # 수용 기준 테스트
 ../../.venv/bin/python -m datanav.api.mcp_server                              # MCP 서버 (stdio)
 ```
+
+테스트 기준선(2026-07-31 실측): 카탈로그 있음 `109 passed`; 카탈로그 미빌드 신선 상태
+`89 passed, 20 skipped, 0 failed`.
 
 로컬 stdio 등록(`.mcp.json`):
 

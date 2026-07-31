@@ -52,6 +52,40 @@ def test_dataset_uri_resolves_to_canonical_doc(service):
     assert doc["@type"] == "dcat:Dataset"
 
 
+def test_catalog_record_uri_resolves_to_canonical_doc(monkeypatch, catalog_service):
+    from datanav.api import rest
+
+    monkeypatch.setattr(rest, "_svc", lambda: catalog_service)
+    dataset = catalog_service.get_dataset("rec-001", "jsonld")["data"]["dataset"]
+    path = dataset["kdp:catalogRecord"].replace("https://data.datahub.kr", "")
+    r = client.get(path)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/ld+json")
+    doc = r.json()
+    assert doc["@context"]
+    assert doc["@id"] == dataset["kdp:catalogRecord"]
+    assert doc["@type"] == "dcat:CatalogRecord"
+    assert doc["foaf:primaryTopic"]["@id"] == f"{BASE_URI}/dataset/list-001"
+
+
+def test_catalog_record_not_found_returns_error_envelope(monkeypatch, catalog_service):
+    from datanav.api import rest
+
+    monkeypatch.setattr(rest, "_svc", lambda: catalog_service)
+    r = client.get(f"{CANON}/catalog/{catalog_service.snapshot}/record/no-such-record")
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "DATASET_NOT_FOUND"
+
+
+def test_catalog_record_unknown_snapshot(monkeypatch, catalog_service):
+    from datanav.api import rest
+
+    monkeypatch.setattr(rest, "_svc", lambda: catalog_service)
+    r = client.get(f"{CANON}/catalog/1999-01/record/rec-001")
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "SNAPSHOT_NOT_FOUND"
+
+
 @requires_catalog
 def test_dataset_html_redirects_to_portal(service):
     key = service.search_datasets(page_size=1)["data"]["items"][0]["listKey"]

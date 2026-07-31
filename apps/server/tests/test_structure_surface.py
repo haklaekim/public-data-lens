@@ -38,7 +38,10 @@ def test_structure_available_with_conservative_mode(svc_with_obs, monkeypatch):
     d = body["data"]
     assert d["coverageStatus"] == "AVAILABLE"
     assert d["evidenceLevel"] == "FILE_OBSERVATION"
+    assert d["rowCountListed"] == covered_row_count(svc, rid)
     assert d["examplesPublic"] is False
+    assert d["assets"][0]["tables"][0]["rowsScanned"] == 100
+    assert d["assets"][0]["tables"][0]["rowCountObserved"] == 100
     cols = d["assets"][0]["tables"][0]["columns"]
     assert [c["sourceName"] for c in cols] == ["시설명", "위도", "담당자 전화번호"]
     assert all("examples" not in c for c in cols)          # 보수 모드: 값 비노출
@@ -123,3 +126,7 @@ def test_missing_obs_store_degrades_to_not_collected(monkeypatch, service, tmp_p
     assert it["structureAvailable"] is False
     assert svc.get_dataset_structure(it["recordId"])["data"]["coverageStatus"] == "NOT_COLLECTED"
     assert "structureCoverage" not in svc.get_status()["data"]
+
+
+def covered_row_count(svc, rid):
+    return svc.get_dataset(rid, "card")["data"]["dataset"]["rowCount"]

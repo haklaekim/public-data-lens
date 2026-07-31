@@ -1,7 +1,7 @@
 {
   "specVersion": "1.3.0",
   "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness 확장 / v1.2.0 minor(2026-07-30): 구조 관측 Tool / v1.3.0 minor(2026-07-30): search_by_columns Tool·compare structureComparison 추가(S2). breaking은 재승인 필요",
-  "generatedAt": "2026-07-30T11:24:15Z",
+  "generatedAt": "2026-07-30T23:32:16Z",
   "baseUri": "https://data.datahub.kr/projects/datanav",
   "compatibilityPolicy": "필드 추가는 하위 호환(minor). required 필드 제거·타입/의미 변경·오류 코드 제거는 breaking(major). meta.schemaVersion으로 전달.",
   "inputLimits": {
@@ -412,6 +412,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
               },
               "structureAvailable": {
                 "type": "boolean",
@@ -877,6 +881,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
               },
               "structureAvailable": {
                 "type": "boolean",
@@ -1374,6 +1382,10 @@
                   "null"
                 ]
               },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
+              },
               "structureAvailable": {
                 "type": "boolean",
                 "description": "데이터 구조 관측 존재 여부(get_dataset_structure로 조회). v1.2.0 추가"
@@ -1803,6 +1815,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
               },
               "structureAvailable": {
                 "type": "boolean",
@@ -2350,6 +2366,10 @@
                   "null"
                 ]
               },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
+              },
               "structureAvailable": {
                 "type": "boolean",
                 "description": "데이터 구조 관측 존재 여부(get_dataset_structure로 조회). v1.2.0 추가"
@@ -2629,6 +2649,13 @@
                               "integer",
                               "null"
                             ]
+                          },
+                          "rowCountObserved": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "description": "관측 결과 알 수 있는 전체 행수. 알 수 없으면 null"
                           },
                           "columnCount": {
                             "type": "integer"
@@ -2983,6 +3010,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
               },
               "structureAvailable": {
                 "type": "boolean",
@@ -3472,6 +3503,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
               },
               "structureAvailable": {
                 "type": "boolean",
@@ -4039,6 +4074,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "rowCountListed": {
+                "type": "integer",
+                "description": "목록 메타데이터에 기재된 전체 행수"
               },
               "structureAvailable": {
                 "type": "boolean",
