@@ -1,6 +1,7 @@
 """원본 CSV 파싱 — 원본값 보존이 최우선(수용 기준: 원본값 추적 가능, 파싱 실패 0)."""
 from __future__ import annotations
 
+import codecs
 import csv
 from pathlib import Path
 from typing import Iterator
@@ -52,9 +53,26 @@ class ParseError(Exception):
     pass
 
 
-def parse_snapshot_csv(path: Path) -> Iterator[dict]:
+def detect_encoding(path: Path) -> str:
+    """스냅샷 CSV 인코딩 감지 — UTF-8(BOM 허용) 우선, 실패 시 CP949(§8).
+    포털 원본이 회차에 따라 어느 쪽으로도 내려올 수 있어 전량 스트림 검증으로 판별하고,
+    호출자는 감지 결과를 meta.json·build_report.json에 기록한다."""
+    for enc in ("utf-8-sig", "cp949"):
+        decoder = codecs.getincrementaldecoder(enc)()
+        try:
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    decoder.decode(chunk)
+                decoder.decode(b"", final=True)
+            return enc
+        except UnicodeDecodeError:
+            continue
+    raise ParseError(f"지원하지 않는 인코딩(utf-8/cp949 모두 아님): {path}")
+
+
+def parse_snapshot_csv(path: Path, encoding: str | None = None) -> Iterator[dict]:
     """행 단위로 (source: 원본 dict, row_no) 반환. 컬럼 구조가 다르면 즉시 실패(§8)."""
-    with open(path, encoding="utf-8-sig", newline="") as f:
+    with open(path, encoding=encoding or detect_encoding(path), newline="") as f:
         reader = csv.DictReader(f)
         missing = set(COLUMN_MAP) - set(reader.fieldnames or [])
         if missing:

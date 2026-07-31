@@ -24,7 +24,7 @@ BASE_ROW = {
 }
 
 
-def make_fixture_csv(path, n_unique=20):
+def make_fixture_csv(path, n_unique=20, encoding="utf-8-sig"):
     rows = []
     for i in range(n_unique):
         r = dict(BASE_ROW)
@@ -51,7 +51,7 @@ def make_fixture_csv(path, n_unique=20):
     })
     rows.append(bad)
 
-    with open(path, "w", encoding="utf-8-sig", newline="") as f:
+    with open(path, "w", encoding=encoding, newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(COLUMN_MAP))
         w.writeheader()
         w.writerows(rows)
@@ -83,6 +83,7 @@ def test_full_build_on_fixture(tmp_path, isolated_config):
     assert all(v["pass"] for v in report["acceptance"].values())
     assert report["insertedRows"] == total
     assert report["duplicateListKeys"] == 1
+    assert report["sourceEncoding"] == "utf-8-sig"
 
     # 표준 MMI 진단(aird-mmi-v1.1): 더미 1셀·중복 키에도 소형 셋은 DM-0 통과
     assert report["aird"]["rule"] == "aird-mmi-v1.1"
@@ -139,3 +140,39 @@ def test_same_snapshot_rebuild_carries_changes(tmp_path, isolated_config):
     assert r3["diff"]["counts"] == r2["diff"]["counts"]  # diff 승계
     assert r3["diff"]["baseSnapshot"] == "9999-01"
     assert "carriedFrom" in r3["diff"]
+
+
+def test_full_build_on_cp949_fixture(tmp_path, isolated_config):
+    """CP949 원본도 전 과정 빌드되고 감지 인코딩이 메타·리포트에 기록된다(P1 회귀)."""
+    from datanav.pipeline.build import build_release
+
+    csv_path = tmp_path / "fixture_cp949.csv"
+    total = make_fixture_csv(csv_path, encoding="cp949")
+
+    release_dir = build_release(csv_path, "9999-02", min_rows=5)
+    report = json.loads((release_dir / "build_report.json").read_text(encoding="utf-8"))
+    assert report["sourceEncoding"] == "cp949"
+    assert report["insertedRows"] == total
+    assert all(v["pass"] for v in report["acceptance"].values())
+
+    meta = json.loads(
+        (isolated_config.RAW_DIR / "9999-02" / "meta.json").read_text(encoding="utf-8")
+    )
+    assert meta["encoding"] == "cp949"
+
+
+def test_detect_encoding_prefers_utf8_and_rejects_unknown(tmp_path):
+    from datanav.pipeline.parse import ParseError, detect_encoding
+
+    utf8 = tmp_path / "u.csv"
+    utf8.write_text("목록키,목록명\n1,가나다\n", encoding="utf-8-sig")
+    assert detect_encoding(utf8) == "utf-8-sig"
+
+    cp949 = tmp_path / "c.csv"
+    cp949.write_text("목록키,목록명\n1,가나다\n", encoding="cp949")
+    assert detect_encoding(cp949) == "cp949"
+
+    bogus = tmp_path / "b.csv"
+    bogus.write_bytes(b"\xff\xfe\x00\xd8ok")  # utf-8도 cp949도 아닌 바이트열
+    with pytest.raises(ParseError):
+        detect_encoding(bogus)

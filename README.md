@@ -169,8 +169,8 @@ cd apps/server
 ../../.venv/bin/python -m datanav.api.mcp_server                              # MCP 서버 (stdio)
 ```
 
-테스트 기준선(2026-07-31 실측): 카탈로그 있음 `109 passed`; 카탈로그 미빌드 신선 상태
-`89 passed, 20 skipped, 0 failed`.
+테스트 기준선(2026-07-31 실측): 카탈로그 있음 `111 passed`; 카탈로그 미빌드 신선 상태
+`91 passed, 20 skipped, 0 failed`.
 
 로컬 stdio 등록(`.mcp.json`):
 
