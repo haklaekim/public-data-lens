@@ -1,4 +1,4 @@
-# 공개 게이트웨이(MCP 전용 배포) — 정적 웹 없이 /mcp·정본 URI·상태·고지만 노출한다.
+# 공개 게이트웨이(A 스택) — /mcp·정본 URI·코어 웹(/)·GET /api/**(코어 웹용 REST)·고지를 노출한다.
 # TLS는 상위 LB/프록시에서 종단한다(커스텀 커넥터는 https 필수).
 # ${GATEWAY_REAL_IP_FROM}: 신뢰할 LB/프록시 대역(CIDR). LB가 붙인 X-Forwarded-For에서
 # 실제 클라이언트 IP를 복원해야 IP당 rate limit이 사용자 단위로 동작한다.

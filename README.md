@@ -153,7 +153,7 @@ apps/server/            # Python — 1층 파이프라인 + 2층 MCP + REST
   datanav/rules/        #   판정 규칙 레지스트리(§5)
   datanav/api/          #   공용 Service + MCP 서버 + REST(FastAPI) + 컨시어지
   tests/                #   §11 수용 기준 테스트
-apps/gateway/           # 공개 배포용 리버스 프록시 + 랜딩
+apps/gateway/           # 공개 배포용 리버스 프록시(랜딩은 코어 웹)
 apps/web/               # React/Vite — 표면 플래그 빌드(VITE_SURFACE: core|concierge|all)
 data/catalog/releases/  # 불변 릴리스 + current.json 포인터 (git 미포함)
 ```
