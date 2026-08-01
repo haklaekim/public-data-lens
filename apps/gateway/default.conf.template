@@ -1,11 +1,8 @@
-# 공개 게이트웨이(A 스택) — /mcp·정본 URI·코어 웹(/)·GET /api/**(코어 웹용 REST)·고지를 노출한다.
+# 공개 게이트웨이(A 스택) — MCP·정본 URI·코어 웹(/)·GET /api/**(코어 웹용 REST)·고지를 노출한다.
 # TLS는 상위 LB/프록시에서 종단한다(커스텀 커넥터는 https 필수).
-# ${GATEWAY_REAL_IP_FROM}: 신뢰할 LB/프록시 대역(CIDR). LB가 붙인 X-Forwarded-For에서
-# 실제 클라이언트 IP를 복원해야 IP당 rate limit이 사용자 단위로 동작한다.
-# 직접 노출(LB 없음) 시 기본값 127.0.0.1은 아무 것도 신뢰하지 않는 no-op이다.
-set_real_ip_from ${GATEWAY_REAL_IP_FROM};
-real_ip_header X-Forwarded-For;
-real_ip_recursive on;
+# real_ip 설정(set_real_ip_from 등)은 10-real-ip.sh가 GATEWAY_REAL_IP_FROM(쉼표 구분 다중 CIDR)에서
+# /etc/nginx/conf.d/00-real-ip.conf로 전개한다 — LB가 붙인 X-Forwarded-For에서 실제 클라이언트 IP를
+# 복원해야 IP당 rate limit이 사용자 단위로 동작한다.
 
 # §10 개인정보 고지 준수: 원 IP를 저장하지 않는 익명 접근 로그.
 # $request 대신 메서드·경로만 기록한다 — 쿼리 문자열(검색어)은 로그에 남기지 않는다.
@@ -38,18 +35,19 @@ server {
         return 200 "ok\n";
     }
 
-    # 원격 MCP(streamable HTTP) — 호스트 앱 커넥터 등록 URL: https://<도메인>/mcp
-    location /mcp {
+    # 원격 MCP(streamable HTTP) — 커넥터 등록 URL: https://<도메인>/projects/public-data-lens/mcp
+    # 프로젝트 프리픽스 아래로 노출하고 내부 /mcp로 재작성한다(프리픽스가 정본 location보다 길어 우선 매칭).
+    location /projects/public-data-lens/mcp {
         limit_req zone=mcp_zone burst=20 nodelay;
-        proxy_pass http://mcp:8300;
+        proxy_pass http://mcp:8300/mcp;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_buffering off;
         proxy_read_timeout 300s;
     }
 
-    # §7 정본 URI 디레퍼런싱 — data.datahub.kr/projects/datanav/... 를 API가 해소한다
-    location /projects/datanav/ {
+    # §7 정본 URI 디레퍼런싱 — service.datahub.kr/projects/public-data-lens/... 를 API가 해소한다
+    location /projects/public-data-lens/ {
         limit_req zone=general_zone burst=20 nodelay;
         proxy_pass http://api:8000;
         proxy_http_version 1.1;

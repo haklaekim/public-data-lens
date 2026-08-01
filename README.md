@@ -16,7 +16,7 @@
 listings) into a canonical JSON-LD/DCAT layer with versioned, deterministic quality rules
 (SHACL-validated, DQV/PROV issue observations), and exposes search / compare / diff tools to
 AI hosts via the **Model Context Protocol**. It also serves as a research testbed for the
-AIRD (AI-Ready Data) standard: every judgment carries a rule version and evidence level,
+draft AIRD (AI-Ready Data) standard: every judgment carries a rule version and evidence level,
 and canonical URIs dereference to their JSON-LD representations.
 
 ## 빠른 시작 — Claude에 연결하기
@@ -24,7 +24,7 @@ and canonical URIs dereference to their JSON-LD representations.
 인증 없이 **URL 등록만으로** 사용할 수 있습니다 (읽기 전용, 무료).
 
 1. Claude 웹/앱 → **[설정] → [커넥터] → [커스텀 커넥터 추가]**
-2. `https://data.datahub.kr/mcp` 입력
+2. `https://service.datahub.kr/projects/public-data-lens/mcp` 입력
 3. 대화에서 바로 사용:
    - *"폐교 활용 사업을 검토 중인데 참고할 공공데이터 찾아줘"*
    - *"고령자 의료 접근성 분석에 쓸 데이터 후보를 비교해줘"*
@@ -32,14 +32,15 @@ and canonical URIs dereference to their JSON-LD representations.
 
 더 정형화된 결과가 필요하면 프롬프트 메뉴에서 **`build_data_plan`** 을 선택하고 목적
 한 문장을 입력하세요 — 목적 분해→검색→비교→예상 결합 키→미확인 항목→포털 링크 순서의
-활용 계획이 표준 절차대로 생성됩니다.
+활용 계획이 표준 절차대로 생성됩니다. `build_data_plan`은 호스트 LLM이 이 절차를 따르도록
+안내하는 MCP Prompt이며, 서버가 스스로 계획을 수립하거나 결합 가능성을 확정하지는 않습니다.
 
 Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 
 ```json
 {
   "mcpServers": {
-    "datanav": { "type": "http", "url": "https://data.datahub.kr/mcp" }
+    "public-data-lens": { "type": "http", "url": "https://service.datahub.kr/projects/public-data-lens/mcp" }
   }
 }
 ```
@@ -53,6 +54,8 @@ Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 | Tool | `compare_datasets` | 최대 5개의 구조화된 사실 비교 (해석 없음) |
 | Tool | `get_catalog_changes` | 월별 변경 추적 — 6개 상태, **스냅샷 부재 ≠ 폐기** |
 | Tool | `get_catalog_stats` | 주제·기관·포맷·완전성·유형 통계 |
+| Tool | `search_by_columns` | 원본 컬럼(변수) 기준 검색 (v1.3) — 예: `['위도','경도']`, 일치 근거 동반 |
+| Tool | `get_dataset_structure` | 실파일에서 관측한 구조 조회 (v1.2) — 컬럼·유형·예시값(안전 게이트 통과분) |
 | Tool | `get_context` | (호환) 서비스 개요·스냅샷·규칙 요약 |
 | Prompt | `build_data_plan` / `compare_for_purpose` | 활용 계획 수립 / 목적 관점 비교의 절차 표준화 |
 | Resource | 판정 규칙 레지스트리 · JSON-LD Context · SHACL 셰이프 · Prompt 공개 문서 · Tool 스키마 명세 | 정본은 §7 URI로도 해소 |
@@ -69,7 +72,7 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 - **서비스로서** — 공공데이터포털이 공식 유통 기반이라면, Public Data Lens는 그 위의
   **탐색·판단 계층**입니다. 어떤 데이터가 존재하고 어떤 후보가 검토할 가치가 있는지를
   근거와 함께 제시하며, 포털을 대체하지 않습니다.
-- **연구로서** — 중앙대학교 HIKE 연구실이 운영하는 **AIRD(AI-Ready Data) 표준 실증** 프로젝트입니다.
+- **연구로서** — 중앙대학교 HIKE 연구실이 운영하는 **AIRD(AI-Ready Data) 표준안 실증** 프로젝트입니다.
   월간 목록을 정본 JSON-LD(DCAT)로 정규화하고, SHACL 검증·버전 관리되는 판정 규칙
   레지스트리·DQV/PROV 이슈 관찰로 "표준이 실제로 동작함"을 보여줍니다. 1차 목적은 표준의
   제정·확산이며, 서비스는 그 실증 수단입니다.
@@ -91,8 +94,11 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 
 ## 사용자 가이드라인
 
-- **목록 수준 근거입니다.** 모든 응답은 `evidenceLevel: CATALOG_METADATA_ONLY` — 실제
-  파일·API의 내용·품질은 반드시 포털 원문에서 확인하세요. 응답의 포털 링크가 그 통로입니다.
+- **기능에 따라 근거 수준이 다릅니다.** 검색·상세·비교·변경 이력은 포털 목록 메타데이터
+  기반으로 `CATALOG_METADATA_ONLY`, 구조가 수집된 파일의 컬럼·관측 유형·예시값은
+  `FILE_OBSERVATION`으로 표시됩니다. 구조 관측은 일부 파일·표본에 한정되며, 어느 쪽이든
+  실제 데이터의 내용·품질·결합 가능성은 반드시 포털 원문에서 확인하세요 — 응답의 포털
+  링크가 그 통로입니다.
 - **스냅샷 부재는 폐기가 아닙니다.** `MISSING_FROM_SNAPSHOT`은 관찰 사실이며, 폐기 확정은
   `OFFICIALLY_WITHDRAWN`으로만 표기됩니다.
 - **검색어에 개인정보를 입력하지 마세요.** 검색어 원문은 품질 개선 목적으로 익명 로그에
@@ -106,43 +112,49 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
   기재 등)을 발견하면 GitHub Issue로 알려주세요 — 검토를 거쳐 데이터 제공 기관에 환류하는
   것이 이 프로젝트 설계(§6)의 일부입니다.
 
-## 셀프 호스팅 — 두 개의 배포 단위
+## 셀프 호스팅 — MCP 스택
 
-생성형 컨시어지는 MCP 배포와 **분리된 별도 서비스**입니다(§2·§11, 부속 명세 명문화).
+이 저장소로 셀프 호스팅하는 공개 표면은 **MCP 스택**입니다. 생성형 AI 컨시어지는 MCP 배포와
+분리된 **별도 서비스**로 제공되며(§2·§11, 부속 명세 명문화), 이 문서는 그 설치·운영을 다루지
+않습니다.
 
-**A. MCP 배포** (`docker-compose.prod.yml`) — gateway + mcp + api + **코어 웹**(검색·비교·
-변경 피드·활용 사례, 컨시어지 없음). 공개 표면: `/`(코어 웹) · `/mcp` ·
-`/projects/datanav/**`(§7 정본) · `/api/**`(비생성형 GET 전용, 컨시어지는 404) · `/privacy`.
+**MCP 배포** (`docker-compose.prod.yml`) — gateway + mcp + api + **코어 웹**(검색·비교·
+변경 피드·활용 사례, 컨시어지 없음). 공개 표면: `/`(코어 웹) · `/projects/public-data-lens/mcp` ·
+`/projects/public-data-lens/**`(§7 정본) · `/api/**`(비생성형 GET 전용, 컨시어지는 404) · `/privacy`.
 **LLM API 키 불필요.**
 
 ```bash
-cp .env.example .env   # GATEWAY_REAL_IP_FROM(LB 대역), DATANAV_MCP_ALLOWED_HOSTS(도메인) 설정
+cp .env.example .env               # GATEWAY_REAL_IP_FROM(LB 대역)·DATANAV_MCP_ALLOWED_HOSTS(도메인) — 미지정 시 기동 실패
+sudo chown -R 10001:10001 data     # api는 비루트(uid 10001)로 데이터 볼륨에 쓴다
+
+# 첫 카탈로그 빌드 — 기동 전에 필요(api healthcheck가 미빌드를 unhealthy로 판정)
+mkdir -p data/raw/incoming && cp <목록개방현황.csv> data/raw/incoming/
+docker compose -f docker-compose.prod.yml build api
+docker compose -f docker-compose.prod.yml run --rm api \
+  python scripts/build_catalog.py /app/data/raw/incoming/<목록개방현황.csv> <YYYY-MM>
+
 docker compose -f docker-compose.prod.yml up -d --build
 
-# 월간 카탈로그 갱신 (빌드→수용검사→원자적 배포→재기동→로그 정리 일괄)
+# 이후 월간 갱신 (빌드→수용검사→원자적 배포→재기동→로그 정리 일괄)
 COMPOSE_FILE=docker-compose.prod.yml scripts/monthly_update.sh <목록개방현황.csv> <YYYY-MM>
 ```
 
-**B. 생성형 컨시어지 서비스** (`docker-compose.concierge.yml`) — 컨시어지 웹(대시보드) +
-api. `ANTHROPIC_API_KEY` 필수, 캡 4겹(세션/IP/일일/월 예산) 운영. 별도 서버·도메인 배포를
-전제하며, 같은 호스트에서는 카탈로그 볼륨을 공유합니다(다른 서버면 월간 갱신을 양쪽에 반영).
-
-```bash
-docker compose -p datanav-concierge -f docker-compose.concierge.yml up -d --build   # http://<호스트>:8890
-```
-
-운영 전제:
+상세 절차는 [배포 설명서](docs/배포_설명서_v1.0.md) 참조. 운영 전제:
 
 - **TLS는 LB/프록시 계층에서 종단**합니다(커스텀 커넥터는 https 필수). 정본 URI가 성립하려면
-  도메인이 `BASE_URI`(기본 `data.datahub.kr`)와 일치해야 합니다.
-- **`GATEWAY_REAL_IP_FROM`에 LB 내부 대역(CIDR)을 반드시 지정**합니다 — 미지정 시 모든
-  사용자가 LB IP 하나로 묶여 IP당 제한이 서비스 전체 한도가 됩니다.
+  도메인이 `BASE_URI`(기본 `service.datahub.kr`)와 일치해야 합니다.
+- **보안 필수 env 2종은 미지정 시 기동이 실패**합니다(조용한 fail-open 방지):
+  `GATEWAY_REAL_IP_FROM`(LB 내부 대역 CIDR, 쉼표 구분 다중 가능 — 잘못 지정하면 전체 사용자가
+  한 버킷으로 묶임)과 `DATANAV_MCP_ALLOWED_HOSTS`(Host 헤더 검증 도메인).
+- 게이트웨이는 기본 `127.0.0.1` 바인딩(원 서버 직접 접근·TLS 우회 차단) — LB가 다른 호스트면
+  `GATEWAY_BIND`에 내부 IP를 지정합니다. api 컨테이너는 비루트(uid 10001)로 실행되므로 최초
+  배포 시 `chown -R 10001:10001 data`가 필요합니다.
 - 카탈로그는 배포 전에 빌드되어 있어야 합니다(api healthcheck가 미빌드를 unhealthy로 표시).
 - 게이트웨이 접근 로그는 원 IP를 기록하지 않는 익명 형식이며, 컨테이너 로그는 크기 기반
   로테이션으로 보존을 제한합니다.
 - rate limit·사용량 캡은 단일 프로세스 전제 — api·mcp 복제 수는 1로 유지합니다.
 
-로컬 데모(웹 UI + 생성형 컨시어지 포함)는 `docker compose up -d --build`
+로컬 데모(웹 UI 포함)는 `docker compose up -d --build`
 (`docker-compose.yml`, http://localhost:8088)를 사용합니다.
 
 ## 개발
@@ -169,15 +181,15 @@ cd apps/server
 ../../.venv/bin/python -m datanav.api.mcp_server                              # MCP 서버 (stdio)
 ```
 
-테스트 기준선(2026-07-31 실측): 카탈로그 있음 `111 passed`; 카탈로그 미빌드 신선 상태
-`91 passed, 20 skipped, 0 failed`.
+테스트 기준선(2026-08-01 실측): 카탈로그 있음 `112 passed`; 카탈로그 미빌드 신선 상태
+`92 passed, 20 skipped, 0 failed`.
 
 로컬 stdio 등록(`.mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "datanav": {
+    "public-data-lens": {
       "command": "/절대경로/.venv/bin/python",
       "args": ["-m", "datanav.api.mcp_server"],
       "cwd": "/절대경로/apps/server"
@@ -224,19 +236,19 @@ cd apps/server
 | [배포 설명서 v1.0](docs/배포_설명서_v1.0.md) | 별도 서버 설치·운영 매뉴얼 (MCP 스택) |
 | [차기 기능 백로그 v1.0](docs/차기_기능_백로그_v1.0.md) | 공개 배포 이후 계획 |
 
-정본(기계 판독용): [Tool 스키마](https://data.datahub.kr/projects/datanav/spec/tools/1.0) ·
-[판정 규칙](https://data.datahub.kr/projects/datanav/rules/catalog/1.0) ·
-[JSON-LD Context](https://data.datahub.kr/projects/datanav/context/catalog/1.0) ·
-[SHACL](https://data.datahub.kr/projects/datanav/shapes/catalog/1.0)
+정본(기계 판독용): [Tool 스키마](https://service.datahub.kr/projects/public-data-lens/spec/tools/1.0) ·
+[판정 규칙](https://service.datahub.kr/projects/public-data-lens/rules/catalog/1.0) ·
+[JSON-LD Context](https://service.datahub.kr/projects/public-data-lens/context/catalog/1.0) ·
+[SHACL](https://service.datahub.kr/projects/public-data-lens/shapes/catalog/1.0)
 
 ## 향후 계획
 
-**v1.0 확정 잔여 조건** — ① 골든셋 인간 검수 ② 정본 도메인(`data.datahub.kr`) 연결.
+**v1.0 확정 잔여 조건** — ① 골든셋 인간 검수 ② 정본 도메인(`service.datahub.kr`) 연결.
 완료 전까지 beta 표기를 유지합니다.
 
 **공개 배포 이후** ([백로그](docs/차기_기능_백로그_v1.0.md) 상세):
 
-- ~~웹 분리~~ → 반영됨: 코어 웹은 MCP 배포에 동반, 생성형 컨시어지는 별도 스택(`docker-compose.concierge.yml`)
+- ~~웹 분리~~ → 반영됨: 코어 웹은 MCP 배포에 동반, 생성형 컨시어지는 별도 서비스
 - 컨시어지의 원격 MCP 소비 전환(카탈로그 동기화 제거 — "첫 번째 MCP 클라이언트"의 문자적 완성)
 - REST API의 공개 계약 승격 (수요 확인 후)
 - MCP 채널 사용 지표(§12) — 앱 레벨 익명 로깅

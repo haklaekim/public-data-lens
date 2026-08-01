@@ -23,6 +23,9 @@ nohup.out
 *.log
 data/catalog/concierge_usage.json
 .env
+.env.*
+!.env.example
+data/catalog/*.tmp
 data/logs/
 data/observations/
 data/anon_hmac.key

@@ -2,7 +2,7 @@
   "specVersion": "1.2.0",
   "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness 확장 / v1.2.0 minor(2026-07-30): get_dataset_structure Tool·summaryItem.structureAvailable 추가(데이터 구조 관측 v2.2). breaking은 재승인 필요",
   "generatedAt": "2026-07-30T00:04:13Z",
-  "baseUri": "https://data.datahub.kr/projects/datanav",
+  "baseUri": "https://service.datahub.kr/projects/public-data-lens",
   "compatibilityPolicy": "필드 추가는 하위 호환(minor). required 필드 제거·타입/의미 변경·오류 코드 제거는 breaking(major). meta.schemaVersion으로 전달.",
   "inputLimits": {
     "maxQueryLength": 500,

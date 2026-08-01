@@ -1,4 +1,4 @@
-"""§7 정본 URI 디레퍼런싱 — data.datahub.kr/projects/datanav/... 경로가 정본 표현으로 해소되는지 검증.
+"""§7 정본 URI 디레퍼런싱 — service.datahub.kr/projects/public-data-lens/... 경로가 정본 표현으로 해소되는지 검증.
 
 JSON-LD 문서의 @id가 약속한 그대로 접속 가능해야 재개봉 없이 Cool URIs를 지킬 수 있다.
 """
@@ -14,7 +14,7 @@ from datanav.spec import SPEC_VERSION
 from tests.conftest import requires_catalog
 
 client = TestClient(app)
-CANON = "/projects/datanav"
+CANON = "/projects/public-data-lens"
 
 
 def test_context_resolves_as_jsonld():
@@ -57,7 +57,7 @@ def test_catalog_record_uri_resolves_to_canonical_doc(monkeypatch, catalog_servi
 
     monkeypatch.setattr(rest, "_svc", lambda: catalog_service)
     dataset = catalog_service.get_dataset("rec-001", "jsonld")["data"]["dataset"]
-    path = dataset["kdp:catalogRecord"].replace("https://data.datahub.kr", "")
+    path = dataset["kdp:catalogRecord"].replace("https://service.datahub.kr", "")
     r = client.get(path)
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("application/ld+json")

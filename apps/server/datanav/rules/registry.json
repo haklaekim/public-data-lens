@@ -1,6 +1,6 @@
 {
   "registryVersion": "1.0",
-  "registryUri": "https://data.datahub.kr/projects/datanav/rules/catalog/1.0",
+  "registryUri": "https://service.datahub.kr/projects/public-data-lens/rules/catalog/1.0",
   "rules": [
     {
       "ruleId": "catalog-completeness-file-v1.0",
