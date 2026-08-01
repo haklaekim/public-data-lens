@@ -39,7 +39,7 @@ Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 ```json
 {
   "mcpServers": {
-    "datanav": { "type": "http", "url": "https://service.datahub.kr/projects/public-data-lens/mcp" }
+    "public-data-lens": { "type": "http", "url": "https://service.datahub.kr/projects/public-data-lens/mcp" }
   }
 }
 ```
@@ -53,6 +53,8 @@ Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 | Tool | `compare_datasets` | 최대 5개의 구조화된 사실 비교 (해석 없음) |
 | Tool | `get_catalog_changes` | 월별 변경 추적 — 6개 상태, **스냅샷 부재 ≠ 폐기** |
 | Tool | `get_catalog_stats` | 주제·기관·포맷·완전성·유형 통계 |
+| Tool | `search_by_columns` | 원본 컬럼(변수) 기준 검색 (v1.3) — 예: `['위도','경도']`, 일치 근거 동반 |
+| Tool | `get_dataset_structure` | 실파일에서 관측한 구조 조회 (v1.2) — 컬럼·유형·예시값(안전 게이트 통과분) |
 | Tool | `get_context` | (호환) 서비스 개요·스냅샷·규칙 요약 |
 | Prompt | `build_data_plan` / `compare_for_purpose` | 활용 계획 수립 / 목적 관점 비교의 절차 표준화 |
 | Resource | 판정 규칙 레지스트리 · JSON-LD Context · SHACL 셰이프 · Prompt 공개 문서 · Tool 스키마 명세 | 정본은 §7 URI로도 해소 |
@@ -173,15 +175,15 @@ cd apps/server
 ../../.venv/bin/python -m datanav.api.mcp_server                              # MCP 서버 (stdio)
 ```
 
-테스트 기준선(2026-07-31 실측): 카탈로그 있음 `111 passed`; 카탈로그 미빌드 신선 상태
-`91 passed, 20 skipped, 0 failed`.
+테스트 기준선(2026-08-01 실측): 카탈로그 있음 `112 passed`; 카탈로그 미빌드 신선 상태
+`92 passed, 20 skipped, 0 failed`.
 
 로컬 stdio 등록(`.mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "datanav": {
+    "public-data-lens": {
       "command": "/절대경로/.venv/bin/python",
       "args": ["-m", "datanav.api.mcp_server"],
       "cwd": "/절대경로/apps/server"
