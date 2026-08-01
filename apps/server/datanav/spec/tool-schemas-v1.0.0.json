@@ -2,7 +2,7 @@
   "specVersion": "1.0.0",
   "status": "APPROVED — 공개 계약 동결(2026-07-17, 운영 주체 승인). 이후 변경은 semver로 관리하며 breaking은 재승인 필요",
   "generatedAt": "2026-07-17T13:50:26Z",
-  "baseUri": "https://data.datahub.kr/projects/datanav",
+  "baseUri": "https://service.datahub.kr/projects/public-data-lens",
   "compatibilityPolicy": "필드 추가는 하위 호환(minor). required 필드 제거·타입/의미 변경·오류 코드 제거는 breaking(major). meta.schemaVersion으로 전달.",
   "inputLimits": {
     "maxQueryLength": 500,

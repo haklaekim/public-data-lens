@@ -2,8 +2,8 @@
 @prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix dct:  <http://purl.org/dc/terms/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
-@prefix kdp:  <https://data.datahub.kr/projects/datanav/ns/kdp#> .
-@prefix :     <https://data.datahub.kr/projects/datanav/shapes/catalog/1.0#> .
+@prefix kdp:  <https://service.datahub.kr/projects/public-data-lens/ns/kdp#> .
+@prefix :     <https://service.datahub.kr/projects/public-data-lens/shapes/catalog/1.0#> .
 
 # 공공데이터 내비게이터 SHACL 셰이프 v1.0
 # Violation = 배포 차단(치명), Warning = 리포트만

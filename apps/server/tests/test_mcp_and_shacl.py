@@ -25,7 +25,7 @@ def test_mcp_surface_and_calls():
             assert prompts == {"build_data_plan", "compare_for_purpose"}
             resources = {str(r.uri) for r in (await c.list_resources()).resources}
             assert len(resources) == 5  # 규칙·Context·SHACL·Prompt 문서·부속 명세
-            assert all(u.startswith("https://data.datahub.kr/projects/datanav/") for u in resources)
+            assert all(u.startswith("https://service.datahub.kr/projects/public-data-lens/") for u in resources)
 
             # Tool 정상 호출 + 봉투
             r = await c.call_tool("search_datasets", {"query": "도서관", "pageSize": 3})
@@ -49,14 +49,14 @@ def test_shacl_catches_fatal_violation():
     from datanav.pipeline.shacl import validate_docs
 
     good = {
-        "@id": "https://data.datahub.kr/projects/datanav/dataset/1",
+        "@id": "https://service.datahub.kr/projects/public-data-lens/dataset/1",
         "@type": "dcat:Dataset",
         "title": "정상", "identifier": "1",
         "kdp:listType": "FILE", "kdp:evidenceLevel": "CATALOG_METADATA_ONLY",
         "landingPage": "https://www.data.go.kr/data/1/fileData.do",
         "description": "d", "keyword": ["k"],
     }
-    bad = dict(good, **{"@id": "https://data.datahub.kr/projects/datanav/dataset/2"})
+    bad = dict(good, **{"@id": "https://service.datahub.kr/projects/public-data-lens/dataset/2"})
     del bad["title"]
     bad["kdp:listType"] = "WEIRD"
 

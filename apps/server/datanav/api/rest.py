@@ -146,7 +146,7 @@ def _prune_old_logs(today: str) -> None:
 
 def _write_usage_log(request: Request, status_code: int, ms: int) -> None:
     path = request.url.path
-    if not (path.startswith("/api/") or path.startswith("/projects/datanav/")):
+    if not (path.startswith("/api/") or path.startswith("/projects/public-data-lens/")):
         return
     entry = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -325,13 +325,13 @@ def resource_tool_spec():
     return json.loads(spec_path.read_text(encoding="utf-8"))
 
 
-# ---- §7 정본 URI 디레퍼런싱 — https://data.datahub.kr/projects/datanav/... 경로가
+# ---- §7 정본 URI 디레퍼런싱 — https://service.datahub.kr/projects/public-data-lens/... 경로가
 # 실제로 해소되도록 정본 표현을 반환한다(Cool URIs). 배포 시 nginx가 이 경로를 그대로 전달한다.
 from fastapi.responses import FileResponse, RedirectResponse, Response  # noqa: E402
 
 from ..config import RELEASES_DIR  # noqa: E402
 
-_CANON = "/projects/datanav"
+_CANON = "/projects/public-data-lens"
 
 
 def _ld(doc: dict) -> Response:

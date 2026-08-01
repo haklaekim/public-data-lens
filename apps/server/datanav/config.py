@@ -16,7 +16,7 @@ RELEASES_DIR = CATALOG_DIR / "releases"
 CURRENT_POINTER = CATALOG_DIR / "current.json"
 
 # §7 확정 네임스페이스 (영구 불변)
-BASE_URI = "https://data.datahub.kr/projects/datanav"
+BASE_URI = "https://service.datahub.kr/projects/public-data-lens"
 
 SCHEMA_VERSION = "1.3.0"
 

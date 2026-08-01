@@ -1,7 +1,7 @@
 # build_data_plan v1.0 — 데이터 활용 계획 수립 Prompt (공개 문서)
 
 > 이 문서는 MCP Prompt `build_data_plan`의 공개 사본입니다(3중 제공, 설계서 §4.2).
-> URI: https://data.datahub.kr/projects/datanav/prompts/build-data-plan/1.0
+> URI: https://service.datahub.kr/projects/public-data-lens/prompts/build-data-plan/1.0
 
 ## 절차
 
