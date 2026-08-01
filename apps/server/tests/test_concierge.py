@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import pytest
 
-from datanav.api import concierge as cz
-from datanav.api.errors import RateLimited
+cz = pytest.importorskip("datanav.api.concierge", reason="공개 스냅샷 — 컨시어지 미포함")
+
+from datanav.api.errors import RateLimited  # noqa: E402
 
 
 @pytest.fixture()
@@ -197,9 +198,9 @@ def test_run_concierge_emit_hook_isolated():
 def test_concierge_disabled_surface(monkeypatch):
     """배포 분리: DATANAV_CONCIERGE_ENABLED=0(MCP·코어 웹 배포)에서는 컨시어지 표면이 닫힌다."""
     from fastapi.testclient import TestClient
-    from datanav.api import rest
+    from datanav.api import concierge_routes, rest
 
-    monkeypatch.setattr(rest, "CONCIERGE_ENABLED", False)
+    monkeypatch.setattr(concierge_routes, "CONCIERGE_ENABLED", False)
     client = TestClient(rest.app)
 
     s = client.get("/api/concierge/status").json()
