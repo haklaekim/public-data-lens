@@ -5,12 +5,14 @@
 #
 # 전제:
 #  - TLS는 상위 LB/프록시에서 종단한다(커스텀 커넥터는 https 필수).
-#  - LB 뒤에서는 .env의 GATEWAY_REAL_IP_FROM에 LB 대역(CIDR)을 반드시 지정한다 —
-#    미지정 시 모든 사용자가 LB IP 하나로 묶여 IP당 rate limit이 서비스 전체 한도가 된다.
+#  - 보안 필수 env 2종(GATEWAY_REAL_IP_FROM·DATANAV_MCP_ALLOWED_HOSTS)은 미지정 시 기동이 실패한다 —
+#    조용한 fail-open(전체 사용자 단일 rate limit 버킷, Host 미검증)을 막기 위한 의도된 동작.
+#  - 게이트웨이는 기본 127.0.0.1에 바인딩한다 — LB가 다른 호스트면 GATEWAY_BIND에 내부 IP를 지정한다.
+#  - api는 ./data에 uid 10001(비루트)로 쓴다 — 최초 배포 시 `chown -R 10001:10001 data` 필요.
 #  - 카탈로그는 배포 전에 빌드되어 있어야 한다(scripts/monthly_update.sh 또는 build_catalog.py).
 #  - api·mcp는 단일 워커 전제(rate limit이 프로세스 메모리 기반) — 복제 수는 1로 유지한다.
 #
-# 공개 표면: /(코어 웹) · /mcp · /projects/datanav/** · GET /api/**(코어 웹용 REST) · /privacy
+# 공개 표면: /(코어 웹) · /projects/public-data-lens/mcp · /projects/public-data-lens/** · GET /api/**(코어 웹용 REST) · /privacy
 # 비공개: /api/concierge*(404, 생성형은 별도 스택) · /api의 비GET 메서드(403). ANTHROPIC_API_KEY도 불필요하다.
 
 x-logging: &logging
@@ -43,6 +45,11 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    # 이미지의 비루트 사용자(uid 10001) 전제 — 권한 상승 봉쇄
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging: *logging
     restart: unless-stopped
     healthcheck:
@@ -59,9 +66,8 @@ services:
     environment:
       DATANAV_MCP_HOST: 0.0.0.0
       DATANAV_MCP_PORT: "8300"
-      # 서비스 도메인 지정 시 DNS 리바인딩 보호(Host 헤더 검증) 활성화 — 예: data.datahub.kr
-      # 미지정이면 Host 검증 비활성(신뢰 게이트웨이 뒤 전제) — 공개 배포에서는 반드시 지정
-      DATANAV_MCP_ALLOWED_HOSTS: ${DATANAV_MCP_ALLOWED_HOSTS:-}
+      # 서비스 도메인(쉼표 구분) — DNS 리바인딩 보호(Host 헤더 검증). 공개 배포 필수라 미지정 시 기동 실패.
+      DATANAV_MCP_ALLOWED_HOSTS: "${DATANAV_MCP_ALLOWED_HOSTS:?서비스 도메인을 지정하세요 — 예. service.datahub.kr}"
       # 관측 예시값 공개 — api와 동일 값으로 유지(판정 이중화 금지)
       DATANAV_EXAMPLES_PUBLIC: ${DATANAV_EXAMPLES_PUBLIC:-0}
     volumes:
@@ -70,6 +76,10 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging: *logging
     restart: unless-stopped
     healthcheck:
@@ -85,20 +95,27 @@ services:
       context: apps/web
       args:
         VITE_SURFACE: core
+    # nginx 마스터는 워커 강등에 루트가 필요 — 권한 상승만 봉쇄
+    security_opt:
+      - no-new-privileges:true
     logging: *logging
     restart: unless-stopped
 
   gateway:
     build: apps/gateway
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       - api
       - mcp
       - web
     environment:
-      # LB/프록시 신뢰 대역(CIDR 1개). 기본값 127.0.0.1은 no-op(직접 노출용).
-      GATEWAY_REAL_IP_FROM: ${GATEWAY_REAL_IP_FROM:-127.0.0.1}
+      # LB/프록시 신뢰 대역(CIDR, 쉼표 구분 다중 가능). 필수 — 미지정 시 기동 실패(조용한 공유 버킷 방지).
+      # 직접 노출(LB 없음)이면 127.0.0.1(no-op)을 명시한다.
+      GATEWAY_REAL_IP_FROM: "${GATEWAY_REAL_IP_FROM:?LB 내부 대역 CIDR을 지정하세요(쉼표 구분, 직접 노출이면 127.0.0.1)}"
     ports:
-      - "${GATEWAY_PORT:-8088}:80"
+      # 기본 루프백 바인딩 — 원 서버 직접 접근(TLS 우회)을 차단한다. LB가 다른 호스트면 GATEWAY_BIND에 내부 IP 지정.
+      - "${GATEWAY_BIND:-127.0.0.1}:${GATEWAY_PORT:-8088}:80"
     logging: *logging
     restart: unless-stopped
     healthcheck:

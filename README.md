@@ -24,7 +24,7 @@ and canonical URIs dereference to their JSON-LD representations.
 인증 없이 **URL 등록만으로** 사용할 수 있습니다 (읽기 전용, 무료).
 
 1. Claude 웹/앱 → **[설정] → [커넥터] → [커스텀 커넥터 추가]**
-2. `https://data.datahub.kr/mcp` 입력
+2. `https://service.datahub.kr/projects/public-data-lens/mcp` 입력
 3. 대화에서 바로 사용:
    - *"폐교 활용 사업을 검토 중인데 참고할 공공데이터 찾아줘"*
    - *"고령자 의료 접근성 분석에 쓸 데이터 후보를 비교해줘"*
@@ -39,7 +39,7 @@ Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 ```json
 {
   "mcpServers": {
-    "datanav": { "type": "http", "url": "https://data.datahub.kr/mcp" }
+    "datanav": { "type": "http", "url": "https://service.datahub.kr/projects/public-data-lens/mcp" }
   }
 }
 ```
@@ -111,8 +111,8 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 생성형 컨시어지는 MCP 배포와 **분리된 별도 서비스**입니다(§2·§11, 부속 명세 명문화).
 
 **A. MCP 배포** (`docker-compose.prod.yml`) — gateway + mcp + api + **코어 웹**(검색·비교·
-변경 피드·활용 사례, 컨시어지 없음). 공개 표면: `/`(코어 웹) · `/mcp` ·
-`/projects/datanav/**`(§7 정본) · `/api/**`(비생성형 GET 전용, 컨시어지는 404) · `/privacy`.
+변경 피드·활용 사례, 컨시어지 없음). 공개 표면: `/`(코어 웹) · `/projects/public-data-lens/mcp` ·
+`/projects/public-data-lens/**`(§7 정본) · `/api/**`(비생성형 GET 전용, 컨시어지는 404) · `/privacy`.
 **LLM API 키 불필요.**
 
 ```bash
@@ -134,9 +134,13 @@ docker compose -p datanav-concierge -f docker-compose.concierge.yml up -d --buil
 운영 전제:
 
 - **TLS는 LB/프록시 계층에서 종단**합니다(커스텀 커넥터는 https 필수). 정본 URI가 성립하려면
-  도메인이 `BASE_URI`(기본 `data.datahub.kr`)와 일치해야 합니다.
-- **`GATEWAY_REAL_IP_FROM`에 LB 내부 대역(CIDR)을 반드시 지정**합니다 — 미지정 시 모든
-  사용자가 LB IP 하나로 묶여 IP당 제한이 서비스 전체 한도가 됩니다.
+  도메인이 `BASE_URI`(기본 `service.datahub.kr`)와 일치해야 합니다.
+- **보안 필수 env 2종은 미지정 시 기동이 실패**합니다(조용한 fail-open 방지):
+  `GATEWAY_REAL_IP_FROM`(LB 내부 대역 CIDR, 쉼표 구분 다중 가능 — 잘못 지정하면 전체 사용자가
+  한 버킷으로 묶임)과 `DATANAV_MCP_ALLOWED_HOSTS`(Host 헤더 검증 도메인).
+- 게이트웨이는 기본 `127.0.0.1` 바인딩(원 서버 직접 접근·TLS 우회 차단) — LB가 다른 호스트면
+  `GATEWAY_BIND`에 내부 IP를 지정합니다. api 컨테이너는 비루트(uid 10001)로 실행되므로 최초
+  배포 시 `chown -R 10001:10001 data`가 필요합니다.
 - 카탈로그는 배포 전에 빌드되어 있어야 합니다(api healthcheck가 미빌드를 unhealthy로 표시).
 - 게이트웨이 접근 로그는 원 IP를 기록하지 않는 익명 형식이며, 컨테이너 로그는 크기 기반
   로테이션으로 보존을 제한합니다.
@@ -224,14 +228,14 @@ cd apps/server
 | [배포 설명서 v1.0](docs/배포_설명서_v1.0.md) | 별도 서버 설치·운영 매뉴얼 (MCP 스택) |
 | [차기 기능 백로그 v1.0](docs/차기_기능_백로그_v1.0.md) | 공개 배포 이후 계획 |
 
-정본(기계 판독용): [Tool 스키마](https://data.datahub.kr/projects/datanav/spec/tools/1.0) ·
-[판정 규칙](https://data.datahub.kr/projects/datanav/rules/catalog/1.0) ·
-[JSON-LD Context](https://data.datahub.kr/projects/datanav/context/catalog/1.0) ·
-[SHACL](https://data.datahub.kr/projects/datanav/shapes/catalog/1.0)
+정본(기계 판독용): [Tool 스키마](https://service.datahub.kr/projects/public-data-lens/spec/tools/1.0) ·
+[판정 규칙](https://service.datahub.kr/projects/public-data-lens/rules/catalog/1.0) ·
+[JSON-LD Context](https://service.datahub.kr/projects/public-data-lens/context/catalog/1.0) ·
+[SHACL](https://service.datahub.kr/projects/public-data-lens/shapes/catalog/1.0)
 
 ## 향후 계획
 
-**v1.0 확정 잔여 조건** — ① 골든셋 인간 검수 ② 정본 도메인(`data.datahub.kr`) 연결.
+**v1.0 확정 잔여 조건** — ① 골든셋 인간 검수 ② 정본 도메인(`service.datahub.kr`) 연결.
 완료 전까지 beta 표기를 유지합니다.
 
 **공개 배포 이후** ([백로그](docs/차기_기능_백로그_v1.0.md) 상세):
