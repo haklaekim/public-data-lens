@@ -420,7 +420,7 @@ export default function ConciergeView({ onOpen, onSearch }) {
 
       {phase === 'done' && result && result.data?.plan && (
         <>
-          <WarningPanel warnings={result.warnings} />
+          <WarningPanel warnings={result.warnings} notices={result.notices} />
 
           <div aria-live="polite" className="sr-only">
             분석 완료 — 후보 {result.data.plan.candidates?.length || 0}건이 제시되었습니다

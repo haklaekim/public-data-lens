@@ -8,12 +8,15 @@ from datanav.api.errors import (
 )
 
 def _envelope_ok(body):
-    assert set(body) == {"data", "meta", "warnings"}
+    assert set(body) == {"data", "meta", "warnings", "notices"}  # notices: v1.5 additive
     assert body["meta"]["sourceSnapshot"]
     from datanav.config import SCHEMA_VERSION
     assert body["meta"]["schemaVersion"] == SCHEMA_VERSION
     assert isinstance(body["meta"]["ruleVersions"], list)
     assert any("보증하지 않습니다" in w for w in body["warnings"])  # 면책 고지
+    # notices는 warnings의 구조화 미러 — 개수 일치, 면책 고지는 severity=info
+    assert [n["text"] for n in body["notices"]] == body["warnings"]
+    assert any(n["code"] == "DISCLAIMER" and n["severity"] == "info" for n in body["notices"])
 
 
 def test_search_envelope_and_ranking_meta(catalog_service):

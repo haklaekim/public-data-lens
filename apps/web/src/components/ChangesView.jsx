@@ -41,7 +41,7 @@ export default function ChangesView({ onOpen }) {
       </div>
 
       {error && <p className="error">{error}</p>}
-      <WarningPanel warnings={body?.warnings} />
+      <WarningPanel warnings={body?.warnings} notices={body?.notices} />
 
       {body && body.data.totalEstimate === 0 && !body.warnings.some((w) => w.includes('이전 스냅샷')) && (
         <p className="empty">해당 상태의 변경이 없습니다.</p>

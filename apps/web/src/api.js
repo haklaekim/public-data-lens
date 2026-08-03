@@ -36,6 +36,21 @@ async function get(path, params) {
   return body
 }
 
+async function post(path, payload) {
+  const res = await fetch(BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...anonHeaders() },
+    body: JSON.stringify(payload),
+  })
+  const body = await res.json()
+  if (!res.ok) {
+    const err = new Error(body?.error?.message || `HTTP ${res.status}`)
+    err.code = body?.error?.code
+    throw err
+  }
+  return body
+}
+
 export const api = {
   status: () => get('/status'),
   search: (params) => get('/search', params),
@@ -48,4 +63,8 @@ export const api = {
   stats: (axis, limit) => get('/stats', { axis, limit }),
   // 판정 규칙 레지스트리 전문(§3.2) — /api/status에는 규칙 목록이 없어 이 라우트가 정본
   rules: () => get('/resources/rules'),
+  // 검색 품질 지표(§3.2, v1.5) — humanReviewed 플래그를 함께 표기할 것
+  evalReport: () => get('/resources/eval'),
+  // 활용 계획 초안(v1.5) — 항상 DRAFT·NOT_ASSESSED, '추천'이 아니라 후보다
+  plan: (purpose, region, maxCandidates = 5) => post('/plan', { purpose, region, maxCandidates }),
 }

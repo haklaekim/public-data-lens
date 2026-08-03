@@ -38,7 +38,7 @@ export default function CompareView({ ids, onRemove, onOpen }) {
   return (
     <section>
       {error && <p className="error">{error}</p>}
-      <WarningPanel warnings={body?.warnings} />
+      <WarningPanel warnings={body?.warnings} notices={body?.notices} />
       {!body && !error && <p className="loading">비교 중…</p>}
       {body && (
         <>

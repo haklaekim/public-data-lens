@@ -21,6 +21,8 @@ export async function stubApi(page) {
     const p = url.pathname
     if (p === '/api/status') return route.fulfill(json(fx('status.json')))
     if (p === '/api/resources/rules') return route.fulfill(json(fx('resources-rules.json')))
+    if (p === '/api/resources/eval') return route.fulfill(json(fx('resources-eval.json')))
+    if (p === '/api/plan') return route.fulfill(json(fx('plan.json')))
     if (p === '/api/search/columns') return route.fulfill(json(fx('search-columns.json')))
     if (p === '/api/search') {
       const q = url.searchParams.get('query')

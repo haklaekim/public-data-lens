@@ -10,10 +10,10 @@ export function CoverageBlock({ status }) {
   if (!d?.structureCoverage) return null
   const { recordsAvailable, fileRecordsTotal } = d.structureCoverage
   const total = d.counts.datasets
-  // 스냅샷 기준월 시작 ~ 배포 시각의 간격(일) — 목록 기준일과 배포 사이의 지연
-  const lagDays = d.deployedAt
+  // 스냅샷 지연: 서버 사실(snapshotLagDays, v1.5)을 우선 — 구버전 응답만 프론트 계산 폴백
+  const lagDays = d.snapshotLagDays ?? (d.deployedAt
     ? Math.floor((Date.parse(d.deployedAt) - Date.parse(`${d.currentSnapshot}-01`)) / 86400000)
-    : null
+    : null)
   return (
     <section className="home-block">
       <h3>구조 관측 커버리지</h3>
@@ -49,8 +49,11 @@ export function CoverageBlock({ status }) {
 // 폐기 규칙(deprecated)은 숨기지 않고 표시한다 — 버전 관리의 증거.
 export function OpenInfraBlock() {
   const [registry, setRegistry] = useState(null)
+  const [evalReport, setEvalReport] = useState(null)
   useEffect(() => {
     api.rules().then(setRegistry).catch(() => setRegistry(null))
+    // 검색 품질 지표(v1.5) — 라우트가 없는 구버전 서버에서는 조용히 생략
+    api.evalReport().then(setEvalReport).catch(() => setEvalReport(null))
   }, [])
   if (!registry?.rules) return null
   return (
@@ -73,6 +76,18 @@ export function OpenInfraBlock() {
           </li>
         ))}
       </ul>
+      {evalReport?.summary && (
+        <p className="eval-metrics">
+          검색 품질(골든셋 {evalReport.summary.queries}질의):
+          {' '}P@10 {evalReport.summary.meanPrecisionAt10}
+          {' '}· R@10 {evalReport.summary.meanRecallAt10}
+          {' '}· nDCG@10 {evalReport.summary.meanNdcgAt10}
+          {!evalReport.summary.humanReviewed && (
+            <span className="rule-flag"> — 자동 생성 골든셋(인간 검토 전)</span>
+          )}
+          {' '}· <a href="/api/resources/eval" target="_blank" rel="noreferrer">전체 리포트</a>
+        </p>
+      )}
       <p className="infra-links">
         원문:{' '}
         <a href="/api/resources/rules" target="_blank" rel="noreferrer">규칙 레지스트리</a> ·{' '}

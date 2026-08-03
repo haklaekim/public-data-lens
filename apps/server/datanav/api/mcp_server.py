@@ -110,6 +110,7 @@ def search_datasets(
     updatedAfter: Annotated[str | None, Field(description="이 날짜 이후 수정된 목록만(YYYY-MM-DD)")] = None,
     cursor: Annotated[str | None, Field(description="이전 응답의 nextCursor(불투명 토큰, 현재 스냅샷에 귀속)")] = None,
     pageSize: Annotated[int, Field(description="페이지 크기(1~100)", ge=1, le=100)] = 20,
+    interpret: Annotated[bool, Field(description="true면 query의 지역·포맷·주기·유형 토큰을 결정론 규칙(query-interpret-v1.0)으로 필터에 이관하고 근거를 interpretedFilters[]로 반환(v1.5)")] = False,
 ) -> dict:
     """공공데이터 목록 검색. 자연어/키워드 query + 필터(theme/org/format/updateCycle/
     license/listType/region(ISO 3166-2:KR 시·도 코드)/updatedAfter(YYYY-MM-DD)).
@@ -119,7 +120,7 @@ def search_datasets(
         query=query, theme=theme, org=org, fmt=format, update_cycle=updateCycle,
         license_code=license, list_type=listType, region=region,
         include_inferred=includeInferred, updated_after=updatedAfter,
-        cursor=cursor, page_size=pageSize,
+        cursor=cursor, page_size=pageSize, interpret=interpret,
     ))
 
 

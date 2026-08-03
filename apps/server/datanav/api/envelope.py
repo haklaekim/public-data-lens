@@ -9,6 +9,21 @@ from ..config import DISCLAIMER, SCHEMA_VERSION
 from .errors import InvalidArgument
 
 
+# v1.5 additive: warnings[] 문자열과 병행하는 구조화 고지(§7 — 소비자의 문자열 결합 제거).
+# 상시 고지 접두 → 코드 매핑. 목록에 없는 경고는 개별 경고(WARNING)다.
+_STANDING_NOTICE_CODES = (
+    ("본 결과는", "DISCLAIMER"),
+    ("생성형 응답은", "GENAI_DISCLAIMER"),
+)
+
+
+def _notice(text: str) -> dict:
+    for prefix, code in _STANDING_NOTICE_CODES:
+        if text.startswith(prefix):
+            return {"code": code, "severity": "info", "text": text}
+    return {"code": "WARNING", "severity": "warning", "text": text}
+
+
 def envelope(
     data,
     source_snapshot: str,
@@ -26,6 +41,7 @@ def envelope(
             "ruleVersions": sorted(set(rule_versions)),
         },
         "warnings": w,
+        "notices": [_notice(t) for t in w],
     }
 
 

@@ -17,6 +17,7 @@ from .envelope import envelope
 from .errors import InvalidArgument
 
 RULE_PLAN = "plan-assembly-v1.0"
+RULE_QUERY_INTERPRET = "query-interpret-v1.0"
 
 # 시·도 이름 → ISO 3166-2:KR (search_datasets의 region 코드 체계와 동일)
 REGION_CODES: dict[str, str] = {
@@ -37,6 +38,50 @@ REGION_CODES: dict[str, str] = {
     "제주": "KR-49", "제주도": "KR-49", "제주특별자치도": "KR-49",
 }
 _REGION_CODE_SET = set(REGION_CODES.values())
+
+# 질의 해석 별칭(query-interpret-v1.0) — 검색어 토큰을 결정론적으로 필터로 옮긴다.
+# 제한 어휘: 확장은 additive(규칙 버전 증가 없이 사전 추가 금지 — registry definition 참조).
+_FORMAT_ALIAS = {"CSV": "CSV", "JSON": "JSON", "XML": "XML", "XLSX": "XLSX",
+                 "엑셀": "XLSX", "EXCEL": "XLSX", "PDF": "PDF", "SHP": "SHP"}
+_CYCLE_ALIAS = {"일간": "DAILY", "매일": "DAILY", "주간": "WEEKLY", "매주": "WEEKLY",
+                "월간": "MONTHLY", "매월": "MONTHLY", "분기": "QUARTERLY",
+                "반기": "SEMIANNUAL", "연간": "ANNUAL", "매년": "ANNUAL", "수시": "IRREGULAR"}
+_TYPE_ALIAS = {"API": "API", "파일": "FILE", "FILE": "FILE", "표준": "STD", "STD": "STD"}
+_INTERPRET_FIELDS = ("region", "format", "updateCycle", "listType")
+
+
+def interpret_query(raw: str, skip_fields: set[str] | None = None) -> tuple[str, list[dict]]:
+    """검색어에서 지역·포맷·주기·유형 토큰을 필터로 분리한다(query-interpret-v1.0).
+
+    반환: (남은 질의, interpretedFilters[]{field,value,sourceToken,ruleId}).
+    skip_fields의 축은 해석하지 않는다(명시 필터 우선 — 토큰은 질의에 남긴다).
+    """
+    skip = skip_fields or set()
+    interpreted: list[dict] = []
+    seen: set[str] = set()
+    rest: list[str] = []
+
+    def hit(field: str, value: str, token: str) -> bool:
+        if field in skip or field in seen:
+            return False
+        seen.add(field)
+        interpreted.append({"field": field, "value": value,
+                            "sourceToken": token, "ruleId": RULE_QUERY_INTERPRET})
+        return True
+
+    for token in raw.split():
+        t = token.strip()
+        up = t.upper()
+        if t in REGION_CODES and hit("region", REGION_CODES[t], token):
+            continue
+        if up in _FORMAT_ALIAS and hit("format", _FORMAT_ALIAS[up], token):
+            continue
+        if t in _CYCLE_ALIAS and hit("updateCycle", _CYCLE_ALIAS[t], token):
+            continue
+        if up in _TYPE_ALIAS and hit("listType", _TYPE_ALIAS[up], token):
+            continue
+        rest.append(token)
+    return " ".join(rest), interpreted
 
 # 목적 문장에서 걷어낼 일반어(검색 변별력 없음) — 제한 어휘, 확장은 additive
 _STOPWORDS = {

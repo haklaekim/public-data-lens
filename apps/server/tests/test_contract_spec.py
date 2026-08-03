@@ -11,10 +11,10 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from datanav.spec import OUTPUT_SCHEMAS
+from datanav.spec import OUTPUT_SCHEMAS, SPEC_VERSION
 
 SPEC_PATH = (
-    Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.4.0.json"
+    Path(__file__).resolve().parents[1] / "datanav" / "spec" / f"tool-schemas-v{SPEC_VERSION}.json"
 )
 
 

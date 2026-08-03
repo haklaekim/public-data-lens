@@ -182,6 +182,12 @@
       "title": "활용 계획 초안 조립 (결정론)",
       "effectiveDate": "2026-08-03",
       "definition": "build_data_plan Tool의 계획 조립 규칙. LLM 없이 결정론적으로 수행한다: 목적 문장에서 제한 어휘 규칙으로 검색어·지역을 추출하고, search_datasets 결과 상위 후보에 제목·주제·관측 컬럼 패턴으로 역할(PRIMARY/DEMAND/SUPPLY/SPATIAL/TEMPORAL/REFERENCE/RELATED)을 배정하며, 후보 2건 이상에서 관측된 컬럼 패턴만 예상 결합 키(CANDIDATE_ONLY)로 제시한다. 산출은 항상 초안(DRAFT)이고 품질(NOT_ASSESSED)·결합 가능성·분석 충분성을 확정하지 않는다."
+    },
+    {
+      "ruleId": "query-interpret-v1.0",
+      "title": "검색어 결정론 해석(지역·포맷·주기·유형 토큰 → 필터)",
+      "effectiveDate": "2026-08-04",
+      "definition": "검색어 공백 토큰을 제한 별칭 사전(시·도명→ISO 3166-2:KR, 포맷, 갱신 주기, 목록 유형)과 정확 일치로 대조해 필터로 이관한다. 축당 최초 1토큰, 명시 필터가 있는 축은 해석하지 않는다(명시 우선). 결과는 interpretedFilters[]{field,value,sourceToken,ruleId}로 노출되어 항상 해제 가능하다. LLM·유사도 추론 없음 — 사전 확장은 규칙 버전 증가를 동반한다."
     }
   ]
 }

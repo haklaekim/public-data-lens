@@ -16,7 +16,7 @@ from jsonschema import Draft202012Validator  # noqa: E402
 from datanav.config import BASE_URI, MAX_COMPARE, MAX_PAGE_SIZE, MAX_QUERY_LENGTH  # noqa: E402
 from datanav.spec import OUTPUT_SCHEMAS, SPEC_VERSION  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.4.0.json"
+OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / f"tool-schemas-v{SPEC_VERSION}.json"
 
 
 async def collect_input_schemas() -> dict[str, dict]:

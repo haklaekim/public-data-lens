@@ -87,6 +87,19 @@ test('데이터셋 프로필 — evidence 렌즈(§5.4)', async ({ page }) => {
   await shoot(page, 'profile-evidence.png')
 })
 
+test('활용 초안 렌즈(§5.5) — DRAFT·NOT_ASSESSED 상시 노출, fitSignals 개별', async ({ page }) => {
+  await page.goto(`/datasets/${RID}?lens=uses`)
+  await page.locator('.uses-form input').fill('어린이 보호구역 교통안전 분석')
+  await page.locator('.uses-form button').click()
+  const lens = page.locator('.uses-lens')
+  await expect(lens.locator('.uses-status')).toContainText('DRAFT')
+  await expect(lens.locator('.uses-status')).toContainText('NOT_ASSESSED')
+  await expect(lens).toContainText('CANDIDATE_ONLY')
+  await expect(lens.locator('.key-field', { hasText: '검색 관련도' }).first()).toBeVisible()
+  await expect(lens).not.toContainText('추천') // '추천' 명명 금지
+  await shoot(page, 'profile-uses.png')
+})
+
 test('딥링크 — 데이터셋 URL 직접 진입과 Escape 닫기 (ADR-003)', async ({ page }) => {
   await page.goto(`/datasets/${RID}`)
   await expect(page.locator('.drawer[role=dialog]')).toBeVisible()

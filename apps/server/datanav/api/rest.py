@@ -15,6 +15,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 
 from fastapi import FastAPI, Query, Request
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 
@@ -227,12 +228,13 @@ def search(
     updatedAfter: str | None = None,
     cursor: str | None = None,
     pageSize: int = Query(default=20, ge=1, le=100),
+    interpret: bool = False,
 ):
     result = _svc().search_datasets(
         query=query, theme=theme, org=org, fmt=format, update_cycle=updateCycle,
         license_code=license, list_type=listType, region=region,
         include_inferred=includeInferred, updated_after=updatedAfter,
-        cursor=cursor, page_size=pageSize,
+        cursor=cursor, page_size=pageSize, interpret=interpret,
     )
     # §12 지표용 주석 — 검색어 원문 정책은 고지문 참조(보존 12개월, 옵트아웃 시 미기록)
     filters = [k for k, v in [("theme", theme), ("org", org), ("format", format),
@@ -321,8 +323,39 @@ def resource_privacy():
 @app.get("/api/resources/spec/tools")
 def resource_tool_spec():
     from pathlib import Path
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.4.0.json"
+    from ..config import SCHEMA_VERSION
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / f"tool-schemas-v{SCHEMA_VERSION}.json"
     return json.loads(spec_path.read_text(encoding="utf-8"))
+
+
+@app.get("/api/resources/eval")
+def resource_eval():
+    """검색 품질 지표(§3.2, v1.5) — golden/eval_report.json 읽기 전용 노출.
+    humanReviewed=false(자동 생성 골든셋 v0)를 그대로 전달한다 — 소비자는 함께 표기할 것."""
+    from pathlib import Path
+    from .errors import DatasetNotFound
+    p = Path(__file__).resolve().parents[2] / "golden" / "eval_report.json"
+    if not p.exists():
+        raise DatasetNotFound("평가 리포트가 아직 생성되지 않았습니다", {"resource": "eval"})
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+class PlanRequest(BaseModel):
+    """POST /api/plan 입력 — build_data_plan Tool과 동일 의미(§12, v1.5)."""
+    purpose: str
+    region: str | None = None
+    maxCandidates: int = 5
+
+
+@app.post("/api/plan")
+def plan(req: PlanRequest, request: Request):
+    """활용 계획 초안(v1.5) — plan.py build_plan()의 REST 노출. 새 판정 없음:
+    MCP build_data_plan Tool과 같은 결정론 조립기를 호출한다(planStatus=DRAFT 고정)."""
+    from .plan import build_plan
+    result = build_plan(_svc(), purpose=req.purpose, region=req.region,
+                        max_candidates=req.maxCandidates)
+    request.state.log_extra = {"q": req.purpose[:200], "filters": ["plan"]}
+    return result
 
 
 # ---- §7 정본 URI 디레퍼런싱 — https://service.datahub.kr/projects/public-data-lens/... 경로가

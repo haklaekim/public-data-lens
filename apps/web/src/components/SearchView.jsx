@@ -30,56 +30,16 @@ const CYCLES = [['', '주기 전체'], ...Object.entries(UPDATE_CYCLE_LABEL)]
 
 const FORMATS = ['', 'CSV', 'JSON', 'XML', 'XLSX', 'PDF', 'SHP']
 
-/* ---- 결정론적 질의 해석 — LLM 없이 검색어에서 조건을 읽어낸다.
-   "서울 무더위 쉼터 CSV" → 지역·포맷을 필터로 옮기고 키워드만 검색.
-   MCP 호스트 LLM이 하는 필터 매핑과 같은 의미론을 웹에서 재현하는 기준점. ---- */
-const REGION_ALIAS = (() => {
-  const m = {}
-  REGIONS.slice(1).forEach(([code, name]) => { m[name] = code })
-  Object.assign(m, {
-    서울시: 'KR-11', 서울특별시: 'KR-11', 부산시: 'KR-26', 부산광역시: 'KR-26',
-    대구시: 'KR-27', 대구광역시: 'KR-27', 인천시: 'KR-28', 인천광역시: 'KR-28',
-    광주시: 'KR-29', 광주광역시: 'KR-29', 대전시: 'KR-30', 대전광역시: 'KR-30',
-    울산시: 'KR-31', 울산광역시: 'KR-31', 세종시: 'KR-50', 세종특별자치시: 'KR-50',
-    경기도: 'KR-41', 강원도: 'KR-42', 강원특별자치도: 'KR-42',
-    충청북도: 'KR-43', 충청남도: 'KR-44', 전라북도: 'KR-45', 전북특별자치도: 'KR-45',
-    전라남도: 'KR-46', 경상북도: 'KR-47', 경상남도: 'KR-48',
-    제주도: 'KR-49', 제주특별자치도: 'KR-49',
-  })
-  return m
-})()
-const FORMAT_ALIAS = { CSV: 'CSV', JSON: 'JSON', XML: 'XML', XLSX: 'XLSX', 엑셀: 'XLSX', EXCEL: 'XLSX', PDF: 'PDF', SHP: 'SHP' }
-const CYCLE_ALIAS = {
-  일간: 'DAILY', 매일: 'DAILY', 주간: 'WEEKLY', 매주: 'WEEKLY', 월간: 'MONTHLY', 매월: 'MONTHLY',
-  분기: 'QUARTERLY', 반기: 'SEMIANNUAL', 연간: 'ANNUAL', 매년: 'ANNUAL', 수시: 'IRREGULAR',
-}
-const TYPE_ALIAS = { API: 'API', 파일: 'FILE', FILE: 'FILE', 표준: 'STD', STD: 'STD' }
 const CYCLE_LABEL = UPDATE_CYCLE_LABEL
 
-function interpretQuery(raw) {
-  const tokens = raw.split(/\s+/).filter(Boolean)
-  const found = {}
-  const labels = []
-  const rest = []
-  for (const t of tokens) {
-    const up = t.toUpperCase()
-    if (!found.region && REGION_ALIAS[t]) {
-      found.region = REGION_ALIAS[t]
-      labels.push(`지역 ${t.replace(/(특별자치|특별|광역)?(시|도)$/, '')}`)
-    } else if (!found.format && (FORMAT_ALIAS[t] || FORMAT_ALIAS[up])) {
-      found.format = FORMAT_ALIAS[t] || FORMAT_ALIAS[up]
-      labels.push(`포맷 ${found.format}`)
-    } else if (!found.updateCycle && CYCLE_ALIAS[t]) {
-      found.updateCycle = CYCLE_ALIAS[t]
-      labels.push(`주기 ${CYCLE_LABEL[CYCLE_ALIAS[t]]}`)
-    } else if (!found.listType && TYPE_ALIAS[up]) {
-      found.listType = TYPE_ALIAS[up]
-      labels.push(`유형 ${TYPE_ALIAS[up]}`)
-    } else {
-      rest.push(t)
-    }
-  }
-  return { found, labels, rest: rest.join(' ') }
+/* 질의 해석은 서버(query-interpret-v1.0)가 한다 — 프론트 별칭 사전·해석 로직 제거(STEP 8).
+   서버가 반환한 interpretedFilters[]를 배너로 표시하고, 해제 시 interpret=false로 재검색. */
+const FIELD_LABEL = { region: '지역', format: '포맷', updateCycle: '주기', listType: '유형' }
+const interpretedLabel = (f) => {
+  const v = f.field === 'region'
+    ? (REGIONS.find(([c]) => c === f.value)?.[1] || f.value)
+    : f.field === 'updateCycle' ? (CYCLE_LABEL[f.value] || f.value) : f.value
+  return `${FIELD_LABEL[f.field] || f.field} ${v}`
 }
 
 // 검색 상태(질의·필터·모드)를 URL 쿼리로 직렬화 — 공유·북마크·복원의 단일 형식(ADR-003)
@@ -108,8 +68,11 @@ export default function SearchView({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  // 사용자가 해석을 해제하면(원문 그대로 검색) 다음 제출 전까지 interpret를 끈다
+  const [interpretOff, setInterpretOff] = useState(false)
+
   const runSearch = useCallback(
-    async (cursor = null, q = query, f = filters) => {
+    async (cursor = null, q = query, f = filters, interpret = !interpretOff) => {
       setLoading(true)
       setError(null)
       try {
@@ -122,6 +85,8 @@ export default function SearchView({
           format: f.format || undefined,
           cursor: cursor || undefined,
           pageSize: 20,
+          // 질의 해석은 서버 규칙(query-interpret-v1.0) — 근거가 interpretedFilters로 돌아온다
+          interpret: interpret && q ? true : undefined,
         })
         setResult(body)
         setItems((prev) => (cursor ? [...prev, ...body.data.items] : body.data.items))
@@ -131,7 +96,7 @@ export default function SearchView({
         setLoading(false)
       }
     },
-    [query, filters],
+    [query, filters, interpretOff],
   )
 
   // URL 반영 — 검색을 실행한 조건을 주소창에 남긴다(replace — 히스토리를 더럽히지 않음)
@@ -148,8 +113,6 @@ export default function SearchView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed?.t])
 
-  // 검색어에서 읽어낸 조건 표시(해석 배너) — keys는 자동 적용된 필터 키(해제용)
-  const [interp, setInterp] = useState(null)
   // 첫 화면에만 예시를 보여준다 — 검색을 시작하면 화면을 비운다
   const [pristine, setPristine] = useState(true)
   // 필터는 기본 접힘 — 활성 조건은 칩으로 요약 노출
@@ -158,31 +121,15 @@ export default function SearchView({
   const submit = (e) => {
     e.preventDefault()
     setPristine(false)
-    const { found, labels, rest } = interpretQuery(query)
-    const keys = Object.keys(found)
-    if (keys.length && rest !== query.trim()) {
-      const next = { ...filters, ...found }
-      setFilters(next)
-      setQuery(rest)
-      setInterp({ labels, keys, raw: query })
-      runSearch(null, rest, next)
-      syncUrl(rest, next)
-    } else {
-      setInterp(null)
-      runSearch()
-      syncUrl(query, filters)
-    }
+    setInterpretOff(false) // 새 제출은 해석 재개
+    runSearch(null, query, filters, true)
+    syncUrl(query, filters)
   }
 
+  // '원문 그대로 검색' — 서버 해석을 끄고 같은 질의를 재실행
   const dismissInterp = () => {
-    if (!interp) return
-    const next = { ...filters }
-    interp.keys.forEach((k) => { next[k] = '' })
-    setFilters(next)
-    setQuery(interp.raw)
-    setInterp(null)
-    runSearch(null, interp.raw, next)
-    syncUrl(interp.raw, next)
+    setInterpretOff(true)
+    runSearch(null, query, filters, false)
   }
 
   // 컬럼 기준 검색(v1.3) — 원본 컬럼명 부분 일치(AND), 구조 확인분 내에서만
@@ -210,7 +157,6 @@ export default function SearchView({
   const setFilter = (k, v) => {
     const next = { ...filters, [k]: v }
     setFilters(next)
-    setInterp(null) // 수동 필터 조작 시 해석 배너는 더 이상 유효하지 않다
     runSearch(null, query, next)
     syncUrl(query, next)
   }
@@ -303,10 +249,13 @@ export default function SearchView({
           쉼표로 적으면 모두 가진 것만(AND) 반환합니다.
         </p>
       )}
-      {mode === 'keyword' && interp && (
+      {mode === 'keyword' && result?.data?.interpretedFilters?.length > 0 && (
         <p className="interp">
           <span className="interp-mark">해석</span>
-          검색어에서 <strong>{interp.labels.join(' · ')}</strong> 조건을 읽어 적용했습니다
+          검색어에서 <strong>
+            {result.data.interpretedFilters.map(interpretedLabel).join(' · ')}
+          </strong> 조건을 읽어 적용했습니다
+          <small> ({result.data.interpretedFilters[0].ruleId})</small>
           <button type="button" className="link" onClick={dismissInterp}>원문 그대로 검색</button>
         </p>
       )}
@@ -434,7 +383,7 @@ export default function SearchView({
       )}
 
       {error && <p className="error">{error}</p>}
-      {!pristine && <WarningPanel warnings={result?.warnings} />}
+      {!pristine && <WarningPanel warnings={result?.warnings} notices={result?.notices} />}
 
       {/* 빈 결과(§4.5) — 조회 범위를 함께 말해 '데이터 부재'로 읽히지 않게 한다 */}
       {!pristine && result && !loading && items.length === 0 && (

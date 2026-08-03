@@ -62,7 +62,7 @@ export default function CasesView({ onOpen }) {
       <button className="link" onClick={() => setSelected(null)}>← 사례 목록</button>
       <h2 style={{ margin: '10px 0 2px' }}>{d.title}</h2>
       <p className="result-meta">{d.purpose}</p>
-      <WarningPanel warnings={detail.warnings} />
+      <WarningPanel warnings={detail.warnings} notices={detail.notices} />
 
       <h3 className="case-h">① 목적 분해</h3>
       <ul className="case-list">{d.purposeBreakdown.map((x, i) => <li key={i}>{x}</li>)}</ul>

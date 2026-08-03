@@ -8,7 +8,7 @@ schemaVersion은 응답 봉투 meta.schemaVersion으로 전달된다.
 """
 from __future__ import annotations
 
-SPEC_VERSION = "1.4.0"
+SPEC_VERSION = "1.5.0"
 
 # ---------------------------------------------------------------- $defs
 DEFS = {
@@ -26,6 +26,22 @@ DEFS = {
         "type": "array",
         "items": {"type": "string"},
         "description": "면책 고지 1건 이상 항상 포함(§10)",
+        "minItems": 1,
+    },
+    "notices": {
+        "type": "array",
+        "description": "v1.5 additive: warnings[]의 구조화 표현 — 상시 고지는 severity=info"
+                       "(code=DISCLAIMER|GENAI_DISCLAIMER), 개별 경고는 severity=warning(code=WARNING). "
+                       "소비자는 문자열 접두 결합 대신 code·severity로 분기한다. warnings[]는 유지된다.",
+        "items": {
+            "type": "object",
+            "required": ["code", "severity", "text"],
+            "properties": {
+                "code": {"type": "string"},
+                "severity": {"enum": ["info", "warning"]},
+                "text": {"type": "string"},
+            },
+        },
         "minItems": 1,
     },
     "error": {
@@ -127,6 +143,10 @@ DEFS = {
             "indexVersion": {"type": "string"},
             "embeddingModel": {"type": ["string", "null"]},
             "tieBreak": {"type": "string"},
+            "direction": {"enum": ["asc", "desc"],
+                          "description": "v1.5 additive: 정렬 방향 — 소비자의 문자열 패턴 추론 제거"},
+            "basis": {"enum": ["relevance", "modified_date"],
+                      "description": "v1.5 additive: 정렬 기준(관련도 vs 최신 수정)"},
         },
     },
     "changeItem": {
@@ -156,6 +176,7 @@ def _envelope(data_schema: dict) -> dict:
             "data": data_schema,
             "meta": {"$ref": "#/$defs/meta"},
             "warnings": {"$ref": "#/$defs/warnings"},
+            "notices": {"$ref": "#/$defs/notices"},
         },
         "$defs": DEFS,
     }
@@ -172,6 +193,22 @@ OUTPUT_SCHEMAS: dict[str, dict] = {
             "hasMore": {"type": "boolean"},
             "totalEstimate": {"type": "integer", "minimum": 0},
             "ranking": {"$ref": "#/$defs/ranking"},
+            "interpretedFilters": {
+                "type": "array",
+                "description": "v1.5 additive: interpret=true일 때만 존재 — query 토큰의 "
+                               "결정론 해석 결과(query-interpret-v1.0). 빈 배열=해석 시도했으나 0건. "
+                               "명시 필터가 있는 축은 해석하지 않는다(명시 우선). 항상 해제 가능해야 한다.",
+                "items": {
+                    "type": "object",
+                    "required": ["field", "value", "sourceToken", "ruleId"],
+                    "properties": {
+                        "field": {"enum": ["region", "format", "updateCycle", "listType"]},
+                        "value": {"type": "string"},
+                        "sourceToken": {"type": "string"},
+                        "ruleId": {"type": "string"},
+                    },
+                },
+            },
         },
     }),
     "get_dataset": _envelope({

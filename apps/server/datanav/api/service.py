@@ -108,9 +108,29 @@ class Service:
         updated_after: str | None = None,
         cursor: str | None = None,
         page_size: int = DEFAULT_PAGE_SIZE,
+        interpret: bool = False,
     ) -> dict:
         if query and len(query) > MAX_QUERY_LENGTH:
             raise InvalidArgument(f"query는 {MAX_QUERY_LENGTH}자 이하", {"length": len(query)})
+
+        # 질의 해석(v1.5 additive, 옵트인): 검색어 토큰을 필터로 이관하고 근거를 노출한다.
+        # 명시 필터가 이미 있는 축은 해석하지 않는다(명시 우선).
+        interpreted_filters: list[dict] = []
+        if interpret and query:
+            from .plan import interpret_query
+            explicit = {f for f, v in (("region", region), ("format", fmt),
+                                       ("updateCycle", update_cycle), ("listType", list_type)) if v}
+            remaining, interpreted_filters = interpret_query(query, skip_fields=explicit)
+            for f in interpreted_filters:
+                if f["field"] == "region":
+                    region = f["value"]
+                elif f["field"] == "format":
+                    fmt = f["value"]
+                elif f["field"] == "updateCycle":
+                    update_cycle = f["value"]
+                elif f["field"] == "listType":
+                    list_type = f["value"]
+            query = remaining or None
         if not 1 <= page_size <= MAX_PAGE_SIZE:
             raise InvalidArgument(f"pageSize는 1~{MAX_PAGE_SIZE}", {"pageSize": page_size})
         if list_type and list_type.upper() not in _VALID_LIST_TYPES:
@@ -210,9 +230,18 @@ class Service:
                 "indexVersion": self.release,
                 "embeddingModel": None,
                 "tieBreak": "record_id asc",
+                # v1.5 additive: 정렬 방향을 사실로 노출(프론트의 문자열 패턴 추론 제거)
+                "direction": "desc",
+                "basis": "relevance" if fts_mode else "modified_date",
             },
         }
-        return envelope(data, self.snapshot, [RULE_RANKING, RULE_REGION, RULE_IDENTITY], warnings)
+        rules = [RULE_RANKING, RULE_REGION, RULE_IDENTITY]
+        if interpret:
+            data["interpretedFilters"] = interpreted_filters
+            if interpreted_filters:
+                from .plan import RULE_QUERY_INTERPRET
+                rules.append(RULE_QUERY_INTERPRET)
+        return envelope(data, self.snapshot, rules, warnings)
 
     def _count(self, joins: str, where: list[str], params: list) -> int:
         where_sql = ("WHERE " + " AND ".join(where)) if where else ""
@@ -798,6 +827,15 @@ class Service:
             "processedAt": self.processed_at,
             "counts": counts,
         }
+        # v1.5 additive: 스냅샷 지연을 서버 사실로(§3.1 — 프론트 계산 회피).
+        # 기준: 스냅샷 월 시작일 ~ 배포 시각.
+        if data["deployedAt"] and self.snapshot:
+            try:
+                deployed = dt.datetime.fromisoformat(data["deployedAt"].replace("Z", "+00:00"))
+                month_start = dt.datetime.fromisoformat(f"{self.snapshot}-01T00:00:00+00:00")
+                data["snapshotLagDays"] = max(0, (deployed - month_start).days)
+            except ValueError:
+                pass
         if self.obs_conn:  # 구조 관측 커버리지(§12) — 스토어 배포 시에만
             total_file = self.conn.execute(
                 "SELECT COUNT(*) FROM datasets WHERE list_type='FILE'").fetchone()[0]

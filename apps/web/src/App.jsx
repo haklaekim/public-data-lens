@@ -144,6 +144,7 @@ export default function App() {
       {route.profileId && (
         <DatasetProfile
           recordId={route.profileId}
+          onOpen={openProfile}
           lens={route.lens}
           onLensChange={(l) =>
             navigate(`/datasets/${encodeURIComponent(route.profileId)}?lens=${l}`, { replace: true })}

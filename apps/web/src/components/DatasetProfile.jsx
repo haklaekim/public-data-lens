@@ -5,15 +5,17 @@ import { exampleStatusLabel, COMPLETENESS_FIELD_LABEL, FRESHNESS_LABEL, EVIDENCE
 import WarningPanel from './WarningPanel.jsx'
 import EvidenceRow from './EvidenceRow.jsx'
 import CoverageIndicator from './CoverageIndicator.jsx'
+import PossibleUsesLens from './PossibleUsesLens.jsx'
 
-/* 상세 = 렌즈 3종(§5.1) + 기술 표현 접힘. 렌즈는 관점이고, JSON 덤프는 렌즈가 아니다. */
+/* 상세 = 렌즈 4종(§5.1) + 기술 표현 접힘. 렌즈는 관점이고, JSON 덤프는 렌즈가 아니다. */
 const LENSES = [
   ['overview', '개요'],
   ['structure', '데이터 구조'],
   ['evidence', '근거'],
+  ['uses', '활용 초안'],
 ]
 
-export default function DatasetProfile({ recordId, lens = 'overview', onLensChange, onClose }) {
+export default function DatasetProfile({ recordId, lens = 'overview', onLensChange, onClose, onOpen }) {
   const [cardBody, setCardBody] = useState(null)
   const [structBody, setStructBody] = useState(null)
   const [error, setError] = useState(null)
@@ -103,13 +105,14 @@ export default function DatasetProfile({ recordId, lens = 'overview', onLensChan
         {error && <p className="error">{error}</p>}
         {!body && !error && <p className="loading">불러오는 중…</p>}
 
-        <WarningPanel warnings={body?.warnings} />
+        {activeLens !== 'uses' && <WarningPanel warnings={body?.warnings} notices={body?.notices} />}
 
         {ds && activeLens === 'overview' && <OverviewLens ds={ds} />}
         {activeLens === 'structure' && structBody && <StructureView st={structBody.data} />}
         {ds && activeLens === 'evidence' && <EvidenceLens ds={ds} meta={cardBody.meta} />}
+        {ds && activeLens === 'uses' && <PossibleUsesLens ds={ds} onOpen={onOpen} />}
 
-        {activeLens !== 'structure' && ds && <RawSection recordId={recordId} />}
+        {(activeLens === 'overview' || activeLens === 'evidence') && ds && <RawSection recordId={recordId} />}
 
         {body && (
           <p className="drawer-meta">
