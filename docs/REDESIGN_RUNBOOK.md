@@ -61,6 +61,8 @@ CSS·컴포넌트 변경 전 베이스라인 확보가 목적이다.
 - 변경 이력
 - 소개
 - AI에 연결
+- AI 컨시어지 초기 화면 (VITE_SURFACE=all 빌드 — WarningPanel 통합 범위, ADR-001)
+- AI 컨시어지 결과 대시보드 (응답 스텁 픽스처 — 라이브 LLM 호출 금지)
 - 각 화면의 모바일 폭(375px)
 
 요구사항:
@@ -174,9 +176,11 @@ docs/UI_IMPLEMENTATION_GUIDE.md의 §7을 읽어라.
 WarningPanel, EvidenceRow, CoverageIndicator를 만들고 기존 중복을 대체해라.
 
 WarningPanel
-  현재 5개 파일이 warnings 필터를 각자 복제하고 있고,
+  현재 7개 파일이 warnings 필터를 각자 복제하고 있고(웹 5 + 컨시어지 2 —
+  ConciergeView·ConciergeDashboard 포함, ADR-001로 전부 통합 확정),
   startsWith('본 결과는')으로 서버 DISCLAIMER 문안에 문자열 결합되어 있다.
   단일 컴포넌트로 대체해라. 서버 문안을 치환하지 마라.
+  컨시어지 화면의 회귀는 STEP 1에서 추가한 베이스라인으로 확인한다.
   SearchView가 INFERRED_ 경고를 자체 문안으로 바꾸고 원문을 title에만
   남기고 있다 — 이걸 없애고 원문을 본문에 표시해라.
   (구조화된 경고 필드는 additive 요청 대상이며 이번 범위가 아니다)
