@@ -233,14 +233,10 @@ export default function SearchView({
     <section className={pristine ? 'search-home' : undefined}>
       {pristine && (
         <div className="hero">
-          <h2 className="hero-title">
-            공공데이터를 찾는 것에서<br />
-            이해하고 활용하는 것으로
-          </h2>
-          {/* 핵심만(2026-08-04) — 기술 문구(판정 엔진)는 MCP 연결 페이지가 담당 */}
+          {/* 제목=행동 유도 질문, 부제=철학 선언(숫자 없음 — 건수는 소개·푸터가 담당) */}
+          <h2 className="hero-title">어떤 데이터를 찾고 계신가요?</h2>
           <p className="hero-sub">
-            {result ? result.data.totalEstimate.toLocaleString() : '96,056'}건을
-            제목이 아니라 구조·근거·한계로 탐색합니다
+            공공데이터를 찾는 것에서, 이해하고 활용하는 것으로
           </p>
         </div>
       )}
@@ -281,7 +277,7 @@ export default function SearchView({
               key="kw"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="무엇을 찾으시나요? — 지역·포맷을 함께 적어도 됩니다"
+              placeholder="찾는 주제를 적어 보세요 — 지역·포맷을 함께 적어도 됩니다"
               maxLength={500}
             />
           )}

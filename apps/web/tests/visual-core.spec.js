@@ -16,7 +16,8 @@ async function searchFor(page, text) {
 }
 
 test('홈 — 검색 단독(pristine, ADR-007)', async ({ page }) => {
-  await expect(page.locator('.hero-title')).toContainText('이해하고 활용하는 것으로')
+  await expect(page.locator('.hero-title')).toContainText('어떤 데이터를 찾고 계신가요')
+  await expect(page.locator('.hero-sub')).toContainText('이해하고 활용하는 것으로')
   await expect(page.locator('.examples .chip').first()).toBeVisible()
   // 홈은 검색으로 끝난다 — 쇼케이스·투명성 블록은 둘러보기·소개로 이동
   await expect(page.locator('.home-block')).toHaveCount(0)
