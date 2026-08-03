@@ -61,7 +61,7 @@ export default function DatasetCardRow({ item, onOpen, compared, compareFull, on
               title={`${EVIDENCE_LABEL[r.evidence] || r.evidence} · 신뢰도 ${r.confidence}`}
             >
               {r.name.replace(/(특별자치|특별|광역)?(시|도)$/, '')}
-              {r.evidence !== 'EXPLICIT_SPATIAL' && '?'}
+              {r.evidence !== 'EXPLICIT_SPATIAL' && <span className="inf-mark">추론</span>}
             </span>
           ))}
         </div>

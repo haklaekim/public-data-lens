@@ -225,6 +225,11 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 }
 .region.explicit { background: var(--green-light); color: var(--green-starbucks); }
 .region.inferred { background: var(--neutral-cool); color: var(--muted); }
+/* 추론 지역 표식 — '?' 한 글자 대신 명시적 라벨(모바일은 툴팁이 없다) */
+.region .inf-mark {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.4px; opacity: 0.72;
+  margin-left: 4px; vertical-align: 0.5px;
+}
 
 /* ---------- "더 보기" — outlined pill ---------- */
 .more {
