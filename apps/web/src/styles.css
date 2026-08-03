@@ -811,52 +811,55 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 }
 
 /* ============================================================
-   Core 표면 테마 (A: MCP 배포 동반 코어 웹) — 구글 톤
-   화이트 캔버스 · Google Blue(#1a73e8) · 절제된 라운드와 은은한 그림자.
-   기본(그린) 토큰은 B(컨시어지)·로컬(all)이 그대로 쓰고,
+   Core 표면 테마 (A: MCP 배포 동반 코어 웹)
+   Linear 디자인 규율의 라이트 번안 — 단일 블루 액센트(브랜드·CTA·포커스·활성에만),
+   헤어라인 보더의 표면 사다리, 절제된 라운드(칩=필·버튼 10px·카드 12px),
+   그림자 대신 보더로 위계. 기본(그린) 토큰은 B(컨시어지)·로컬(all)이 그대로 쓰고,
    여기서는 App.jsx가 찍는 data-surface='core'일 때만 값을 덮어쓴다.
+   컴포넌트 수준 정제는 파일 끝 "Core 표면 컴포넌트 정제" 섹션에 모아 둔다.
    ============================================================ */
 :root[data-surface='core'] {
-  /* 브랜드 — 그린 역할군을 블루 계열로 재매핑 */
-  --green-starbucks: #1a73e8; /* 제목·브랜드 순간 */
-  --green-accent: #1a73e8;    /* CTA·링크 */
-  --green-house: #202124;     /* 다크 밴드 → 잉크 */
-  --green-uplift: #174ea6;    /* 진한 보조 블루 */
-  --green-light: #e8f0fe;     /* 연한 블루 워시 */
+  /* 브랜드 — 액센트는 블루 하나. 제목·다크 역할군은 잉크로 강등해 액센트 남용을 막는다 */
+  --green-starbucks: #0f172a; /* 제목·브랜드 순간 → 잉크 */
+  --green-accent: #2563eb;    /* CTA·링크·포커스 — 유일한 유채색 */
+  --green-house: #0f172a;     /* 다크 밴드 → 잉크 */
+  --green-uplift: #1d4ed8;    /* 액센트 hover/진한 순간 */
+  --green-light: #eff4ff;     /* 액센트 워시 */
 
-  --gold: #f9ab00;
-  --gold-light: #fde293;
-  --gold-lightest: #fef7e0;
+  --gold: #b45309;
+  --gold-light: #fcd34d;
+  --gold-lightest: #fffbeb;
 
-  /* 표면 — 웜 크림 대신 화이트/그레이 */
-  --bg: #ffffff;
-  --ceramic: #f8f9fa;
+  /* 표면 사다리 — 캔버스 → 카드(화이트) → 워시. 그림자 대신 헤어라인 */
+  --bg: #fafbfc;
+  --ceramic: #f1f5f9;
   --card: #ffffff;
-  --neutral-cool: #f8f9fa;
+  --neutral-cool: #f8fafc;
 
-  --text: #202124;
-  --muted: #5f6368;
+  --text: #0f172a;
+  --muted: #5a6577;
 
-  --line: #dadce0;
-  --input-border: #dadce0;
+  --line: #e5e9f0;
+  --input-border: #d9dfe8;
 
-  --valid-tint: rgba(26, 115, 232, 0.08);
+  --valid-tint: rgba(37, 99, 235, 0.06);
 
-  --shadow-card: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
-  --shadow-nav: 0 1px 2px rgba(60, 64, 67, 0.15);
-  --shadow-frap: 0 1px 3px rgba(60, 64, 67, 0.3);
-  --shadow-frap-active: 0 1px 2px rgba(60, 64, 67, 0.3);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-nav: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-frap: 0 1px 3px rgba(15, 23, 42, 0.2);
+  --shadow-frap-active: 0 1px 2px rgba(15, 23, 42, 0.2);
 
-  /* 형태 — 필 대신 8px 라운드, 프레스 스케일 없음 */
-  --radius-card: 8px;
-  --radius-pill: 8px;
+  /* 형태 — 칩·배지는 필, 버튼·입력은 10px, 카드는 12px(스코프 섹션에서 지정) */
+  --radius-card: 12px;
+  --radius-pill: 999px;
   --button-active-scale: none;
 }
 
 :root[data-surface='core'] body {
-  font-family: 'Roboto', 'Google Sans Text', 'Pretendard', 'Apple SD Gothic Neo',
+  font-family: 'Pretendard Variable', 'Pretendard', 'Apple SD Gothic Neo',
     'Noto Sans KR', system-ui, sans-serif;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ---- 데이터 구조 탭(v1.2) ---- */
@@ -890,3 +893,145 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 .structure-compare { margin-top: 20px; padding: 14px; background: var(--ceramic);
   border-radius: var(--radius-card); font-size: 13px; }
 .structure-compare h3 { margin: 0 0 6px; font-size: 14px; }
+
+/* ============================================================
+   Core 표면 컴포넌트 정제 — 토큰만으로 표현 못 하는 구조 개선.
+   전부 [data-surface='core'] 스코프 — B(그린)·로컬(all) 표면은 불변.
+   ============================================================ */
+
+/* ---- 헤더: 워드마크(잉크) + 렌즈 도트(액센트는 여기 한 점) ---- */
+:root[data-surface='core'] .header { align-items: center; }
+:root[data-surface='core'] .header h1 {
+  font-size: 21px; font-weight: 700; letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 9px;
+}
+:root[data-surface='core'] .header h1::before {
+  content: ''; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--green-accent);
+  box-shadow: 0 0 0 3px var(--green-light);
+  flex: none;
+}
+:root[data-surface='core'] .tagline { font-size: 13px; color: var(--muted); }
+:root[data-surface='core'] .status-chip {
+  flex-direction: row; flex-wrap: wrap; gap: 6px;
+  background: none; border: none; box-shadow: none; padding: 0;
+}
+:root[data-surface='core'] .status-chip span {
+  background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 10px; font-size: 11.5px; color: var(--muted);
+}
+
+/* ---- 탭: 조용한 텍스트 + 2px 액센트 언더라인 ---- */
+:root[data-surface='core'] .tabs { gap: 2px; margin: 28px 0 20px; }
+:root[data-surface='core'] .tab {
+  padding: 9px 12px; font-weight: 500; font-size: 14px;
+  border-bottom-width: 2px; margin-bottom: -1px;
+}
+:root[data-surface='core'] .tab.active { color: var(--text); border-bottom-color: var(--green-accent); font-weight: 600; }
+:root[data-surface='core'] .badge { background: var(--green-accent); }
+
+/* ---- 검색: 주(키워드) 46px + 부(컬럼) 38px 의 뚜렷한 위계 ---- */
+:root[data-surface='core'] .searchbar input {
+  height: 46px; padding: 0 18px; font-size: 15px; border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+:root[data-surface='core'] .searchbar input::placeholder { color: #9aa3b2; }
+:root[data-surface='core'] .searchbar input:focus {
+  border-color: var(--green-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+:root[data-surface='core'] .searchbar button {
+  height: 46px; padding: 0 18px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  min-width: 104px; /* 두 검색바의 입력창 오른쪽 끝 정렬 — 버튼 폭 통일 */
+}
+:root[data-surface='core'] .searchbar.columns input { height: 38px; font-size: 13px; border-radius: 9px; background: var(--neutral-cool); }
+:root[data-surface='core'] .searchbar.columns input:focus { background: var(--card); }
+:root[data-surface='core'] .searchbar.columns button {
+  height: 38px; padding: 0 12px; font-size: 13px; border-radius: 9px; min-width: 104px;
+  background: var(--card); color: var(--text); border-color: var(--input-border); font-weight: 500;
+}
+:root[data-surface='core'] .searchbar.columns button:hover:not(:disabled) {
+  background: var(--neutral-cool); border-color: #c3ccd9; color: var(--text);
+}
+
+/* ---- 예시 칩: 조용한 필 ---- */
+:root[data-surface='core'] .chip { padding: 5px 13px; font-size: 12.5px; color: var(--muted); }
+:root[data-surface='core'] .chip:hover { color: var(--green-accent); border-color: rgba(37, 99, 235, 0.45); background: var(--green-light); }
+
+/* ---- 필터 셀렉트: 커스텀 셰브론, 기본 브라우저 룩 제거 ---- */
+:root[data-surface='core'] .filters { gap: 8px; margin: 12px 0 20px; }
+:root[data-surface='core'] .filters select {
+  appearance: none; -webkit-appearance: none;
+  padding: 7px 28px 7px 12px; border-radius: 8px; font-size: 13px; color: var(--muted);
+  background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235a6577' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+  cursor: pointer; transition: border-color 0.15s ease;
+}
+:root[data-surface='core'] .filters select:hover { border-color: #c3ccd9; color: var(--text); }
+:root[data-surface='core'] .inferred { font-size: 12.5px; }
+:root[data-surface='core'] .inferred input { accent-color: var(--green-accent); }
+:root[data-surface='core'] .result-meta { font-size: 12px; margin: 10px 0; }
+
+/* ---- 결과 카드: 그림자 대신 헤어라인, hover는 보더 강조 + 미세 리프트 ---- */
+:root[data-surface='core'] .results { gap: 10px; }
+:root[data-surface='core'] .card-row {
+  border: 1px solid var(--line); box-shadow: none; padding: 18px 20px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+:root[data-surface='core'] .card-row:hover {
+  border-color: #c9d2df;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+:root[data-surface='core'] .card-title-line strong { font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; }
+:root[data-surface='core'] .card-main:hover .card-title-line strong { color: var(--green-accent); }
+:root[data-surface='core'] .card-sub { font-size: 12.5px; margin-top: 5px; }
+:root[data-surface='core'] .card-badges { margin-top: 10px; }
+:root[data-surface='core'] .compare-check {
+  border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: 12px;
+  transition: all 0.15s ease;
+}
+:root[data-surface='core'] .compare-check:hover { border-color: rgba(37, 99, 235, 0.45); color: var(--green-accent); }
+:root[data-surface='core'] .compare-check:has(input:checked) {
+  border-color: var(--green-accent); background: var(--green-light); color: var(--green-uplift);
+}
+:root[data-surface='core'] .card-actions a { font-weight: 500; font-size: 12.5px; }
+
+/* ---- 유형 배지: 채도 절제 — FILE만 액센트 워시, 나머지는 뉴트럴 ---- */
+:root[data-surface='core'] .type { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; padding: 2.5px 9px; }
+:root[data-surface='core'] .type-FILE { background: var(--green-light); color: var(--green-uplift); }
+:root[data-surface='core'] .type-API { background: var(--ceramic); color: var(--muted); }
+:root[data-surface='core'] .type-STD { background: #eceff4; color: #3d495c; }
+
+/* ---- 구조 관측(실파일 근거) — 유일한 시맨틱 그린 ---- */
+:root[data-surface='core'] .structure-chip,
+:root[data-surface='core'] .completeness .structure-chip {
+  background: #e5f6ee; color: #067a55; font-weight: 600;
+  border-radius: 999px; padding: 2.5px 10px; font-size: 11.5px;
+}
+:root[data-surface='core'] .completeness .key-field:not(.structure-chip) { background: var(--ceramic); color: var(--muted); font-weight: 500; }
+:root[data-surface='core'] .region.explicit { background: var(--green-light); color: var(--green-uplift); }
+:root[data-surface='core'] .region.inferred { background: var(--ceramic); color: var(--muted); }
+:root[data-surface='core'] .completeness .fill { background: var(--green-accent); }
+
+/* ---- 더 보기·경고·푸터 ---- */
+:root[data-surface='core'] .more {
+  border-color: var(--input-border); color: var(--text); border-radius: 10px;
+  font-weight: 500; padding: 10px 32px;
+}
+:root[data-surface='core'] .more:hover { background: var(--neutral-cool); border-color: #c3ccd9; }
+:root[data-surface='core'] .warning {
+  background: var(--gold-lightest); color: var(--gold);
+  border: 1px solid rgba(180, 83, 9, 0.15); border-radius: 10px;
+}
+:root[data-surface='core'] .footer {
+  background: none; color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 24px; padding-bottom: 32px; margin-top: 56px; font-size: 12px;
+}
+:root[data-surface='core'] .footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+:root[data-surface='core'] .footer a:hover { color: var(--green-accent); }
+
+/* ---- 드로어·표: 헤어라인 통일 ---- */
+:root[data-surface='core'] .drawer { box-shadow: -12px 0 32px rgba(15, 23, 42, 0.12); border-radius: 0; }
+:root[data-surface='core'] .profile h2 { color: var(--text); letter-spacing: -0.02em; }
+:root[data-surface='core'] .json-view { background: #0f172a; border-radius: 10px; }
+:root[data-surface='core'] .compare-table thead th { background: var(--neutral-cool); }
