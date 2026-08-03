@@ -38,6 +38,9 @@ apps/server/scripts/score_bench.py
 apps/server/golden/bench_v0_report.json
 apps/web/src/components/ConciergeView.jsx
 apps/web/src/components/ConciergeDashboard.jsx
+apps/web/tests/visual-concierge.spec.js
+apps/web/tests/fixtures/concierge-status.json
+apps/web/tests/fixtures/concierge-stream.sse
 apps/web/nginx.concierge.conf
 docker-compose.concierge.yml
 docs/공공데이터_내비게이터_구현정리_v1.0.pptx
