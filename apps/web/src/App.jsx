@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { api } from './api.js'
 import SearchView from './components/SearchView.jsx'
 import CompareView from './components/CompareView.jsx'
 import ChangesView from './components/ChangesView.jsx'
 import CasesView from './components/CasesView.jsx'
-import ConciergeView from './components/ConciergeView.jsx'
 import DatasetProfile from './components/DatasetProfile.jsx'
 
 const DISCLAIMER =
@@ -13,7 +12,13 @@ const DISCLAIMER =
 // 배포 표면(빌드 시 결정): 'core' = MCP 배포 동반 웹(비생성형만),
 // 'concierge' = 별도 컨시어지 서비스(컨시어지 중심 + 보조 검색), 'all' = 로컬 개발 기본
 const SURFACE = import.meta.env.VITE_SURFACE || 'all'
-const HAS_CONCIERGE = SURFACE !== 'core'
+
+// 컨시어지 뷰는 파일이 존재할 때만 로드한다(공개 스냅샷에는 미포함) —
+// 파일 부재 시 import.meta.glob이 빈 객체를 반환해 표면 자체가 사라진다.
+const _czModules = import.meta.glob('./components/ConciergeView.jsx')
+const _czLoader = _czModules['./components/ConciergeView.jsx']
+const ConciergeView = _czLoader ? lazy(_czLoader) : null
+const HAS_CONCIERGE = ConciergeView !== null && SURFACE !== 'core'
 
 // 표면별 테마 스위치(styles.css의 :root[data-surface] 토큰 블록과 짝):
 // core(A) = 구글 톤(화이트·블루·절제), concierge/all(B·로컬) = 그린 시스템
@@ -27,13 +32,13 @@ const ALL_TABS = [
   { id: 'cases', label: '활용 사례' },
 ]
 const TABS = ALL_TABS.filter((t) =>
-  SURFACE === 'core' ? t.id !== 'concierge'
-  : SURFACE === 'concierge' ? ['concierge', 'search'].includes(t.id)
+  t.id === 'concierge' ? HAS_CONCIERGE
+  : SURFACE === 'concierge' ? t.id === 'search'
   : true,
 )
 
 export default function App() {
-  const [tab, setTab] = useState(SURFACE === 'concierge' ? 'concierge' : 'search')
+  const [tab, setTab] = useState(SURFACE === 'concierge' && HAS_CONCIERGE ? 'concierge' : 'search')
   const [status, setStatus] = useState(null)
   const [profileId, setProfileId] = useState(null)
   const [compareIds, setCompareIds] = useState([])
@@ -114,7 +119,11 @@ export default function App() {
         )}
         {tab === 'changes' && <ChangesView onOpen={setProfileId} />}
         {tab === 'cases' && <CasesView onOpen={setProfileId} />}
-        {tab === 'concierge' && <ConciergeView onOpen={setProfileId} onSearch={seedSearch} />}
+        {tab === 'concierge' && ConciergeView && (
+          <Suspense fallback={null}>
+            <ConciergeView onOpen={setProfileId} onSearch={seedSearch} />
+          </Suspense>
+        )}
       </main>
 
       {profileId && (
