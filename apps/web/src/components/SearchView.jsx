@@ -82,7 +82,23 @@ function interpretQuery(raw) {
   return { found, labels, rest: rest.join(' ') }
 }
 
-export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, status }) {
+// 검색 상태(질의·필터·모드)를 URL 쿼리로 직렬화 — 공유·북마크·복원의 단일 형식(ADR-003)
+function toUrlParams(q, f, m, cq) {
+  const p = new URLSearchParams()
+  if (m === 'columns') {
+    p.set('mode', 'columns')
+    if (cq) p.set('cols', cq)
+    return p.toString()
+  }
+  if (q) p.set('q', q)
+  for (const k of ['listType', 'region', 'updateCycle', 'format']) if (f[k]) p.set(k, f[k])
+  if (!f.includeInferred) p.set('inferred', '0')
+  return p.toString()
+}
+
+export default function SearchView({
+  onOpen, compareIds, onToggleCompare, seed, status, urlParams, onUrlChange,
+}) {
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({
     listType: '', region: '', includeInferred: true, updateCycle: '', format: '',
@@ -118,10 +134,10 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, 
     [query, filters],
   )
 
-  useEffect(() => {
-    runSearch() // 초기: 최신 수정순 목록
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // URL 반영 — 검색을 실행한 조건을 주소창에 남긴다(replace — 히스토리를 더럽히지 않음)
+  const syncUrl = (q, f, m = 'keyword', cq = '') => {
+    onUrlChange?.(toUrlParams(q, f, m, cq))
+  }
 
   // 컨시어지 보완 노드에서 넘어온 프리필 질의
   useEffect(() => {
@@ -150,9 +166,11 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, 
       setQuery(rest)
       setInterp({ labels, keys, raw: query })
       runSearch(null, rest, next)
+      syncUrl(rest, next)
     } else {
       setInterp(null)
       runSearch()
+      syncUrl(query, filters)
     }
   }
 
@@ -164,6 +182,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, 
     setQuery(interp.raw)
     setInterp(null)
     runSearch(null, interp.raw, next)
+    syncUrl(interp.raw, next)
   }
 
   // 컬럼 기준 검색(v1.3) — 원본 컬럼명 부분 일치(AND), 구조 확인분 내에서만
@@ -174,6 +193,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, 
     setPristine(false)
     const kws = q.split(',').map((k) => k.trim()).filter(Boolean)
     if (!kws.length) return
+    syncUrl('', filters, 'columns', q)
     setLoading(true)
     setError(null)
     try {
@@ -192,7 +212,35 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, 
     setFilters(next)
     setInterp(null) // 수동 필터 조작 시 해석 배너는 더 이상 유효하지 않다
     runSearch(null, query, next)
+    syncUrl(query, next)
   }
+
+  // 최초 마운트: URL에 담긴 검색 상태를 복원한다(공유·북마크·뒤로가기 — ADR-003)
+  useEffect(() => {
+    const p = urlParams
+    if (p && p.get('mode') === 'columns' && p.get('cols')) {
+      setMode('columns')
+      setColQuery(p.get('cols'))
+      runColumnSearch(null, p.get('cols'))
+      return
+    }
+    const restored = { ...filters }
+    let any = false
+    for (const k of ['listType', 'region', 'updateCycle', 'format']) {
+      if (p?.get(k)) { restored[k] = p.get(k); any = true }
+    }
+    if (p?.get('inferred') === '0') { restored.includeInferred = false; any = true }
+    const q = p?.get('q') || ''
+    if (q || any) {
+      setQuery(q)
+      setFilters(restored)
+      setPristine(false)
+      runSearch(null, q, restored)
+    } else {
+      runSearch() // 초기: 최신 수정순 목록(pristine 홈의 Live 블록 데이터)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <section className={pristine ? 'search-home' : undefined}>
@@ -272,7 +320,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, 
               className="chip"
               onClick={() => {
                 setPristine(false)
-                if (mode === 'keyword') { setQuery(ex); runSearch(null, ex, filters) }
+                if (mode === 'keyword') { setQuery(ex); runSearch(null, ex, filters); syncUrl(ex, filters) }
                 else { setColQuery(ex); runColumnSearch(null, ex) }
               }}
             >

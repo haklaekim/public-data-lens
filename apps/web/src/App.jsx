@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { api } from './api.js'
+import { useRoute, pathFor } from './router.js'
 import SearchView from './components/SearchView.jsx'
 import CompareView from './components/CompareView.jsx'
 import ChangesView from './components/ChangesView.jsx'
@@ -32,15 +33,42 @@ const NAV_LINKS = [
 ]
 
 export default function App() {
-  const [view, setView] = useState(SURFACE === 'concierge' && HAS_CONCIERGE ? 'concierge' : 'search')
+  // URL이 뷰 상태의 단일 진실(ADR-003): 뷰·프로필·렌즈·검색 조건이 전부 URL에 담긴다
+  const [route, navigate] = useRoute()
+  // 프로필이 열려 있는 동안 밑판은 직전 뷰를 유지한다(변경 이력·컨시어지에서 열어도 화면 유지)
+  const underlay = useRef('search')
+  if (!route.profileId) underlay.current = route.view
+  const view = route.profileId ? underlay.current : route.view
   const [status, setStatus] = useState(null)
-  const [profileId, setProfileId] = useState(null)
   const [compareIds, setCompareIds] = useState([])
   const [searchSeed, setSearchSeed] = useState(null) // 컨시어지 보완 노드 → 검색 프리필
 
+  // 검색 조건이 담긴 마지막 URL — 다른 뷰에 다녀와도 검색 상태가 복원된다
+  const lastSearchUrl = useRef('/')
+  if (view === 'search' && !route.profileId) {
+    lastSearchUrl.current = window.location.pathname + window.location.search
+  }
+
+  // 컨시어지 전용 표면은 루트 진입 시 컨시어지로 (URL은 유지)
+  useEffect(() => {
+    if (SURFACE === 'concierge' && HAS_CONCIERGE && window.location.pathname === '/') {
+      navigate('/concierge', { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const goto = (v) => navigate(v === 'search' ? lastSearchUrl.current : pathFor(v))
+
+  const openProfile = (id) => navigate(`/datasets/${encodeURIComponent(id)}`)
+  const closeProfile = () => {
+    // 앱 내부에서 열었으면 이전 화면으로(뒤로), 새 탭 직접 진입이면 검색으로
+    if (window.history.state?.app) window.history.back()
+    else navigate(lastSearchUrl.current, { replace: true })
+  }
+
   const seedSearch = (q) => {
     setSearchSeed({ q, t: Date.now() })
-    setView('search')
+    goto('search')
   }
 
   useEffect(() => {
@@ -61,7 +89,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topnav">
-        <button className="brand" onClick={() => setView('search')} aria-label="데이터 찾기로 이동">
+        <button className="brand" onClick={() => goto('search')} aria-label="데이터 찾기로 이동">
           <h1>공공데이터 렌즈</h1>
         </button>
         <nav className="nav-links" aria-label="보조 메뉴">
@@ -69,53 +97,64 @@ export default function App() {
             <button
               key={l.id}
               className={view === l.id ? 'nav-link active' : 'nav-link'}
-              onClick={() => setView(l.id)}
+              onClick={() => goto(l.id)}
             >
               {l.label}
             </button>
           ))}
-          <button className="mcp-cta" onClick={() => setView('connect')}>AI에 연결</button>
+          <button className="mcp-cta" onClick={() => goto('connect')}>AI에 연결</button>
         </nav>
       </header>
 
       <main>
         {view === 'search' && (
           <SearchView
-            onOpen={setProfileId}
+            onOpen={openProfile}
             compareIds={compareIds}
             onToggleCompare={toggleCompare}
             seed={searchSeed}
             status={status}
+            urlParams={route.profileId ? null : route.params}
+            onUrlChange={(qs) => {
+              if (route.profileId) return // 프로필이 열린 동안은 URL을 건드리지 않는다
+              navigate(qs ? `/?${qs}` : '/', { replace: true })
+            }}
           />
         )}
         {view === 'compare' && (
           <>
-            <button className="back-link" onClick={() => setView('search')}>← 데이터 찾기로</button>
+            <button className="back-link" onClick={() => goto('search')}>← 데이터 찾기로</button>
             <CompareView
               ids={compareIds}
               onRemove={(id) => setCompareIds((p) => p.filter((x) => x !== id))}
-              onOpen={setProfileId}
+              onOpen={openProfile}
             />
           </>
         )}
-        {view === 'changes' && <ChangesView onOpen={setProfileId} />}
+        {view === 'changes' && <ChangesView onOpen={openProfile} />}
         {view === 'about' && <AboutView status={status} />}
         {view === 'connect' && <ConnectView />}
         {view === 'concierge' && ConciergeView && (
           <Suspense fallback={null}>
-            <ConciergeView onOpen={setProfileId} onSearch={seedSearch} />
+            <ConciergeView onOpen={openProfile} onSearch={seedSearch} />
           </Suspense>
         )}
       </main>
 
-      {profileId && (
-        <DatasetProfile recordId={profileId} onClose={() => setProfileId(null)} />
+      {route.profileId && (
+        <DatasetProfile
+          recordId={route.profileId}
+          lens={route.lens}
+          onLensChange={(l) =>
+            navigate(`/datasets/${encodeURIComponent(route.profileId)}?lens=${l}`, { replace: true })}
+          onClose={closeProfile}
+        />
       )}
 
       {compareIds.length > 0 && view !== 'compare' && (
         <div className="compare-bar" role="status">
           <span className="cb-count">{compareIds.length}개 선택</span>
-          <button className="cb-go" onClick={() => setView('compare')}>비교하기 →</button>
+          <button className="cb-go" onClick={() => goto('compare')}>비교하기 →</button>
           <button className="cb-clear" onClick={() => setCompareIds([])}>비우기</button>
         </div>
       )}
@@ -125,7 +164,7 @@ export default function App() {
           className="frap"
           title="AI 컨시어지"
           aria-label="AI 컨시어지 열기"
-          onClick={() => setView('concierge')}
+          onClick={() => goto('concierge')}
         >
           AI
         </button>

@@ -1392,6 +1392,12 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 }
 .browse-all:hover { color: var(--accent); }
 
+/* ---------- 상세 렌즈 보조(§5) ---------- */
+.raw-section { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 10px; }
+.raw-section summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 4px 0; }
+.raw-tabs { display: flex; gap: 6px; margin: 10px 0; }
+.col-note { color: var(--muted); font-size: 11px; }
+
 /* ---------- 홈 블록(§3) — Live·Coverage·Open Infrastructure ---------- */
 .home-block { margin-top: 44px; text-align: left; width: 100%; }
 .home-block h3 { font-size: 16px; margin: 0 0 10px; color: var(--text); }

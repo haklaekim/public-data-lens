@@ -1,7 +1,7 @@
 // 코어 표면(VITE_SURFACE=core) 시각 베이스라인 — 런북 STEP 1 대상 9화면.
 // 모든 화면은 DOM 스모크(구성 검증)를 항상 수행하고, 스크린샷 대조는 SKIP_VISUAL이 아닐 때만.
 import { test, expect } from '@playwright/test'
-import { stubApi, shoot, CARD_TITLE, RULES_COUNT } from './stub.js'
+import { stubApi, shoot, CARD_TITLE, RID, RULES_COUNT } from './stub.js'
 
 test.beforeEach(async ({ page }) => {
   await stubApi(page)
@@ -76,6 +76,32 @@ test('데이터셋 프로필 — structure 탭', async ({ page }) => {
   await page.locator('.drawer-tabs .tab', { hasText: '데이터 구조' }).click()
   await expect(page.locator('.structure-table').first()).toBeVisible()
   await shoot(page, 'profile-structure.png')
+})
+
+test('데이터셋 프로필 — evidence 렌즈(§5.4)', async ({ page }) => {
+  await searchFor(page, '어린이 보호구역')
+  await page.locator('.row-title strong', { hasText: CARD_TITLE }).first().click()
+  await page.locator('.drawer-tabs .tab', { hasText: '근거' }).click()
+  await expect(page.locator('.profile h2')).toContainText('근거')
+  await expect(page.locator('.profile')).toContainText('card-projection-v1.0')
+  await shoot(page, 'profile-evidence.png')
+})
+
+test('딥링크 — 데이터셋 URL 직접 진입과 Escape 닫기 (ADR-003)', async ({ page }) => {
+  await page.goto(`/datasets/${RID}`)
+  await expect(page.locator('.drawer[role=dialog]')).toBeVisible()
+  await expect(page.locator('.profile h2')).toContainText(CARD_TITLE)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.drawer')).toHaveCount(0)
+})
+
+test('URL 복원 — 검색 상태가 주소에 담기고 재현된다 (ADR-003)', async ({ page }) => {
+  await searchFor(page, '어린이 보호구역')
+  await expect(page).toHaveURL(/q=/)
+  const url = page.url()
+  await page.goto(url) // 새 탭에 붙여넣기와 동일
+  await expect(page.locator('.result-row').first()).toBeVisible()
+  await expect(page.locator('.toolbar .result-meta')).toContainText('총')
 })
 
 test('비교 — 2건 선택', async ({ page }) => {

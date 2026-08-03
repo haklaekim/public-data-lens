@@ -96,12 +96,16 @@ export default function CompareView({ ids, onRemove, onOpen }) {
             <strong>공통 컬럼 {body.data.structureComparison.commonColumns.length}개:</strong>{' '}
             {body.data.structureComparison.commonColumns.join(', ') || '없음'}
           </p>
-          {Object.entries(body.data.structureComparison.onlyIn).map(([rid, cols]) => (
-            <p key={rid}>
-              <strong>{rid}에만:</strong> {cols.length ? cols.join(', ') : '없음'}
-              {' '}(전체 {body.data.structureComparison.columnCounts[rid]}개)
-            </p>
-          ))}
+          {Object.entries(body.data.structureComparison.onlyIn).map(([rid, cols]) => {
+            // recordId를 그대로 노출하지 않는다 — datasets[]의 제목으로 해소(§6)
+            const title = body.data.datasets.find((d) => d.recordId === rid)?.title || rid
+            return (
+              <p key={rid}>
+                <strong>{title}에만:</strong> {cols.length ? cols.join(', ') : '없음'}
+                {' '}(전체 {body.data.structureComparison.columnCounts[rid]}개)
+              </p>
+            )
+          })}
         </div>
       )}
     </section>
