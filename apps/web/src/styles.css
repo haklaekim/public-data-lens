@@ -1188,3 +1188,112 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
   .seg button { padding: 0 12px; font-size: 12.5px; }
   .toolbar { align-items: flex-start; }
 }
+
+/* ============================================================
+   IA 재편 — 상단 내비·소개 페이지·컨텍스트 비교 바 (양 테마 공통 기본)
+   ============================================================ */
+.topnav {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 2px 0 14px; border-bottom: 1px solid var(--line); margin-bottom: 8px;
+}
+.brand { border: none; background: none; padding: 0; cursor: pointer; text-align: left; }
+.brand h1 { margin: 0; font-size: 19px; font-weight: 700; color: var(--green-starbucks); letter-spacing: -0.02em; }
+.nav-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.nav-link {
+  border: none; background: none; padding: 8px 12px; font-size: 13.5px; cursor: pointer;
+  color: var(--muted); border-radius: 8px; font-weight: 500;
+}
+.nav-link:hover { color: var(--text); background: var(--neutral-cool); }
+.nav-link.active { color: var(--text); font-weight: 600; background: var(--ceramic); }
+.nav-links .mcp-cta { margin-left: 8px; }
+.back-link {
+  border: none; background: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0; margin: 14px 0 4px; font-weight: 500;
+}
+.back-link:hover { color: var(--green-accent); }
+
+.compare-bar {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 30;
+  display: flex; align-items: center; gap: 14px;
+  background: var(--green-house); color: #fff;
+  border-radius: 999px; padding: 10px 12px 10px 20px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+}
+.cb-count { font-size: 13.5px; font-weight: 600; }
+.cb-go {
+  border: none; background: #fff; color: var(--green-house);
+  border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.cb-clear { border: none; background: none; color: rgba(255,255,255,0.7); font-size: 12.5px; cursor: pointer; padding: 0 6px; }
+.cb-clear:hover { color: #fff; }
+
+/* ---- 소개(어바웃) ---- */
+.about { max-width: 760px; margin: 24px 0 0; }
+.about-hero h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.35; }
+.about-hero p { font-size: 14.5px; line-height: 1.7; margin: 0 0 10px; }
+.about-research { color: var(--muted); font-size: 13px; }
+.about h3 { font-size: 16px; font-weight: 700; margin: 36px 0 12px; letter-spacing: -0.01em; }
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat-tile {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 2px;
+}
+.stat-v { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.stat-k { font-size: 12px; color: var(--muted); }
+.theme-bars { margin-top: 16px; display: flex; flex-direction: column; gap: 7px; }
+.theme-bar { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+.tb-label { flex: none; width: 110px; color: var(--muted); text-align: right; }
+.tb-track { flex: 1; height: 8px; border-radius: 4px; background: var(--ceramic); overflow: hidden; }
+.tb-fill { display: block; height: 100%; background: var(--green-accent); border-radius: 4px; }
+.tb-count { flex: none; width: 64px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.connect-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }
+.connect-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--card); }
+.connect-card h4 { margin: 0 0 8px; font-size: 13.5px; font-weight: 700; }
+.connect-card .mcp-steps { margin: 0; padding-left: 18px; font-size: 13px; }
+.connect-code {
+  margin: 0; background: var(--green-house); color: #e6edf3; border-radius: 8px;
+  padding: 12px 14px; font-size: 11.5px; line-height: 1.6; overflow-x: auto; white-space: pre;
+}
+.connect-note { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.about-list { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.8; }
+.about-list code { background: var(--ceramic); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+/* ---- 결과 행 상용 마감 ---- */
+.row-date { margin-left: auto; flex: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 720px) {
+  .topnav { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .tb-label { width: 84px; }
+}
+
+/* ---- Core 정제: 내비·행 디테일 ---- */
+:root[data-surface='core'] .brand h1 { display: flex; align-items: center; gap: 9px; font-size: 18px; }
+:root[data-surface='core'] .topnav { padding-bottom: 12px; }
+:root[data-surface='core'] .type {
+  background: none; border: 1px solid var(--line); color: var(--muted); font-weight: 600;
+  border-radius: 5px; padding: 1.5px 7px;
+}
+:root[data-surface='core'] .type-STD { background: var(--ceramic); }
+:root[data-surface='core'] .structure-chip,
+:root[data-surface='core'] .completeness .structure-chip {
+  background: none; padding: 0; border-radius: 0; color: #067a55; font-size: 12px;
+}
+:root[data-surface='core'] .structure-chip::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #10b981; margin-right: 5px; vertical-align: 1px;
+}
+:root[data-surface='core'] .completeness .fill-count { font-size: 12px; }
+:root[data-surface='core'] .card-badges { gap: 5px 14px; }
+/* 행 액션은 hover/선택 시에만 — 리스트를 조용하게 */
+@media (hover: hover) {
+  :root[data-surface='core'] .card-actions { opacity: 0; transition: opacity 0.12s ease; }
+  :root[data-surface='core'] .card-row:hover .card-actions,
+  :root[data-surface='core'] .card-row:focus-within .card-actions,
+  :root[data-surface='core'] .card-actions:has(input:checked) { opacity: 1; }
+}
+:root[data-surface='core'] .compare-bar { background: #0f172a; border-radius: 12px; }
+:root[data-surface='core'] .cb-go { border-radius: 8px; color: #0f172a; }
+:root[data-surface='core'] .brand h1::before {
+  content: ''; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--green-accent); box-shadow: 0 0 0 3px var(--green-light); flex: none;
+}
