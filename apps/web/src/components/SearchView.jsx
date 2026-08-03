@@ -126,6 +126,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
   useEffect(() => {
     if (!seed?.q) return
     setQuery(seed.q)
+    setPristine(false)
     runSearch(null, seed.q, filters)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed?.t])
@@ -193,7 +194,18 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
   }
 
   return (
-    <section>
+    <section className={pristine ? 'search-home' : undefined}>
+      {pristine && (
+        <div className="hero">
+          <h2 className="hero-title">
+            공공데이터 {result ? result.data.totalEstimate.toLocaleString() : '96,056'}건을<br />
+            근거와 함께 찾아드립니다
+          </h2>
+          <p className="hero-sub">
+            목록 검색부터 실파일에서 확인한 컬럼 구조까지 — 웹과 AI(MCP)가 같은 판정 엔진을 씁니다
+          </p>
+        </div>
+      )}
       <form
         className="searchbar unified"
         onSubmit={mode === 'keyword' ? submit : runColumnSearch}
@@ -269,7 +281,17 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
         </div>
       )}
 
-      {result && (
+      {pristine && (
+        <button
+          type="button"
+          className="browse-all"
+          onClick={() => { setPristine(false); runSearch() }}
+        >
+          전체 목록 둘러보기 →
+        </button>
+      )}
+
+      {!pristine && result && (
         <div className="toolbar">
           <p
             className="result-meta"
@@ -335,7 +357,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
       )}
 
       {error && <p className="error">{error}</p>}
-      {result?.warnings
+      {!pristine && result?.warnings
         .filter((w) => !w.startsWith('본 결과는'))
         .map((w, i) => (
           // 계약 경고 원문은 툴팁으로 보존하고, 화면에는 소비자 언어로 순화해 보여준다
@@ -346,7 +368,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           </p>
         ))}
 
-      {result && !loading && items.length === 0 && (
+      {!pristine && result && !loading && items.length === 0 && (
         <div className="empty-state">
           <p className="empty-title">조건에 맞는 데이터를 찾지 못했습니다</p>
           <p className="empty-body">
@@ -356,6 +378,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
         </div>
       )}
 
+      {!pristine && (<>
       <ul className="results">
         {items.map((item) => (
           <DatasetCardRow
@@ -378,6 +401,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           {loading ? '불러오는 중…' : '결과 더 보기'}
         </button>
       )}
+      </>)}
     </section>
   )
 }
