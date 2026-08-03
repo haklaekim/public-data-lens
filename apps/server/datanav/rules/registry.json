@@ -176,6 +176,12 @@
       "effectiveDate": "2026-07-30",
       "definition": "자산별 상태(AVAILABLE/NOT_COLLECTED/QUEUED/COLLECTING/SOURCE_UNAVAILABLE/UNSUPPORTED_FORMAT/ACCESS_RESTRICTED/COLLECTION_FAILED/API_STRUCTURE_NOT_SUPPORTED_YET)와 레코드 집계(전 자산 성공=AVAILABLE, 일부=PARTIAL). 미수집은 품질 문제가 아니라 수집 순번이다.",
       "status": "active"
+    },
+    {
+      "ruleId": "plan-assembly-v1.0",
+      "title": "활용 계획 초안 조립 (결정론)",
+      "effectiveDate": "2026-08-03",
+      "definition": "build_data_plan Tool의 계획 조립 규칙. LLM 없이 결정론적으로 수행한다: 목적 문장에서 제한 어휘 규칙으로 검색어·지역을 추출하고, search_datasets 결과 상위 후보에 제목·주제·관측 컬럼 패턴으로 역할(PRIMARY/DEMAND/SUPPLY/SPATIAL/TEMPORAL/REFERENCE/RELATED)을 배정하며, 후보 2건 이상에서 관측된 컬럼 패턴만 예상 결합 키(CANDIDATE_ONLY)로 제시한다. 산출은 항상 초안(DRAFT)이고 품질(NOT_ASSESSED)·결합 가능성·분석 충분성을 확정하지 않는다."
     }
   ]
 }

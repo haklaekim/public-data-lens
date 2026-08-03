@@ -35,12 +35,12 @@ export default function DatasetCardRow({ item, onOpen, compared, compareFull, on
         <div className="card-title-line">
           <span className={`type type-${item.listType}`}>{item.listType}</span>
           <strong>{item.title}</strong>
+          {item.modifiedDate && <span className="row-date">{item.modifiedDate}</span>}
         </div>
         <div className="card-sub">
           <span>{item.orgName}</span>
           {item.theme?.top && <span>{item.theme.top}{item.theme.sub ? ` › ${item.theme.sub}` : ''}</span>}
           {item.formats?.length > 0 && <span>{item.formats.join(' · ')}</span>}
-          {item.modifiedDate && <span>수정 {item.modifiedDate}</span>}
         </div>
         {item.matchedColumns && (
           <p className="matched-columns">
@@ -61,7 +61,7 @@ export default function DatasetCardRow({ item, onOpen, compared, compareFull, on
               title={`${EVIDENCE_LABEL[r.evidence] || r.evidence} · 신뢰도 ${r.confidence}`}
             >
               {r.name.replace(/(특별자치|특별|광역)?(시|도)$/, '')}
-              {r.evidence !== 'EXPLICIT_SPATIAL' && '?'}
+              {r.evidence !== 'EXPLICIT_SPATIAL' && <span className="inf-mark">추론</span>}
             </span>
           ))}
         </div>

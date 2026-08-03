@@ -3,11 +3,9 @@ import { api } from './api.js'
 import SearchView from './components/SearchView.jsx'
 import CompareView from './components/CompareView.jsx'
 import ChangesView from './components/ChangesView.jsx'
-import CasesView from './components/CasesView.jsx'
 import DatasetProfile from './components/DatasetProfile.jsx'
-
-const DISCLAIMER =
-  '본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을 보증하지 않습니다.'
+import AboutView from './components/AboutView.jsx'
+import ConnectView from './components/ConnectView.jsx'
 
 // 배포 표면(빌드 시 결정): 'core' = MCP 배포 동반 웹(비생성형만),
 // 'concierge' = 별도 컨시어지 서비스(컨시어지 중심 + 보조 검색), 'all' = 로컬 개발 기본
@@ -21,24 +19,20 @@ const ConciergeView = _czLoader ? lazy(_czLoader) : null
 const HAS_CONCIERGE = ConciergeView !== null && SURFACE !== 'core'
 
 // 표면별 테마 스위치(styles.css의 :root[data-surface] 토큰 블록과 짝):
-// core(A) = 구글 톤(화이트·블루·절제), concierge/all(B·로컬) = 그린 시스템
+// core(A) = 라이트 블루 시스템, concierge/all(B·로컬) = 그린 시스템
 document.documentElement.dataset.surface = SURFACE
 
-const ALL_TABS = [
-  { id: 'search', label: '검색' },
-  { id: 'concierge', label: 'AI 컨시어지' },
-  { id: 'compare', label: '비교' },
-  { id: 'changes', label: '변경 피드' },
-  { id: 'cases', label: '활용 사례' },
+// IA: 주 표면은 '데이터 찾기' 하나. 나머지는 우측 유틸리티 내비(조용한 링크),
+// 비교는 선택이 생겼을 때만 하단 컨텍스트 바로 등장한다.
+// '활용 사례'는 자동 생성 v0(인간 검토 전)이라 상용 표면에서 내렸다 — 검수 후 복귀.
+const NAV_LINKS = [
+  ...(HAS_CONCIERGE ? [{ id: 'concierge', label: 'AI 컨시어지' }] : []),
+  { id: 'changes', label: '변경 이력' },
+  { id: 'about', label: '소개' },
 ]
-const TABS = ALL_TABS.filter((t) =>
-  t.id === 'concierge' ? HAS_CONCIERGE
-  : SURFACE === 'concierge' ? t.id === 'search'
-  : true,
-)
 
 export default function App() {
-  const [tab, setTab] = useState(SURFACE === 'concierge' && HAS_CONCIERGE ? 'concierge' : 'search')
+  const [view, setView] = useState(SURFACE === 'concierge' && HAS_CONCIERGE ? 'concierge' : 'search')
   const [status, setStatus] = useState(null)
   const [profileId, setProfileId] = useState(null)
   const [compareIds, setCompareIds] = useState([])
@@ -46,7 +40,7 @@ export default function App() {
 
   const seedSearch = (q) => {
     setSearchSeed({ q, t: Date.now() })
-    setTab('search')
+    setView('search')
   }
 
   useEffect(() => {
@@ -63,46 +57,29 @@ export default function App() {
     )
   }
 
+
   return (
     <div className="app">
-      <header className="header">
-        <div>
+      <header className="topnav">
+        <button className="brand" onClick={() => setView('search')} aria-label="데이터 찾기로 이동">
           <h1>공공데이터 렌즈</h1>
-          <p className="tagline">
-            하고 싶은 일을 말하면 AI Ready 관점으로 정밀하게 투영하는 공공데이터 초점 레이어
-          </p>
-        </div>
-        {status && (
-          <div className="status-chip" title={`릴리스 ${status.data.release}`}>
-            <span>스냅샷 {status.data.currentSnapshot}</span>
-            <span>{status.data.counts.datasets.toLocaleString()}건</span>
-            {status.data.structureCoverage && (
-              <span title="실제 파일에서 구조(원본 컬럼·예시값)가 관측된 FILE 데이터 수">
-                구조 확인 {status.data.structureCoverage.recordsAvailable.toLocaleString()}건
-              </span>
-            )}
-            <span>분석 기준 {status.data.processedAt?.slice(0, 10)}</span>
-          </div>
-        )}
+        </button>
+        <nav className="nav-links" aria-label="보조 메뉴">
+          {NAV_LINKS.map((l) => (
+            <button
+              key={l.id}
+              className={view === l.id ? 'nav-link active' : 'nav-link'}
+              onClick={() => setView(l.id)}
+            >
+              {l.label}
+            </button>
+          ))}
+          <button className="mcp-cta" onClick={() => setView('connect')}>AI에 연결</button>
+        </nav>
       </header>
 
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={tab === t.id ? 'tab active' : 'tab'}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-            {t.id === 'compare' && compareIds.length > 0 && (
-              <span className="badge">{compareIds.length}</span>
-            )}
-          </button>
-        ))}
-      </nav>
-
       <main>
-        {tab === 'search' && (
+        {view === 'search' && (
           <SearchView
             onOpen={setProfileId}
             compareIds={compareIds}
@@ -110,16 +87,20 @@ export default function App() {
             seed={searchSeed}
           />
         )}
-        {tab === 'compare' && (
-          <CompareView
-            ids={compareIds}
-            onRemove={(id) => setCompareIds((p) => p.filter((x) => x !== id))}
-            onOpen={setProfileId}
-          />
+        {view === 'compare' && (
+          <>
+            <button className="back-link" onClick={() => setView('search')}>← 데이터 찾기로</button>
+            <CompareView
+              ids={compareIds}
+              onRemove={(id) => setCompareIds((p) => p.filter((x) => x !== id))}
+              onOpen={setProfileId}
+            />
+          </>
         )}
-        {tab === 'changes' && <ChangesView onOpen={setProfileId} />}
-        {tab === 'cases' && <CasesView onOpen={setProfileId} />}
-        {tab === 'concierge' && ConciergeView && (
+        {view === 'changes' && <ChangesView onOpen={setProfileId} />}
+        {view === 'about' && <AboutView status={status} />}
+        {view === 'connect' && <ConnectView />}
+        {view === 'concierge' && ConciergeView && (
           <Suspense fallback={null}>
             <ConciergeView onOpen={setProfileId} onSearch={seedSearch} />
           </Suspense>
@@ -130,31 +111,36 @@ export default function App() {
         <DatasetProfile recordId={profileId} onClose={() => setProfileId(null)} />
       )}
 
-      {HAS_CONCIERGE && tab !== 'concierge' && (
+      {compareIds.length > 0 && view !== 'compare' && (
+        <div className="compare-bar" role="status">
+          <span className="cb-count">{compareIds.length}개 선택</span>
+          <button className="cb-go" onClick={() => setView('compare')}>비교하기 →</button>
+          <button className="cb-clear" onClick={() => setCompareIds([])}>비우기</button>
+        </div>
+      )}
+
+      {HAS_CONCIERGE && view !== 'concierge' && (
         <button
           className="frap"
           title="AI 컨시어지"
           aria-label="AI 컨시어지 열기"
-          onClick={() => setTab('concierge')}
+          onClick={() => setView('concierge')}
         >
           AI
         </button>
       )}
 
       <footer className="footer">
-        <p>{DISCLAIMER}</p>
         <p>
-          모든 원문 접근은{' '}
-          <a href="https://www.data.go.kr" target="_blank" rel="noreferrer">
-            공공데이터포털
-          </a>
-          로 연결됩니다. 본 서비스는 포털을 대체하지 않는 탐색·판단 계층입니다.
+          본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합
+          가능성을 보증하지 않습니다. 모든 원문 접근은{' '}
+          <a href="https://www.data.go.kr" target="_blank" rel="noreferrer">공공데이터포털</a>로
+          연결됩니다.
         </p>
         <p>
-          이용 기록은 익명으로 수집되며 브라우저의 DNT/GPC 설정으로 거부할 수 있습니다.{' '}
-          <a href="/api/resources/privacy" target="_blank" rel="noreferrer">
-            개인정보·로그 고지
-          </a>
+          {status && <>스냅샷 {status.data.currentSnapshot} · 목록 {status.data.counts.datasets.toLocaleString()}건 · </>}
+          이용 기록은 익명 수집되며 DNT/GPC로 거부할 수 있습니다.{' '}
+          <a href="/api/resources/privacy" target="_blank" rel="noreferrer">개인정보·로그 고지</a>
         </p>
       </footer>
     </div>

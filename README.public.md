@@ -4,7 +4,7 @@
 
 ![snapshot](https://img.shields.io/badge/%EC%8A%A4%EB%83%85%EC%83%B7-2026--06-blue)
 ![datasets](https://img.shields.io/badge/%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%85%8B-96%2C056%EA%B1%B4-informational)
-![contract](https://img.shields.io/badge/MCP%20%EA%B3%84%EC%95%BD-v1.0.0%20%EB%8F%99%EA%B2%B0%20%2B%20v1.3.0%20additive-success)
+![contract](https://img.shields.io/badge/MCP%20%EA%B3%84%EC%95%BD-v1.0.0%20%EB%8F%99%EA%B2%B0%20%2B%20v1.4.0%20additive-success)
 ![status](https://img.shields.io/badge/%EC%83%81%ED%83%9C-v1.0%20beta-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
@@ -31,9 +31,11 @@ SLA 없이 제공되며, 과도한 사용은 예고 없이 제한될 수 있습�
    - *"고령자 의료 접근성 분석에 쓸 데이터 후보를 비교해줘"*
    - *"지난달 공공데이터 목록에서 사라진 데이터가 있어?"*
 
-더 정형화된 결과가 필요하면 프롬프트 메뉴에서 **`build_data_plan`** 을 선택하세요 — 호스트
-LLM이 목적 분해→검색→비교→예상 결합 키→포털 링크의 표준 절차를 따르도록 안내하는 MCP
-Prompt입니다(서버가 스스로 계획을 수립하거나 결합 가능성을 확정하지는 않습니다).
+목적만 말해도 됩니다 — **`build_data_plan`** Tool이 필요한 데이터 역할을 나누고, 후보·선정
+근거·예상 결합 항목·확인할 한계를 **활용 계획 초안**으로 반환합니다(같은 이름의 프롬프트는
+이 결과를 대화형으로 풀어 설명합니다). 이 계획은 목록 메타데이터와 관측 구조에 기반한
+초안(DRAFT)입니다 — 실제 품질 검증, 값 수준 결합 확인, 반복적인 분석 설계는 별도 AI
+컨시어지에서 제공합니다.
 
 Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 
@@ -57,10 +59,11 @@ Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 | Tool | `search_by_columns` | 원본 컬럼(변수) 기준 검색 — 예: `['위도','경도']`, 일치 근거 동반 |
 | Tool | `get_dataset_structure` | 실파일에서 관측한 구조 조회 — 컬럼·유형·예시값(안전 게이트 통과분) |
 | Tool | `get_context` | (호환) 서비스 개요·스냅샷·규칙 요약 |
-| Prompt | `build_data_plan` / `compare_for_purpose` | 활용 계획 수립 / 목적 관점 비교의 절차 표준화 |
+| Tool | `build_data_plan` | 목적 문장 → **활용 계획 초안** — 후보 역할·선정 근거·예상 결합 키(CANDIDATE_ONLY)·미충족 요구. 결정론(LLM 미사용), 항상 DRAFT |
+| Prompt | `build_data_plan` / `compare_for_purpose` | Tool 결과의 사용자 친화적 설명 / 목적 관점 비교의 절차 표준화 |
 | Resource | 판정 규칙 · JSON-LD Context · SHACL · Tool 스키마 | 정본 URI로도 해소 |
 
-**공통 계약** — 기반 v1.0.0(동결) + 확장 v1.3.0(additive): 응답 봉투
+**공통 계약** — 기반 v1.0.0(동결) + 확장 v1.4.0(additive): 응답 봉투
 `{ data, meta: { sourceSnapshot, processedAt, schemaVersion, ruleVersions[] }, warnings[] }`,
 일관된 오류 모델, 모든 판정에 규칙 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 

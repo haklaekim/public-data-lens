@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:core": "VITE_SURFACE=core vite",
     "dev:local": "DATANAV_API_PROXY=http://127.0.0.1:8010 vite",
     "build": "vite build",
     "preview": "vite preview"
