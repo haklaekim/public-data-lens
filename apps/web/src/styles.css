@@ -160,6 +160,8 @@ code, pre, kbd, samp {
   border: 1px solid var(--input-border); border-radius: 8px; background: var(--card);
   color: var(--text); font-size: 12.5px; padding: 5px 8px; font-family: inherit;
 }
+.explore-title { font-size: 20px; margin: 4px 0 6px; }
+.explore .home-block:first-of-type { margin-top: 28px; }
 .footer-link {
   border: none; background: none; padding: 0; cursor: pointer; font-size: inherit;
   color: inherit; text-decoration: underline; font-family: inherit;

@@ -6,6 +6,7 @@ import CompareView from './components/CompareView.jsx'
 import ChangesView from './components/ChangesView.jsx'
 import DatasetProfile from './components/DatasetProfile.jsx'
 import AboutView from './components/AboutView.jsx'
+import ExploreView from './components/ExploreView.jsx'
 import ConnectView from './components/ConnectView.jsx'
 
 // 배포 표면(빌드 시 결정): 'core' = MCP 배포 동반 웹(비생성형만),
@@ -26,9 +27,10 @@ document.documentElement.dataset.surface = SURFACE
 // IA: 주 표면은 '데이터 찾기' 하나. 나머지는 우측 유틸리티 내비(조용한 링크),
 // 비교는 선택이 생겼을 때만 하단 컨텍스트 바로 등장한다.
 // '활용 사례'는 자동 생성 v0(인간 검토 전)이라 상용 표면에서 내렸다 — 검수 후 복귀.
-// 상단은 소개·MCP 연결만(2026-08-04 결정) — 변경 이력은 푸터로 강등(라우트는 유지)
+// 상단은 둘러보기·소개·MCP 연결(2026-08-04 결정) — 변경 이력은 푸터(라우트는 유지)
 const NAV_LINKS = [
   ...(HAS_CONCIERGE ? [{ id: 'concierge', label: 'AI 컨시어지' }] : []),
+  { id: 'explore', label: '둘러보기' },
   { id: 'about', label: '소개' },
   { id: 'connect', label: 'MCP 연결' },
 ]
@@ -134,6 +136,13 @@ export default function App() {
               onOpen={openProfile}
             />
           </>
+        )}
+        {view === 'explore' && (
+          <ExploreView
+            onOpen={openProfile}
+            planAvailable={planAvailable}
+            onTryPurpose={(p) => navigate(`/?mode=purpose&purpose=${encodeURIComponent(p)}`)}
+          />
         )}
         {view === 'changes' && <ChangesView onOpen={openProfile} />}
         {view === 'about' && <AboutView status={status} />}

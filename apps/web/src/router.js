@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 const VIEW_PATH = {
-  search: '/', compare: '/compare', changes: '/changes',
+  search: '/', explore: '/explore', compare: '/compare', changes: '/changes',
   about: '/about', connect: '/connect', concierge: '/concierge',
 }
 const PATH_VIEW = Object.fromEntries(Object.entries(VIEW_PATH).map(([v, p]) => [p, v]))

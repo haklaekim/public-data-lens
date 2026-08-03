@@ -15,30 +15,27 @@ async function searchFor(page, text) {
   await expect(page.locator('.result-row').first()).toBeVisible()
 }
 
-test('홈 — 검색 첫 화면(pristine)', async ({ page }) => {
+test('홈 — 검색 단독(pristine, ADR-007)', async ({ page }) => {
   await expect(page.locator('.hero-title')).toContainText('이해하고 활용하는 것으로')
   await expect(page.locator('.examples .chip').first()).toBeVisible()
+  // 홈은 검색으로 끝난다 — 쇼케이스·투명성 블록은 둘러보기·소개로 이동
+  await expect(page.locator('.home-block')).toHaveCount(0)
+  // 상단 메뉴는 둘러보기·소개·MCP 연결 — 변경 이력은 푸터로
+  await expect(page.locator('.nav-links .nav-link')).toHaveCount(3)
+  await expect(page.locator('.footer .footer-link')).toContainText('변경 이력')
+  await shoot(page, 'home.png')
+})
+
+test('둘러보기 — 서사·해부·구조 실물(ADR-007)', async ({ page }) => {
+  await page.locator('.nav-link', { hasText: '둘러보기' }).click()
   // §3 #3 탐색 서사 — 과정(해석→후보→한계)이 실제 plan 응답으로 렌더된다
   await expect(page.locator('.story-steps')).toContainText('목적 해석')
   await expect(page.locator('.story-block')).toContainText('DRAFT')
   // §3 #5 Dataset anatomy — 원본 컬럼명 그대로 + 관측 출처
   await expect(page.locator('.anatomy-block .structure-table')).toBeVisible()
-  // §3 #4 Live exploration — 구조 관측이 있는 최신 수정분 3건(2026-08-04 축소·격하)
+  // §3 #4 — 구조 관측이 있는 최신 수정분 3건
   await expect(page.locator('.live-block .result-row')).toHaveCount(3)
-  await expect(page.locator('.live-block .structure-chip').first()).toBeVisible()
-  // 상단 메뉴는 소개·MCP 연결만 — 변경 이력은 푸터로
-  await expect(page.locator('.nav-links .nav-link')).toHaveCount(2)
-  await expect(page.locator('.footer .footer-link')).toContainText('변경 이력')
-  // §3.1 Coverage — 세 숫자(전체·FILE·구조 관측)와 스냅샷 지연이 함께 보인다
-  const cov = page.locator('.cov-figures')
-  await expect(cov).toContainText('96,056')
-  await expect(cov).toContainText('83,695')
-  await expect(cov).toContainText('59,395')
-  await expect(page.locator('.cov-lag')).toContainText('지연')
-  // §3.2 Open Infrastructure — 규칙 레지스트리(개수는 응답 length), 폐기 표시 유지
-  await expect(page.locator('.rule-list .rule')).toHaveCount(RULES_COUNT)
-  await expect(page.locator('.rule.deprecated .rule-flag')).toContainText('폐기')
-  await shoot(page, 'home.png')
+  await shoot(page, 'explore.png')
 })
 
 test('검색 결과 — 어린이 보호구역', async ({ page }) => {
@@ -146,10 +143,19 @@ test('변경 이력 — 푸터 진입', async ({ page }) => {
   await shoot(page, 'changes.png')
 })
 
-test('소개', async ({ page }) => {
+test('소개 — 투명성 블록 포함(ADR-007)', async ({ page }) => {
   await page.locator('.nav-link', { hasText: '소개' }).click()
   await expect(page.locator('.stat-tiles .stat-tile').first()).toBeVisible()
   await expect(page.locator('.theme-bars')).toBeVisible()
+  // §3.1 Coverage — 세 숫자와 스냅샷 지연(홈에서 이동)
+  const cov = page.locator('.cov-figures')
+  await expect(cov).toContainText('96,056')
+  await expect(cov).toContainText('83,695')
+  await expect(cov).toContainText('59,395')
+  await expect(page.locator('.cov-lag')).toContainText('지연')
+  // §3.2 Open Infrastructure — 규칙 레지스트리(개수는 응답 length), 폐기 표시 유지
+  await expect(page.locator('.rule-list .rule')).toHaveCount(RULES_COUNT)
+  await expect(page.locator('.rule.deprecated .rule-flag')).toContainText('폐기')
   await shoot(page, 'about.png')
 })
 

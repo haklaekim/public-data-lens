@@ -81,15 +81,23 @@
 
 # 3. 정보 구조
 
+*(2026-08-04 재배분 — ADR-007: 홈은 검색 단독, 블록은 화면별로 이동. 블록 자체와
+데이터 출처 원칙은 불변.)*
+
 ```
-Header
-  Hero                    무엇을 하는 서비스인가
-  Live Exploration        실제로 작동하는 것을 즉시 보여준다
+Header                    둘러보기 · 소개 · MCP 연결 (변경 이력은 푸터)
+홈(/)
+  Hero(축소) + 검색바      검색으로 시작해 검색으로 끝난다
+둘러보기(/explore)
+  Exploration Story       탐색이 어떻게 진행되는가 — 실제 plan 응답의 과정 서사
   Dataset Anatomy         실파일 관측이 무엇인지 실물로 보여준다
+  Live Exploration        구조까지 볼 수 있는 최신 데이터 실물
+소개(/about)
+  서비스 설명·현황
   Coverage                무엇을 알고 무엇을 모르는지 분모와 함께
-  Lens                    같은 데이터를 다른 관점으로 보는 방법
-  MCP Experience          AI 안에서 같은 능력을 쓰는 방법
   Open Infrastructure     판정 규칙·스키마·평가 지표 공개
+MCP 연결(/connect)
+  Capability Demo         AI 안에서 같은 능력을 쓰는 방법 → 등록 안내
 Footer
 ```
 

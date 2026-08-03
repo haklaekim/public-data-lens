@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { CoverageBlock, OpenInfraBlock } from './HomeBlocks.jsx'
 
 export default function AboutView({ status }) {
   const [themes, setThemes] = useState(null)
@@ -76,6 +77,10 @@ export default function AboutView({ status }) {
         <li>이용 기록은 원 IP를 저장하지 않는 익명 로그로 수집되며, 브라우저 DNT/GPC로 거부할 수 있습니다. <a href="/api/resources/privacy" target="_blank" rel="noreferrer">개인정보·로그 고지</a></li>
         <li>목록 메타데이터의 오류 의심은 <a href="https://github.com/hike-lab/public-data-lens/issues" target="_blank" rel="noreferrer">GitHub Issues</a>로 제보해 주세요 — 검토 후 제공 기관에 환류합니다.</li>
       </ul>
+
+      {/* 투명성 블록(2026-08-04, ADR-007) — 홈에서 이동: 무엇을 알고 모르는지, 판정 인프라 공개 */}
+      <CoverageBlock status={status} />
+      <OpenInfraBlock />
     </section>
   )
 }

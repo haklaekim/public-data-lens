@@ -4,7 +4,6 @@ import { UPDATE_CYCLE_LABEL } from '../labels.js'
 import DatasetRow from './DatasetRow.jsx'
 import WarningPanel from './WarningPanel.jsx'
 import { CoveragePopulation } from './CoverageIndicator.jsx'
-import { CoverageBlock, OpenInfraBlock, AnatomyBlock, ExplorationStoryBlock } from './HomeBlocks.jsx'
 import { PlanResult } from './PossibleUsesLens.jsx'
 
 const EXAMPLES = [
@@ -360,43 +359,8 @@ export default function SearchView({
         </button>
       )}
 
-      {/* 홈 블록 순서(2026-08-04 재배치): 차별점(서사·해부)을 먼저, 목록 표본은 축소 후순위.
-          §3 #3 탐색 서사 — 결과가 아니라 과정. CTA는 목적 모드로 이어진다(v1.5 게이팅) */}
-      {pristine && planAvailable && (
-        <ExplorationStoryBlock
-          onTryPurpose={(p) => {
-            setMode('purpose')
-            setPurposeQuery(p)
-            runPurposeSearch(null, p)
-            window.scrollTo({ top: 0 })
-          }}
-        />
-      )}
-      {/* §3 #5 Dataset anatomy — 이미 받아둔 결과에서 구조 관측 레코드 1건 해부 */}
-      {pristine && <AnatomyBlock items={items} onOpen={onOpen} />}
-
-      {/* §3 #4 Live exploration — 이미 받아둔 최신 수정분에서 구조 관측이 있는 3건만
-          (최신 수정 자체는 판단 가치가 낮다는 검토 반영 — 탐색 가능성 우선, 추가 왕복 없음) */}
-      {pristine && result && items.some((it) => it.structureAvailable) && (
-        <div className="home-block live-block">
-          <h3>지금 바로 구조까지 볼 수 있는 데이터 — 최신 수정분 중 3건</h3>
-          <ul className="results">
-            {items.filter((it) => it.structureAvailable).slice(0, 3).map((item) => (
-              <DatasetRow
-                key={item.recordId}
-                item={item}
-                onOpen={onOpen}
-                compared={compareIds.includes(item.recordId)}
-                compareFull={compareIds.length >= 5}
-                onToggleCompare={onToggleCompare}
-              />
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {pristine && <CoverageBlock status={status} />}
-      {pristine && <OpenInfraBlock />}
+      {/* 홈은 검색 단독(2026-08-04 결정, ADR-007) — 쇼케이스 블록은 '둘러보기',
+          커버리지·판정 인프라는 '소개' 하단으로 이동 */}
 
       {!pristine && mode !== 'purpose' && result && (
         <div className="toolbar">
