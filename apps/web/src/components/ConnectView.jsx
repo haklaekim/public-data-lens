@@ -89,6 +89,37 @@ export default function ConnectView() {
           <p className="connect-note">연결 확인: <code>claude mcp list</code>에서 connected 표시</p>
         </details>
         <details>
+          <summary>ChatGPT 웹</summary>
+          <ol className="mcp-steps">
+            <li><strong>설정 → 보안 및 로그인 → 개발자 모드</strong> 켜기</li>
+            <li><a href="https://chatgpt.com/plugins" target="_blank" rel="noreferrer">ChatGPT Plugins</a> → <code>+</code> 선택</li>
+            <li>
+              다음 정보로 MCP 앱 등록:
+              <table className="connect-table">
+                <tbody>
+                  <tr><th>이름</th><td>공공데이터 렌즈</td></tr>
+                  <tr><th>설명</th><td>한국 공공데이터를 목적·키워드·컬럼 기준으로 검색하고 구조와 근거를 확인합니다.</td></tr>
+                  <tr><th>연결</th><td>Public endpoint</td></tr>
+                  <tr><th>MCP 서버 URL</th><td><code>{MCP_URL}</code></td></tr>
+                  <tr><th>인증</th><td>No Authentication</td></tr>
+                </tbody>
+              </table>
+            </li>
+            <li>생성 후 탐지된 도구 목록 확인</li>
+            <li>새 대화 → 입력창의 <code>+</code> → 개발자 모드 → 공공데이터 렌즈 선택</li>
+            <li>대화에서 바로 질문</li>
+          </ol>
+          <p className="connect-note">
+            연결 확인: "공공데이터 렌즈를 사용해서 공공데이터 카탈로그 현황을 알려줘."<br />
+            활용 계획 작성: "공공데이터 렌즈를 사용해서 전기차 충전소 분석에 필요한 데이터
+            활용 계획을 만들어줘."
+          </p>
+          <p className="connect-note connect-caveat">
+            개발자 모드는 현재 ChatGPT 웹의 Plus·Pro·Business·Enterprise·Education 계정에서
+            제공되며, 조직 계정은 관리자 정책에 따라 제한될 수 있습니다.
+          </p>
+        </details>
+        <details>
           <summary>기타 MCP 클라이언트</summary>
           <p className="connect-note">
             원격 MCP(streamable HTTP)를 지원하는 클라이언트라면 같은 주소로 등록할 수 있습니다.

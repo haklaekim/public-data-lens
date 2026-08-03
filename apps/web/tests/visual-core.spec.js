@@ -166,6 +166,12 @@ test('AI에 연결 — capability 데모가 설치 안내보다 먼저', async (
   await expect(page.locator('.mcp-url code')).toContainText('/projects/public-data-lens/mcp')
   await expect(page.locator('.cap-demo')).toContainText('후보')
   await expect(page.locator('.cap-demo')).not.toContainText('추천')
+  // 등록 안내 4종(Claude 웹·앱 / Claude Code / ChatGPT 웹 / 기타)
+  await expect(page.locator('.connect-acc summary')).toHaveCount(4)
+  const gpt = page.locator('.connect-acc details', { hasText: 'ChatGPT 웹' })
+  await gpt.locator('summary').click()
+  await expect(gpt.locator('.connect-table')).toContainText('No Authentication')
+  await expect(gpt.locator('.connect-table code')).toContainText('/projects/public-data-lens/mcp')
   await shoot(page, 'connect.png')
 })
 
