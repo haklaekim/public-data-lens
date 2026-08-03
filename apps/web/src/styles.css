@@ -1040,3 +1040,65 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 :root[data-surface='core'] .profile h2 { color: var(--text); letter-spacing: -0.02em; }
 :root[data-surface='core'] .json-view { background: #0f172a; border-radius: 10px; }
 :root[data-surface='core'] .compare-table thead th { background: var(--neutral-cool); }
+
+/* ============================================================
+   통합 검색(세그먼트 모드)·MCP 연결 CTA·모달 — 양 테마 공통 기본형
+   ============================================================ */
+.searchbar.unified { align-items: stretch; }
+.seg {
+  display: flex; flex: none; border: 1px solid var(--input-border);
+  border-radius: var(--radius-pill); overflow: hidden; background: var(--card);
+}
+.seg button {
+  border: none; background: none; padding: 0 16px; font-size: 13.5px;
+  color: var(--muted); cursor: pointer; font-weight: 500;
+}
+.seg button.on { background: var(--green-light); color: var(--green-accent); font-weight: 600; }
+.seg button:active { transform: none; }
+.search-hint { font-size: 12.5px; color: var(--muted); margin: 8px 2px 0; }
+
+.header-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex: none; }
+.mcp-cta {
+  border: 1px solid var(--green-accent); background: var(--green-accent); color: #fff;
+  border-radius: var(--radius-pill); padding: 9px 18px; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.mcp-cta:hover { background: var(--green-starbucks); border-color: var(--green-starbucks); }
+
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 60;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal {
+  background: var(--card); border-radius: var(--radius-card); max-width: 580px; width: 100%;
+  padding: 24px 28px 26px; box-shadow: 0 16px 48px rgba(15, 23, 42, 0.2);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.modal-head h2 { font-size: 17px; margin: 0; font-weight: 700; }
+.mcp-lead { font-size: 14px; margin: 8px 0 14px; }
+.mcp-url {
+  display: flex; gap: 10px; align-items: center;
+  background: var(--neutral-cool); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; margin: 0 0 14px;
+}
+.mcp-url code { flex: 1; font-size: 12.5px; word-break: break-all; color: var(--text); }
+.mcp-url button {
+  flex: none; border: 1px solid var(--green-accent); background: var(--green-accent); color: #fff;
+  border-radius: 7px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.mcp-steps { font-size: 13.5px; padding-left: 20px; margin: 0 0 12px; }
+.mcp-steps li { margin-bottom: 7px; }
+.mcp-note { font-size: 12px; color: var(--muted); margin: 0; }
+
+@media (max-width: 720px) {
+  .header-side { align-items: flex-start; }
+}
+
+/* ---- Core 표면 정제 ---- */
+:root[data-surface='core'] .seg { border-radius: 10px; background: var(--neutral-cool); padding: 3px; gap: 2px; border-color: var(--line); }
+:root[data-surface='core'] .seg button { border-radius: 7px; padding: 0 14px; }
+:root[data-surface='core'] .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08); }
+:root[data-surface='core'] .mcp-cta { border-radius: 10px; padding: 8px 16px; }
+:root[data-surface='core'] .modal { border: 1px solid var(--line); }
+:root[data-surface='core'] .mcp-url button { border-radius: 7px; }

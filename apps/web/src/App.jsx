@@ -5,6 +5,7 @@ import CompareView from './components/CompareView.jsx'
 import ChangesView from './components/ChangesView.jsx'
 import CasesView from './components/CasesView.jsx'
 import DatasetProfile from './components/DatasetProfile.jsx'
+import McpConnect from './components/McpConnect.jsx'
 
 const DISCLAIMER =
   '본 결과는 공공데이터포털 목록 메타데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을 보증하지 않습니다.'
@@ -72,18 +73,21 @@ export default function App() {
             하고 싶은 일을 말하면 AI Ready 관점으로 정밀하게 투영하는 공공데이터 초점 레이어
           </p>
         </div>
-        {status && (
-          <div className="status-chip" title={`릴리스 ${status.data.release}`}>
-            <span>스냅샷 {status.data.currentSnapshot}</span>
-            <span>{status.data.counts.datasets.toLocaleString()}건</span>
-            {status.data.structureCoverage && (
-              <span title="실제 파일에서 구조(원본 컬럼·예시값)가 관측된 FILE 데이터 수">
-                구조 확인 {status.data.structureCoverage.recordsAvailable.toLocaleString()}건
-              </span>
-            )}
-            <span>분석 기준 {status.data.processedAt?.slice(0, 10)}</span>
-          </div>
-        )}
+        <div className="header-side">
+          <McpConnect />
+          {status && (
+            <div className="status-chip" title={`릴리스 ${status.data.release}`}>
+              <span>스냅샷 {status.data.currentSnapshot}</span>
+              <span>{status.data.counts.datasets.toLocaleString()}건</span>
+              {status.data.structureCoverage && (
+                <span title="실제 파일에서 구조(원본 컬럼·예시값)가 관측된 FILE 데이터 수">
+                  구조 확인 {status.data.structureCoverage.recordsAvailable.toLocaleString()}건
+                </span>
+              )}
+              <span>분석 기준 {status.data.processedAt?.slice(0, 10)}</span>
+            </div>
+          )}
+        </div>
       </header>
 
       <nav className="tabs">

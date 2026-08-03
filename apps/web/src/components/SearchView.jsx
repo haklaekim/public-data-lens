@@ -11,6 +11,9 @@ const EXAMPLES = [
   '관광지 방문객',
 ]
 
+// 컬럼 모드 예시 — 실파일에서 자주 관측되는 원본 컬럼명 조합
+const COLUMN_EXAMPLES = ['위도, 경도', '주소, 전화번호', '사업자등록번호', '설치연도']
+
 const REGIONS = [
   ['', '지역 전체'], ['KR-11', '서울'], ['KR-26', '부산'], ['KR-27', '대구'],
   ['KR-28', '인천'], ['KR-29', '광주'], ['KR-30', '대전'], ['KR-31', '울산'],
@@ -81,10 +84,11 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
   }
 
   // 컬럼 기준 검색(v1.3) — 원본 컬럼명 부분 일치(AND), 구조 확인분 내에서만
+  const [mode, setMode] = useState('keyword') // 'keyword' | 'columns'
   const [colQuery, setColQuery] = useState('')
-  const runColumnSearch = async (e) => {
+  const runColumnSearch = async (e, q = colQuery) => {
     e?.preventDefault()
-    const kws = colQuery.split(',').map((k) => k.trim()).filter(Boolean)
+    const kws = q.split(',').map((k) => k.trim()).filter(Boolean)
     if (!kws.length) return
     setLoading(true)
     setError(null)
@@ -107,38 +111,69 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
 
   return (
     <section>
-      <form className="searchbar" onSubmit={submit}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="키워드로 검색 (예: 어린이 보호구역)"
-          maxLength={500}
-        />
+      <form
+        className="searchbar unified"
+        onSubmit={mode === 'keyword' ? submit : runColumnSearch}
+      >
+        <div className="seg" role="tablist" aria-label="검색 방식">
+          <button
+            type="button"
+            className={mode === 'keyword' ? 'on' : ''}
+            onClick={() => setMode('keyword')}
+          >
+            키워드
+          </button>
+          <button
+            type="button"
+            className={mode === 'columns' ? 'on' : ''}
+            onClick={() => setMode('columns')}
+            title="실제 파일에서 관측된 원본 컬럼명으로 데이터셋을 찾습니다"
+          >
+            컬럼
+          </button>
+        </div>
+        {mode === 'keyword' ? (
+          <input
+            key="kw"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="키워드로 검색 (예: 어린이 보호구역)"
+            maxLength={500}
+          />
+        ) : (
+          <input
+            key="col"
+            value={colQuery}
+            onChange={(e) => setColQuery(e.target.value)}
+            placeholder="원본 컬럼명 — 쉼표로 여러 개 (예: 위도, 경도)"
+            maxLength={200}
+          />
+        )}
         <button type="submit" disabled={loading}>검색</button>
       </form>
-
-      <form className="searchbar columns" onSubmit={runColumnSearch}>
-        <input
-          value={colQuery}
-          onChange={(e) => setColQuery(e.target.value)}
-          placeholder="컬럼으로 검색 — 쉼표 구분 (예: 위도, 경도)"
-          maxLength={200}
-        />
-        <button type="submit" disabled={loading}>컬럼 검색</button>
-      </form>
+      {mode === 'columns' && (
+        <p className="search-hint">
+          실제 파일에서 관측된 원본 컬럼명과 부분 일치하는 데이터셋을 찾습니다 — 여러 개를
+          쉼표로 적으면 모두 가진 것만(AND) 반환합니다.
+        </p>
+      )}
 
       <div className="examples">
-        {EXAMPLES.map((ex) => (
+        {(mode === 'keyword' ? EXAMPLES : COLUMN_EXAMPLES).map((ex) => (
           <button
             key={ex}
             className="chip"
-            onClick={() => { setQuery(ex); runSearch(null, ex, filters) }}
+            onClick={() => {
+              if (mode === 'keyword') { setQuery(ex); runSearch(null, ex, filters) }
+              else { setColQuery(ex); runColumnSearch(null, ex) }
+            }}
           >
             {ex}
           </button>
         ))}
       </div>
 
+      {mode === 'keyword' && (
       <div className="filters">
         <select value={filters.listType} onChange={(e) => setFilter('listType', e.target.value)}>
           <option value="">유형 전체</option>
@@ -164,6 +199,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           {FORMATS.map((f) => <option key={f} value={f}>{f || '포맷 전체'}</option>)}
         </select>
       </div>
+      )}
 
       {error && <p className="error">{error}</p>}
       {result && (
