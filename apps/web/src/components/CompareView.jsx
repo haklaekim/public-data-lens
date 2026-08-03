@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import { cycleLabel, licenseLabel } from '../labels.js'
-
-const FIELD_LABEL = {
-  listType: '목록유형', orgName: '제공기관', theme: '분류체계', formats: '포맷',
-  updateCycle: '업데이트 주기', license: '이용허락', modifiedDate: '수정일',
-  createdDate: '등록일', rowCount: '전체 행', spatial: '공간범위', temporal: '시간범위',
-  completenessScore: '완전성 점수', keywords: '키워드', fee: '비용', apiType: 'API 유형',
-}
+import { cycleLabel, licenseLabel, COMPARE_FIELD_LABEL } from '../labels.js'
 
 function fmt(v, field) {
   if (v === null || v === undefined) return '—'
@@ -74,7 +67,7 @@ export default function CompareView({ ids, onRemove, onOpen }) {
               <tbody>
                 {body.data.differences.map((diff) => (
                   <tr key={diff.field} className="diff">
-                    <td>{FIELD_LABEL[diff.field] || diff.field}</td>
+                    <td>{COMPARE_FIELD_LABEL[diff.field] || diff.field}</td>
                     {datasets.map((d) => (
                       <td key={d.recordId}>{fmt(diff.values[d.recordId], diff.field)}</td>
                     ))}
@@ -83,7 +76,7 @@ export default function CompareView({ ids, onRemove, onOpen }) {
                 {showShared &&
                   body.data.sharedFields.map((s) => (
                     <tr key={s.field} className="shared">
-                      <td>{FIELD_LABEL[s.field] || s.field}</td>
+                      <td>{COMPARE_FIELD_LABEL[s.field] || s.field}</td>
                       <td colSpan={datasets.length}>{fmt(s.value, s.field)} (공통)</td>
                     </tr>
                   ))}

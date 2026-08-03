@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 
+import { COVERAGE_LABEL, exampleStatusLabel, COMPLETENESS_FIELD_LABEL, FRESHNESS_LABEL } from '../labels.js'
+
 const VIEWS = [
   ['card', '카드'],
   ['structure', '데이터 구조'],
@@ -8,37 +10,6 @@ const VIEWS = [
   ['source', '원본'],
   ['jsonld', 'JSON-LD'],
 ]
-
-const COVERAGE_LABEL = {
-  AVAILABLE: '구조 확인됨',
-  PARTIAL: '일부 파일만 확인됨',
-  NOT_COLLECTED: '아직 관측되지 않음',
-  COLLECTION_FAILED: '관측 실패',
-  API_STRUCTURE_NOT_SUPPORTED_YET: 'API 구조는 차기 지원',
-}
-
-const EXAMPLE_STATUS_LABEL = {
-  NO_NON_NULL_VALUES: '값 없음',
-  WITHHELD_BY_LICENSE: '라이선스 보류',
-  WITHHELD_BY_SAFETY: '안전 비공개',
-  NOT_COLLECTED: '미수집',
-  COLLECTION_FAILED: '수집 실패',
-}
-
-// 완전성 점검 필드의 한글 표기 — 점수(기재 n/16)의 분해 근거 체크리스트용
-const FIELD_LABEL = {
-  title: '제목', theme: '분류', org_name: '제공기관', update_cycle: '갱신주기',
-  keywords: '키워드', description: '설명', license: '이용허락', created_date: '등록일',
-  modified_date: '수정일', list_url: '원문 URL', spatial: '공간범위', temporal: '시간범위',
-  data_limits: '이용제한', format: '포맷', row_count: '행 수', file_data_name: '파일명',
-  api_type: 'API 유형', traffic: '트래픽',
-}
-
-const FRESH_LABEL = {
-  FRESH: { text: '최신', cls: 'fresh' },
-  POSSIBLY_STALE: { text: '갱신 지연 가능', cls: 'stale' },
-  UNKNOWN: { text: '최신성 판단 불가', cls: 'unknown' },
-}
 
 export default function DatasetProfile({ recordId, onClose }) {
   const [view, setView] = useState('card')
@@ -93,7 +64,7 @@ export default function DatasetProfile({ recordId, onClose }) {
 }
 
 function CardView({ ds }) {
-  const fresh = FRESH_LABEL[ds.freshness?.status] || FRESH_LABEL.UNKNOWN
+  const fresh = FRESHNESS_LABEL[ds.freshness?.status] || FRESHNESS_LABEL.UNKNOWN
   return (
     <div className="profile">
       <h2>
@@ -137,7 +108,7 @@ function CardView({ ds }) {
         <div className="field-checklist">
           {Object.entries(ds.completeness.fields).map(([f, filled]) => (
             <span key={f} className={filled ? 'fc filled' : 'fc missing'}>
-              {filled ? '✓' : '—'} {FIELD_LABEL[f] || f}
+              {filled ? '✓' : '—'} {COMPLETENESS_FIELD_LABEL[f] || f}
             </span>
           ))}
         </div>
@@ -243,7 +214,7 @@ function StructureView({ st }) {
                         <td>
                           {c.examples
                             ? c.examples.slice(0, 3).join(', ')
-                            : <em className="ex-status">{EXAMPLE_STATUS_LABEL[c.exampleStatus] || (c.exampleStatus === 'AVAILABLE' ? '비공개(정책)' : c.exampleStatus)}</em>}
+                            : <em className="ex-status">{exampleStatusLabel(c.exampleStatus, st.examplesPublic)}</em>}
                         </td>
                       </tr>
                     ))}

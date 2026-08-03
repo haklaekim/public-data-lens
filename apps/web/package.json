@@ -7,11 +7,12 @@
     "dev": "vite",
     "dev:core": "VITE_SURFACE=core vite",
     "dev:local": "DATANAV_API_PROXY=http://127.0.0.1:8010 vite",
-    "build": "vite build",
+    "build": "node scripts/check-labels.mjs && vite build",
     "preview": "vite preview",
-    "build:core": "VITE_SURFACE=core vite build",
+    "build:core": "node scripts/check-labels.mjs && VITE_SURFACE=core vite build",
     "test": "playwright test",
-    "test:update": "playwright test --update-snapshots"
+    "test:update": "playwright test --update-snapshots",
+    "check:labels": "node scripts/check-labels.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

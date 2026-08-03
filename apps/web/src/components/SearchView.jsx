@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { UPDATE_CYCLE_LABEL } from '../labels.js'
 import DatasetCardRow from './DatasetCardRow.jsx'
 
 const EXAMPLES = [
@@ -22,10 +23,7 @@ const REGIONS = [
   ['KR-48', '경남'], ['KR-49', '제주'],
 ]
 
-const CYCLES = [
-  ['', '주기 전체'], ['DAILY', '일간'], ['WEEKLY', '주간'], ['MONTHLY', '월간'],
-  ['QUARTERLY', '분기'], ['SEMIANNUAL', '반기'], ['ANNUAL', '연간'], ['IRREGULAR', '수시'],
-]
+const CYCLES = [['', '주기 전체'], ...Object.entries(UPDATE_CYCLE_LABEL)]
 
 const FORMATS = ['', 'CSV', 'JSON', 'XML', 'XLSX', 'PDF', 'SHP']
 
@@ -53,7 +51,7 @@ const CYCLE_ALIAS = {
   분기: 'QUARTERLY', 반기: 'SEMIANNUAL', 연간: 'ANNUAL', 매년: 'ANNUAL', 수시: 'IRREGULAR',
 }
 const TYPE_ALIAS = { API: 'API', 파일: 'FILE', FILE: 'FILE', 표준: 'STD', STD: 'STD' }
-const CYCLE_LABEL = Object.fromEntries(CYCLES.map(([v, l]) => [v, l]))
+const CYCLE_LABEL = UPDATE_CYCLE_LABEL
 
 function interpretQuery(raw) {
   const tokens = raw.split(/\s+/).filter(Boolean)
