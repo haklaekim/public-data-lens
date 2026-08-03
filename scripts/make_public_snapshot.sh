@@ -41,11 +41,21 @@ apps/web/src/components/ConciergeDashboard.jsx
 apps/web/nginx.concierge.conf
 docker-compose.concierge.yml
 docs/공공데이터_내비게이터_구현정리_v1.0.pptx
+docs/구현현황_설계대조_v1.0.md
+docs/데이터구조_관측_설계_v2_초안.md
+docs/어휘_매핑_확장_제안_v1.md
+docs/차기_기능_백로그_v1.0.md
 AGENTS.md
 "
 # 개발 에이전트 워크플로 잔재 — AGENTS.md(에이전트 규칙 문서)와 .claude/(Claude Code 설정)는
 # 개발 저장소 전용이므로 공개 릴리스에서 제외한다.
 rm -rf "$OUT/.claude"
+
+# 공개판 README 교체 — 개발용 README 대신 핵심만 담은 공개판을 쓴다.
+mv "$OUT/README.public.md" "$OUT/README.md"
+
+# 매핑표의 내부 문서 링크를 일반 텍스트로 (어휘 제안 문서는 공개판에서 제외됨)
+sed -i.bak 's|\[어휘 매핑 확장 제안 v1.1\](어휘_매핑_확장_제안_v1.md)|어휘 매핑 확장 제안 v1.1(내부 검토 문서)|' "$OUT/docs/매핑표_v1.0.md" && rm -f "$OUT/docs/매핑표_v1.0.md.bak"
 for f in $EXCLUDE; do
   if [ -e "$OUT/$f" ]; then
     rm "$OUT/$f"
