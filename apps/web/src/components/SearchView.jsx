@@ -29,6 +29,58 @@ const CYCLES = [
 
 const FORMATS = ['', 'CSV', 'JSON', 'XML', 'XLSX', 'PDF', 'SHP']
 
+/* ---- 결정론적 질의 해석 — LLM 없이 검색어에서 조건을 읽어낸다.
+   "서울 무더위 쉼터 CSV" → 지역·포맷을 필터로 옮기고 키워드만 검색.
+   MCP 호스트 LLM이 하는 필터 매핑과 같은 의미론을 웹에서 재현하는 기준점. ---- */
+const REGION_ALIAS = (() => {
+  const m = {}
+  REGIONS.slice(1).forEach(([code, name]) => { m[name] = code })
+  Object.assign(m, {
+    서울시: 'KR-11', 서울특별시: 'KR-11', 부산시: 'KR-26', 부산광역시: 'KR-26',
+    대구시: 'KR-27', 대구광역시: 'KR-27', 인천시: 'KR-28', 인천광역시: 'KR-28',
+    광주시: 'KR-29', 광주광역시: 'KR-29', 대전시: 'KR-30', 대전광역시: 'KR-30',
+    울산시: 'KR-31', 울산광역시: 'KR-31', 세종시: 'KR-50', 세종특별자치시: 'KR-50',
+    경기도: 'KR-41', 강원도: 'KR-42', 강원특별자치도: 'KR-42',
+    충청북도: 'KR-43', 충청남도: 'KR-44', 전라북도: 'KR-45', 전북특별자치도: 'KR-45',
+    전라남도: 'KR-46', 경상북도: 'KR-47', 경상남도: 'KR-48',
+    제주도: 'KR-49', 제주특별자치도: 'KR-49',
+  })
+  return m
+})()
+const FORMAT_ALIAS = { CSV: 'CSV', JSON: 'JSON', XML: 'XML', XLSX: 'XLSX', 엑셀: 'XLSX', EXCEL: 'XLSX', PDF: 'PDF', SHP: 'SHP' }
+const CYCLE_ALIAS = {
+  일간: 'DAILY', 매일: 'DAILY', 주간: 'WEEKLY', 매주: 'WEEKLY', 월간: 'MONTHLY', 매월: 'MONTHLY',
+  분기: 'QUARTERLY', 반기: 'SEMIANNUAL', 연간: 'ANNUAL', 매년: 'ANNUAL', 수시: 'IRREGULAR',
+}
+const TYPE_ALIAS = { API: 'API', 파일: 'FILE', FILE: 'FILE', 표준: 'STD', STD: 'STD' }
+const CYCLE_LABEL = Object.fromEntries(CYCLES.map(([v, l]) => [v, l]))
+
+function interpretQuery(raw) {
+  const tokens = raw.split(/\s+/).filter(Boolean)
+  const found = {}
+  const labels = []
+  const rest = []
+  for (const t of tokens) {
+    const up = t.toUpperCase()
+    if (!found.region && REGION_ALIAS[t]) {
+      found.region = REGION_ALIAS[t]
+      labels.push(`지역 ${t.replace(/(특별자치|특별|광역)?(시|도)$/, '')}`)
+    } else if (!found.format && (FORMAT_ALIAS[t] || FORMAT_ALIAS[up])) {
+      found.format = FORMAT_ALIAS[t] || FORMAT_ALIAS[up]
+      labels.push(`포맷 ${found.format}`)
+    } else if (!found.updateCycle && CYCLE_ALIAS[t]) {
+      found.updateCycle = CYCLE_ALIAS[t]
+      labels.push(`주기 ${CYCLE_LABEL[CYCLE_ALIAS[t]]}`)
+    } else if (!found.listType && TYPE_ALIAS[up]) {
+      found.listType = TYPE_ALIAS[up]
+      labels.push(`유형 ${TYPE_ALIAS[up]}`)
+    } else {
+      rest.push(t)
+    }
+  }
+  return { found, labels, rest: rest.join(' ') }
+}
+
 export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }) {
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({
@@ -78,9 +130,33 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed?.t])
 
+  // 검색어에서 읽어낸 조건 표시(해석 배너) — keys는 자동 적용된 필터 키(해제용)
+  const [interp, setInterp] = useState(null)
+
   const submit = (e) => {
     e.preventDefault()
-    runSearch()
+    const { found, labels, rest } = interpretQuery(query)
+    const keys = Object.keys(found)
+    if (keys.length && rest !== query.trim()) {
+      const next = { ...filters, ...found }
+      setFilters(next)
+      setQuery(rest)
+      setInterp({ labels, keys, raw: query })
+      runSearch(null, rest, next)
+    } else {
+      setInterp(null)
+      runSearch()
+    }
+  }
+
+  const dismissInterp = () => {
+    if (!interp) return
+    const next = { ...filters }
+    interp.keys.forEach((k) => { next[k] = '' })
+    setFilters(next)
+    setQuery(interp.raw)
+    setInterp(null)
+    runSearch(null, interp.raw, next)
   }
 
   // 컬럼 기준 검색(v1.3) — 원본 컬럼명 부분 일치(AND), 구조 확인분 내에서만
@@ -106,6 +182,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
   const setFilter = (k, v) => {
     const next = { ...filters, [k]: v }
     setFilters(next)
+    setInterp(null) // 수동 필터 조작 시 해석 배너는 더 이상 유효하지 않다
     runSearch(null, query, next)
   }
 
@@ -157,6 +234,13 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           쉼표로 적으면 모두 가진 것만(AND) 반환합니다.
         </p>
       )}
+      {mode === 'keyword' && interp && (
+        <p className="interp">
+          <span className="interp-mark">해석</span>
+          검색어에서 <strong>{interp.labels.join(' · ')}</strong> 조건을 읽어 적용했습니다
+          <button type="button" className="link" onClick={dismissInterp}>원문 그대로 검색</button>
+        </p>
+      )}
 
       <div className="examples">
         {(mode === 'keyword' ? EXAMPLES : COLUMN_EXAMPLES).map((ex) => (
@@ -204,19 +288,33 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
       {error && <p className="error">{error}</p>}
       {result && (
         <>
-          <p className="result-meta">
-            {result.data.totalEstimate.toLocaleString()}건
-            {result.data.ranking && (
-              <> · 랭킹 {result.data.ranking.method} ({result.data.ranking.version})</>
-            )}
-            {result.data.coverage && (
-              <> · 구조 확인 {result.data.coverage.searchedRecords.toLocaleString()}건 내 컬럼 검색</>
-            )}
+          <p
+            className="result-meta"
+            title={result.data.ranking
+              ? `랭킹 ${result.data.ranking.method} (${result.data.ranking.version})`
+              : undefined}
+          >
+            총 {result.data.totalEstimate.toLocaleString()}건
+            {result.data.coverage
+              ? <> · 구조가 관측된 {result.data.coverage.searchedRecords.toLocaleString()}건 중 검색</>
+              : result.data.ranking?.method?.includes('bm25')
+                ? ' · 관련도순'
+                : ' · 최신 수정순'}
           </p>
           {result.warnings
             .filter((w) => !w.startsWith('본 결과는'))
-            .map((w, i) => <p className="warning" key={i}>⚠ {w}</p>)}
+            .map((w, i) => <p className="notice" key={i}>{w}</p>)}
         </>
+      )}
+
+      {result && !loading && items.length === 0 && (
+        <div className="empty-state">
+          <p className="empty-title">조건에 맞는 데이터를 찾지 못했습니다</p>
+          <p className="empty-body">
+            키워드를 줄이거나 필터를 해제해 보세요. 찾는 방식이 막막하면 우측 상단
+            <strong> AI에 연결</strong>로 대화하며 탐색할 수도 있습니다.
+          </p>
+        </div>
       )}
 
       <ul className="results">
@@ -238,7 +336,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           disabled={loading}
           onClick={() => runSearch(result.data.nextCursor)}
         >
-          {loading ? '불러오는 중…' : '더 보기'}
+          {loading ? '불러오는 중…' : '결과 더 보기'}
         </button>
       )}
     </section>

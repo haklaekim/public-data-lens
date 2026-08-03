@@ -26,10 +26,10 @@ const HAS_CONCIERGE = ConciergeView !== null && SURFACE !== 'core'
 document.documentElement.dataset.surface = SURFACE
 
 const ALL_TABS = [
-  { id: 'search', label: '검색' },
+  { id: 'search', label: '데이터 찾기' },
   { id: 'concierge', label: 'AI 컨시어지' },
   { id: 'compare', label: '비교' },
-  { id: 'changes', label: '변경 피드' },
+  { id: 'changes', label: '변경 이력' },
   { id: 'cases', label: '활용 사례' },
 ]
 const TABS = ALL_TABS.filter((t) =>
