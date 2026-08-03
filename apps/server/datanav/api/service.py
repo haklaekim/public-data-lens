@@ -52,6 +52,21 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _LIKE_ESCAPE = "\\"
 
 
+def _matched_fields(rec: dict, tokens: list[str]) -> list[str]:
+    """v1.6 additive: 검색어 토큰이 어느 목록 필드에 나타나는지 — '왜 이 결과인가'의 사실 표시.
+    포함 판정 기준이라 FTS 완화(OR·접두) 일치와 다를 수 있다 — 빈 목록은 '필드 표시 불가'이지
+    미일치 단정이 아니다."""
+    kw = rec.get("keywords")
+    checks = (
+        ("title", rec.get("title")),
+        ("keywords", " ".join(kw) if isinstance(kw, list) else (kw or "")),
+        ("description", rec.get("description")),
+        ("orgName", rec.get("org_name")),
+    )
+    return [name for name, text in checks
+            if text and any(t in text.lower() for t in tokens)]
+
+
 def _escape_like_literal(value: str) -> str:
     """SQLite LIKE pattern fragment for a literal user substring."""
     return (
@@ -109,7 +124,12 @@ class Service:
         cursor: str | None = None,
         page_size: int = DEFAULT_PAGE_SIZE,
         interpret: bool = False,
+        sort: str | None = None,
     ) -> dict:
+        # v1.6 additive: 정렬 선택 — relevance(질의 필요)|modified. 기본은 기존 동작
+        # (질의 있으면 관련도, 없으면 최신 수정순)이라 미지정 소비자는 불변.
+        if sort and sort not in ("relevance", "modified"):
+            raise InvalidArgument("sort는 relevance|modified", {"sort": sort})
         if query and len(query) > MAX_QUERY_LENGTH:
             raise InvalidArgument(f"query는 {MAX_QUERY_LENGTH}자 이하", {"length": len(query)})
 
@@ -199,6 +219,9 @@ class Service:
                 warnings.append("전체 단어 일치 결과가 없어 부분 일치(OR)로 완화해 검색했습니다.")
             params = params_fts
             score_col = "bm25(datasets_fts, 4.0, 3.0, 1.0, 2.0) AS score"
+            if sort == "modified":  # 질의로 거르되 순서는 최신 수정(v1.6)
+                order = "ORDER BY d.modified_date DESC, d.record_id"
+                fts_mode = f"{fts_mode}/sort=modified"
         else:
             order = "ORDER BY d.modified_date DESC, d.record_id"
             score_col = "NULL AS score"
@@ -210,12 +233,15 @@ class Service:
             params + [page_size, offset],
         ).fetchall()
 
+        q_tokens = [t.lower() for t in re.split(r"\s+", query.strip()) if t] if query and query.strip() else []
         items = []
         for r in rows:
             rec = row_to_record(r)
             item = self._summary(rec)
             if rec.get("score") is not None:
                 item["score"] = round(rec["score"], 4)
+            if q_tokens:
+                item["matchedFields"] = _matched_fields(rec, q_tokens)
             items.append(item)
 
         has_more = offset + len(rows) < total
@@ -232,7 +258,7 @@ class Service:
                 "tieBreak": "record_id asc",
                 # v1.5 additive: 정렬 방향을 사실로 노출(프론트의 문자열 패턴 추론 제거)
                 "direction": "desc",
-                "basis": "relevance" if fts_mode else "modified_date",
+                "basis": "modified_date" if (not fts_mode or sort == "modified") else "relevance",
             },
         }
         rules = [RULE_RANKING, RULE_REGION, RULE_IDENTITY]
@@ -572,7 +598,7 @@ class Service:
         return comp
 
     def _summary(self, rec: dict) -> dict:
-        return {
+        s = {
             "recordId": rec["record_id"],
             "listKey": rec["list_key"],
             "listType": rec["list_type"],
@@ -587,6 +613,10 @@ class Service:
             "regions": rec["regions"],
             "portalUrl": rec["list_url"],
         }
+        # v1.6 교정: 스펙(summaryItem.rowCountListed)에 있으나 미방출이던 필드 — 목록 기재 행수
+        if rec.get("row_count") is not None:
+            s["rowCountListed"] = rec["row_count"]
+        return s
 
     def _card(self, rec: dict) -> dict:
         card = self._summary(rec)
@@ -747,9 +777,19 @@ class Service:
             for r in rows
         ]
         has_more = offset + len(rows) < total
+        # v1.6 additive: 상태별 집계 — 소비자가 '무엇이 얼마나 바뀌었는지'를 한 번에 본다
+        summary = {
+            r["status"]: r["n"]
+            for r in self.conn.execute(
+                "SELECT status, COUNT(*) AS n FROM changes GROUP BY status"
+            ).fetchall()
+        }
         data = {
             "baseSnapshot": base["base_snapshot"] if base else None,
+            # v1.6 additive: 기준 부재 사유 코드 — null·0을 고장으로 오인하지 않게(§12)
+            "baseUnavailableReason": None if base else "FIRST_SNAPSHOT_OR_DIFF_NOT_GENERATED",
             "currentSnapshot": self.snapshot,
+            "summary": summary,
             "items": items,
             "nextCursor": encode_cursor({"s": self.snapshot, "o": offset + len(rows)}) if has_more else None,
             "hasMore": has_more,

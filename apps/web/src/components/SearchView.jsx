@@ -70,7 +70,7 @@ function toUrlParams(q, f, m, cq) {
 }
 
 export default function SearchView({
-  onOpen, compareIds, onToggleCompare, seed, status, urlParams, onUrlChange,
+  onOpen, compareIds, onToggleCompare, seed, status, urlParams, onUrlChange, planAvailable,
 }) {
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({
@@ -83,9 +83,11 @@ export default function SearchView({
 
   // 사용자가 해석을 해제하면(원문 그대로 검색) 다음 제출 전까지 interpret를 끈다
   const [interpretOff, setInterpretOff] = useState(false)
+  // 정렬 선택(v1.6) — ''=기본(질의 시 관련도), 'modified'=최신 수정순
+  const [sortMode, setSortMode] = useState('')
 
   const runSearch = useCallback(
-    async (cursor = null, q = query, f = filters, interpret = !interpretOff) => {
+    async (cursor = null, q = query, f = filters, interpret = !interpretOff, sortArg = sortMode) => {
       setLoading(true)
       setError(null)
       try {
@@ -100,6 +102,7 @@ export default function SearchView({
           pageSize: 20,
           // 질의 해석은 서버 규칙(query-interpret-v1.0) — 근거가 interpretedFilters로 돌아온다
           interpret: interpret && q ? true : undefined,
+          sort: sortArg || undefined,
         })
         setResult(body)
         setItems((prev) => (cursor ? [...prev, ...body.data.items] : body.data.items))
@@ -109,7 +112,7 @@ export default function SearchView({
         setLoading(false)
       }
     },
-    [query, filters, interpretOff],
+    [query, filters, interpretOff, sortMode],
   )
 
   // URL 반영 — 검색을 실행한 조건을 주소창에 남긴다(replace — 히스토리를 더럽히지 않음)
@@ -262,14 +265,16 @@ export default function SearchView({
             >
               컬럼
             </button>
-            <button
-              type="button"
-              className={mode === 'purpose' ? 'on' : ''}
-              onClick={() => setMode('purpose')}
-              title="데이터 이름을 몰라도 하려는 일을 적으면 후보와 한계를 초안으로 조립합니다"
-            >
-              목적
-            </button>
+            {planAvailable && (
+              <button
+                type="button"
+                className={mode === 'purpose' ? 'on' : ''}
+                onClick={() => setMode('purpose')}
+                title="데이터 이름을 몰라도 하려는 일을 적으면 후보와 한계를 초안으로 조립합니다"
+              >
+                목적
+              </button>
+            )}
           </div>
           {mode === 'keyword' && (
             <input
@@ -373,8 +378,8 @@ export default function SearchView({
         </div>
       )}
 
-      {/* §3 #3 탐색 서사 — 결과가 아니라 과정. CTA는 목적 모드로 이어진다 */}
-      {pristine && (
+      {/* §3 #3 탐색 서사 — 결과가 아니라 과정. CTA는 목적 모드로 이어진다(v1.5 게이팅) */}
+      {pristine && planAvailable && (
         <ExplorationStoryBlock
           onTryPurpose={(p) => {
             setMode('purpose')
@@ -397,9 +402,10 @@ export default function SearchView({
               ? `랭킹 ${result.data.ranking.method} (${result.data.ranking.version})`
               : undefined}
           >
-            {/* 정렬 방식은 계약(ranking.method/version)을 그대로 툴팁에 표기 —
-                문자열 패턴으로 의미를 추론하지 않는다(CLAUDE.md 불변식) */}
+            {/* 정렬·검색 기준은 계약 필드(ranking.basis, v1.5)에서 — 문자열 추론 금지 */}
             총 {result.data.totalEstimate.toLocaleString()}건
+            {result.data.ranking?.basis === 'relevance' && ' · 관련도순(제목·키워드·설명·기관 일치)'}
+            {result.data.ranking?.basis === 'modified_date' && ' · 최신 수정순'}
             {result.data.coverage && (
               <> · <CoveragePopulation
                 searched={result.data.coverage.searchedRecords}
@@ -412,6 +418,21 @@ export default function SearchView({
           </p>
           {mode === 'keyword' && (
             <div className="toolbar-right">
+              {query && (
+                <select
+                  className="sort-select"
+                  aria-label="정렬"
+                  value={sortMode}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setSortMode(v)
+                    runSearch(null, query, filters, !interpretOff, v)
+                  }}
+                >
+                  <option value="">관련도순</option>
+                  <option value="modified">최신 수정순</option>
+                </select>
+              )}
               {['listType', 'region', 'updateCycle', 'format'].filter((k) => filters[k]).map((k) => (
                 <button key={k} className="fchip" onClick={() => setFilter(k, '')} title="조건 해제">
                   {k === 'region'

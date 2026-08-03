@@ -43,7 +43,20 @@ export default function ChangesView({ onOpen }) {
       {error && <p className="error">{error}</p>}
       <WarningPanel warnings={body?.warnings} notices={body?.notices} />
 
-      {body && body.data.totalEstimate === 0 && !body.warnings.some((w) => w.includes('이전 스냅샷')) && (
+      {/* v1.6: 상태별 집계 — 무엇이 얼마나 바뀌었는지 한 줄 요약 */}
+      {body?.data?.summary && Object.keys(body.data.summary).length > 0 && (
+        <p className="result-meta">
+          이번 스냅샷 변경 요약:{' '}
+          {Object.entries(body.data.summary)
+            .map(([s, n]) => `${CHANGE_STATUS_LABEL[s] || s} ${n.toLocaleString()}건`)
+            .join(' · ')}
+        </p>
+      )}
+
+      {/* 기준 부재는 사유 코드(v1.6)로 판별 — 문자열 결합 폴백은 구버전 응답용 */}
+      {body && body.data.totalEstimate === 0
+        && !(body.data.baseUnavailableReason
+          ?? body.warnings.some((w) => w.includes('이전 스냅샷'))) && (
         <p className="empty">해당 상태의 변경이 없습니다.</p>
       )}
 

@@ -229,12 +229,13 @@ def search(
     cursor: str | None = None,
     pageSize: int = Query(default=20, ge=1, le=100),
     interpret: bool = False,
+    sort: str | None = None,
 ):
     result = _svc().search_datasets(
         query=query, theme=theme, org=org, fmt=format, update_cycle=updateCycle,
         license_code=license, list_type=listType, region=region,
         include_inferred=includeInferred, updated_after=updatedAfter,
-        cursor=cursor, page_size=pageSize, interpret=interpret,
+        cursor=cursor, page_size=pageSize, interpret=interpret, sort=sort,
     )
     # §12 지표용 주석 — 검색어 원문 정책은 고지문 참조(보존 12개월, 옵트아웃 시 미기록)
     filters = [k for k, v in [("theme", theme), ("org", org), ("format", format),

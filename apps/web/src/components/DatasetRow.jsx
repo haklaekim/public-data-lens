@@ -1,4 +1,6 @@
 import { KEY_FIELD_LABEL } from '../labels.js'
+
+const MATCH_FIELD_LABEL = { title: '제목', keywords: '키워드', description: '설명', orgName: '기관' }
 import { rowButtonProps } from '../a11y.js'
 import { RegionBadges } from './EvidenceRow.jsx'
 import CoverageIndicator from './CoverageIndicator.jsx'
@@ -10,7 +12,7 @@ import CoverageIndicator from './CoverageIndicator.jsx'
 
 function CompletenessBadges({ c }) {
   const keys = Object.entries(c.keyFields || {}).filter(([, v]) => v)
-  const title = `목록 메타데이터 기재 ${c.filledFields}/${c.totalFields} (${c.profile} 프로파일, ${c.rule})`
+  const title = `메타데이터 ${c.filledFields}/${c.totalFields} 항목 기재 (${c.profile} 프로파일, ${c.rule})`
       + (c.typical ? ` — 동일 유형의 ${c.typicalShare}%가 같은 수준` : ` — 상위 ${c.topPercent}%`)
   return (
     <span className="completeness" title={title}>
@@ -18,7 +20,7 @@ function CompletenessBadges({ c }) {
         <span key={k} className="key-field">{KEY_FIELD_LABEL[k]} ✓</span>
       ))}
       <span className="fill-count">
-        기재 {c.filledFields}/{c.totalFields}
+        메타데이터 {c.filledFields}/{c.totalFields} 항목
         {c.typical ? ' · 표준 수준' : ` · 상위 ${c.topPercent}%`}
       </span>
     </span>
@@ -43,6 +45,12 @@ export default function DatasetRow({ item, onOpen, compared, compareFull, onTogg
         {item.matchedColumns && (
           <p className="matched-columns">
             일치 컬럼: {item.matchedColumns.map((m) => m.columns.join(', ')).join(' · ')}
+          </p>
+        )}
+        {/* v1.6: '왜 이 결과인가' — 검색어가 나타난 필드(서버 사실, 프론트 재추정 아님) */}
+        {item.matchedFields?.length > 0 && (
+          <p className="matched-columns">
+            검색어 일치: {item.matchedFields.map((f) => MATCH_FIELD_LABEL[f] || f).join(', ')}
           </p>
         )}
         <div className="row-badges">

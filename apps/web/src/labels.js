@@ -49,8 +49,8 @@ export const EVIDENCE_LABEL = {
 
 // §2.4 구조 수집 상태 (10종) — COLLECTION_FAILED 하나만 경고, 나머지는 전부 중립
 export const COVERAGE_LABEL = {
-  AVAILABLE: '구조 확인됨',
-  PARTIAL: '일부 파일만 확인됨',
+  AVAILABLE: '컬럼 구조 확인됨',
+  PARTIAL: '일부 컬럼 구조 확인됨',
   NOT_COLLECTED: '아직 관측되지 않음',
   QUEUED: '수집 대기',
   COLLECTING: '수집 중',

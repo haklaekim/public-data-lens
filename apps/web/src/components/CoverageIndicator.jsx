@@ -4,7 +4,7 @@
 import { COVERAGE_LABEL } from '../labels.js'
 
 const STATUS_NOTE = {
-  AVAILABLE: "실제 파일에서 원본 컬럼·유형이 관측됨 — 프로필의 '데이터 구조' 탭에서 확인",
+  AVAILABLE: '실제 파일에서 컬럼명과 기본 구조가 관측됨 — 데이터 값의 정확성·품질을 보증하지 않습니다',
   NOT_COLLECTED: '품질 문제가 아니라 수집 순번입니다.',
   QUEUED: '수집 순번을 기다리고 있습니다.',
   API_STRUCTURE_NOT_SUPPORTED_YET: '파일 목록만 구조를 관측합니다.',

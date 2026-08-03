@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { api } from './api.js'
+import { api, supportsPlan } from './api.js'
 import { useRoute, pathFor } from './router.js'
 import SearchView from './components/SearchView.jsx'
 import CompareView from './components/CompareView.jsx'
@@ -75,6 +75,9 @@ export default function App() {
     api.status().then(setStatus).catch(() => setStatus(null))
   }, [])
 
+  // 계약 v1.5 기능(POST /api/plan) 게이팅 — 구버전 서버에서는 진입점을 숨긴다(P0)
+  const planAvailable = supportsPlan(status)
+
   const toggleCompare = (id) => {
     setCompareIds((prev) =>
       prev.includes(id)
@@ -102,7 +105,7 @@ export default function App() {
               {l.label}
             </button>
           ))}
-          <button className="mcp-cta" onClick={() => goto('connect')}>AI에 연결</button>
+          <button className="mcp-cta" onClick={() => goto('connect')}>MCP 연결</button>
         </nav>
       </header>
 
@@ -114,6 +117,7 @@ export default function App() {
             onToggleCompare={toggleCompare}
             seed={searchSeed}
             status={status}
+            planAvailable={planAvailable}
             urlParams={route.profileId ? null : route.params}
             onUrlChange={(qs) => {
               if (route.profileId) return // 프로필이 열린 동안은 URL을 건드리지 않는다
@@ -145,6 +149,7 @@ export default function App() {
         <DatasetProfile
           recordId={route.profileId}
           onOpen={openProfile}
+          planAvailable={planAvailable}
           lens={route.lens}
           onLensChange={(l) =>
             navigate(`/datasets/${encodeURIComponent(route.profileId)}?lens=${l}`, { replace: true })}

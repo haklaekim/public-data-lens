@@ -15,7 +15,12 @@ const LENSES = [
   ['uses', '활용 초안'],
 ]
 
-export default function DatasetProfile({ recordId, lens = 'overview', onLensChange, onClose, onOpen }) {
+export default function DatasetProfile({
+  recordId, lens = 'overview', onLensChange, onClose, onOpen, planAvailable,
+}) {
+  // v1.5 게이팅(P0): 구버전 서버에는 활용 초안 렌즈를 노출하지 않는다.
+  // 딥링크(?lens=uses)는 시도를 허용하고 오류 문안으로 강등한다.
+  const lenses = planAvailable ? LENSES : LENSES.filter(([l]) => l !== 'uses')
   const [cardBody, setCardBody] = useState(null)
   const [structBody, setStructBody] = useState(null)
   const [error, setError] = useState(null)
@@ -64,14 +69,14 @@ export default function DatasetProfile({ recordId, lens = 'overview', onLensChan
   const onTabKey = (e, idx) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
     e.preventDefault()
-    const next = (idx + (e.key === 'ArrowRight' ? 1 : -1) + LENSES.length) % LENSES.length
-    onLensChange?.(LENSES[next][0])
+    const next = (idx + (e.key === 'ArrowRight' ? 1 : -1) + lenses.length) % lenses.length
+    onLensChange?.(lenses[next][0])
     e.currentTarget.parentElement.children[next]?.focus()
   }
 
   const ds = cardBody?.data?.dataset
   const body = lens === 'structure' ? structBody : cardBody
-  const activeLens = LENSES.some(([l]) => l === lens) ? lens : 'overview'
+  const activeLens = lenses.some(([l]) => l === lens) ? lens : 'overview'
 
   return (
     <div className="drawer-backdrop" onClick={onClose}>
@@ -85,7 +90,7 @@ export default function DatasetProfile({ recordId, lens = 'overview', onLensChan
       >
         <div className="drawer-head">
           <div className="drawer-tabs" role="tablist" aria-label="상세 렌즈">
-            {LENSES.map(([l, label], i) => (
+            {lenses.map(([l, label], i) => (
               <button
                 key={l}
                 role="tab"
@@ -102,6 +107,15 @@ export default function DatasetProfile({ recordId, lens = 'overview', onLensChan
           <button className="close" onClick={onClose} aria-label="상세 닫기">✕</button>
         </div>
 
+        {/* 원본 접근은 핵심 행동(P1) — 렌즈 무관 상단 고정. 이 서비스는 재배포하지 않는다 */}
+        {ds?.portalUrl && (
+          <div className="drawer-actions">
+            <a href={ds.portalUrl} target="_blank" rel="noreferrer">
+              공공데이터포털에서 원본 보기 ↗
+            </a>
+          </div>
+        )}
+
         {error && <p className="error">{error}</p>}
         {!body && !error && <p className="loading">불러오는 중…</p>}
 
@@ -114,9 +128,10 @@ export default function DatasetProfile({ recordId, lens = 'overview', onLensChan
 
         {(activeLens === 'overview' || activeLens === 'evidence') && ds && <RawSection recordId={recordId} />}
 
+        {/* 판정 스냅샷은 L1에 유지(신뢰 신호), 규칙 버전 원문은 근거 렌즈로 이동(P1) */}
         {body && (
           <p className="drawer-meta">
-            스냅샷 {body.meta.sourceSnapshot} · 규칙 {body.meta.ruleVersions.join(', ') || '—'}
+            판정 스냅샷 {body.meta.sourceSnapshot} — 상세 근거는 '근거' 렌즈에서
           </p>
         )}
       </aside>
@@ -151,7 +166,7 @@ function OverviewLens({ ds }) {
           className="completeness large"
           title={`${ds.completeness.profile} 프로파일 · ${ds.completeness.rule}`}
         >
-          목록 기재 {ds.completeness.filledFields}/{ds.completeness.totalFields}
+          메타데이터 {ds.completeness.filledFields}/{ds.completeness.totalFields} 항목 기재
           <small>
             {' '}({ds.completeness.profile} 프로파일 ·{' '}
             {ds.completeness.typical
@@ -177,8 +192,16 @@ function OverviewLens({ ds }) {
 
       {ds.description && (
         <>
-          <h3>설명</h3>
-          <p className="desc">{ds.description}</p>
+          <h3>설명 <small className="desc-src">(기관 원문)</small></h3>
+          {ds.description.length > 220 ? (
+            /* 긴 원문은 접는다(P1) — 서비스가 요약을 생성하지는 않는다(§8 언어 규칙) */
+            <details className="desc-fold">
+              <summary>{ds.description.slice(0, 160)}…</summary>
+              <p className="desc">{ds.description}</p>
+            </details>
+          ) : (
+            <p className="desc">{ds.description}</p>
+          )}
         </>
       )}
       {ds.dataLimits && (
@@ -189,6 +212,7 @@ function OverviewLens({ ds }) {
       )}
       {ds.keywords?.length > 0 && (
         <div className="keywords">
+          <span className="examples-label">원문 키워드</span>
           {ds.keywords.map((k) => <span key={k} className="chip small">{k}</span>)}
         </div>
       )}
@@ -218,12 +242,18 @@ function EvidenceLens({ ds, meta }) {
       <div className="prop-grid">
         <Prop k="판정 스냅샷" v={`${meta.sourceSnapshot} (처리 ${meta.processedAt?.slice(0, 10)})`} />
         <Prop k="스키마 버전" v={meta.schemaVersion} />
-        <Prop k="적용 규칙" v={meta.ruleVersions.join(', ') || '—'} />
-        <Prop k="카드 재구성 규칙" v={ds.cardRule || '—'} />
-        <Prop k="완전성 규칙" v={`${ds.completeness.rule} (${ds.completeness.profile} 프로파일)`} />
-        <Prop k="최신성 규칙" v={ds.freshness?.rule || '—'} />
       </div>
       {ds.freshness?.note && <p className="obs-meta">최신성 주석: {ds.freshness.note}</p>}
+      {/* 규칙 버전 원문은 L3(P1) — 존재는 보이되 기본 접힘 */}
+      <details className="raw-section">
+        <summary>판정 방식 — 적용 규칙 버전 보기</summary>
+        <div className="prop-grid">
+          <Prop k="적용 규칙" v={meta.ruleVersions.join(', ') || '—'} />
+          <Prop k="카드 재구성 규칙" v={ds.cardRule || '—'} />
+          <Prop k="완전성 규칙" v={`${ds.completeness.rule} (${ds.completeness.profile} 프로파일)`} />
+          <Prop k="최신성 규칙" v={ds.freshness?.rule || '—'} />
+        </div>
+      </details>
       {ds.regions?.length > 0 && (
         <>
           <h3>지역 판정</h3>

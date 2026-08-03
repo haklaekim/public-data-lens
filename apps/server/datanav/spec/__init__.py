@@ -8,7 +8,7 @@ schemaVersion은 응답 봉투 meta.schemaVersion으로 전달된다.
 """
 from __future__ import annotations
 
-SPEC_VERSION = "1.5.0"
+SPEC_VERSION = "1.6.0"
 
 # ---------------------------------------------------------------- $defs
 DEFS = {
@@ -132,6 +132,13 @@ DEFS = {
                                "description": "목록 메타데이터에 기재된 전체 행수"},
             "structureAvailable": {"type": "boolean", "description": "데이터 구조 관측 존재 여부(get_dataset_structure로 조회). v1.2.0 추가"},
             "score": {"type": "number", "description": "query 있을 때만 — BM25 점수(낮을수록 상위)"},
+            "matchedFields": {
+                "type": "array",
+                "items": {"enum": ["title", "keywords", "description", "orgName"]},
+                "description": "v1.6 additive: query 있을 때만 — 검색어 토큰이 나타난 목록 필드"
+                               "('왜 이 결과인가'의 사실 표시). 포함 판정 기준이라 FTS 완화 일치와 다를 수 "
+                               "있으며, 빈 배열은 필드 특정 불가이지 미일치 단정이 아니다.",
+            },
         },
     },
     "ranking": {
@@ -306,6 +313,16 @@ OUTPUT_SCHEMAS: dict[str, dict] = {
         "properties": {
             "baseSnapshot": {"type": ["string", "null"],
                              "description": "v1.0 범위: 직전 배포 스냅샷과의 diff만 제공. 기간·기준월 조회는 v1.1 백로그"},
+            "baseUnavailableReason": {
+                "type": ["string", "null"],
+                "description": "v1.6 additive: baseSnapshot이 null인 사유 코드 — "
+                               "FIRST_SNAPSHOT_OR_DIFF_NOT_GENERATED. null·0건을 고장으로 오인하지 않게(§12)",
+            },
+            "summary": {
+                "type": "object",
+                "description": "v1.6 additive: 상태별 변경 건수 집계(존재하는 상태만 키로)",
+                "additionalProperties": {"type": "integer"},
+            },
             "currentSnapshot": {"type": "string"},
             "items": {"type": "array", "items": {"$ref": "#/$defs/changeItem"}},
             "nextCursor": {"type": ["string", "null"]},

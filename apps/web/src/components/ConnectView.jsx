@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
-const MCP_URL = `${window.location.origin}/projects/public-data-lens/mcp`
+// 정본 URI(§7 영구 불변)를 안내한다 — 화면 origin을 쓰면 dev·프리뷰에서
+// 동작하지 않는 로컬 주소가 복사된다(P0). 정본은 배포 후 변경 불가이므로 상수가 맞다.
+const MCP_URL = 'https://service.datahub.kr/projects/public-data-lens/mcp'
 
 const EXAMPLE_PROMPTS = [
   '폐교 활용 사업을 검토 중인데 참고할 공공데이터 찾아줘',
@@ -67,26 +69,32 @@ export default function ConnectView() {
       </div>
 
       <h3>클라이언트별 등록 방법</h3>
-      <div className="connect-grid">
-        <div className="connect-card">
-          <h4>Claude 웹 · 앱</h4>
+      {/* 카드 3열은 정보량 불균형으로 폐기(P2) — 같은 구조의 아코디언으로 */}
+      <div className="connect-acc">
+        <details open>
+          <summary>Claude 웹 · 앱</summary>
           <ol className="mcp-steps">
             <li><strong>설정 → 커넥터 → 커스텀 커넥터 추가</strong></li>
             <li>위 주소를 붙여넣고 추가</li>
             <li>대화에서 바로 질문 — 정형화된 활용 계획은 프롬프트 메뉴의 <code>build_data_plan</code></li>
+            <li>연결 확인: "이 커넥터로 공공데이터 카탈로그 현황을 알려줘"</li>
           </ol>
-        </div>
-        <div className="connect-card">
-          <h4>Claude Code (터미널)</h4>
-          <pre className="connect-code">claude mcp add --transport http \{'\n'}  public-data-lens {MCP_URL}</pre>
-        </div>
-        <div className="connect-card">
-          <h4>기타 MCP 클라이언트</h4>
+        </details>
+        <details>
+          <summary>Claude Code (터미널)</summary>
+          <pre className="connect-code">{`claude mcp add \\
+  --transport http \\
+  public-data-lens \\
+  ${MCP_URL}`}</pre>
+          <p className="connect-note">연결 확인: <code>claude mcp list</code>에서 connected 표시</p>
+        </details>
+        <details>
+          <summary>기타 MCP 클라이언트</summary>
           <p className="connect-note">
             원격 MCP(streamable HTTP)를 지원하는 클라이언트라면 같은 주소로 등록할 수 있습니다.
             명세: <a href="/projects/public-data-lens/spec/tools/1.0" target="_blank" rel="noreferrer">Tool 스키마(JSON)</a>
           </p>
-        </div>
+        </details>
       </div>
 
       <h3>이렇게 물어보세요</h3>

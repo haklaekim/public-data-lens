@@ -40,6 +40,9 @@ test('홈 — 검색 첫 화면(pristine)', async ({ page }) => {
 test('검색 결과 — 어린이 보호구역', async ({ page }) => {
   await searchFor(page, '어린이 보호구역')
   await expect(page.locator('.toolbar .result-meta')).toContainText('총')
+  // v1.6: '왜 이 결과인가' — 서버가 준 matchedFields 표시(프론트 재추정 아님)
+  await expect(page.locator('.matched-columns').first()).toContainText('검색어 일치')
+  await expect(page.locator('.sort-select')).toBeVisible()
   await shoot(page, 'search-results.png')
 })
 

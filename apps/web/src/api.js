@@ -27,10 +27,24 @@ async function get(path, params) {
     }
   }
   const res = await fetch(url, { headers: anonHeaders() })
-  const body = await res.json()
+  return unwrap(res)
+}
+
+// 오류 모델 언랩 — HTTP 상태 코드 원문을 사용자에게 노출하지 않는다(P0).
+// 서버 오류 봉투(error.message)가 있으면 그 문안을, 없으면(구버전 서버·라우트 부재 등)
+// 사용자 언어의 폴백을 쓴다. 프로그램 분기는 err.code/err.status로 한다.
+async function unwrap(res) {
+  let body = null
+  try { body = await res.json() } catch { body = null }
   if (!res.ok) {
-    const err = new Error(body?.error?.message || `HTTP ${res.status}`)
+    const err = new Error(
+      body?.error?.message
+      || (res.status === 404
+        ? '이 기능을 서버가 아직 제공하지 않습니다 — 서버가 이전 버전일 수 있습니다. 키워드·컬럼 탐색은 계속 사용할 수 있습니다.'
+        : `요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요. (오류 코드 ${res.status})`),
+    )
     err.code = body?.error?.code
+    err.status = res.status
     throw err
   }
   return body
@@ -42,13 +56,16 @@ async function post(path, payload) {
     headers: { 'Content-Type': 'application/json', ...anonHeaders() },
     body: JSON.stringify(payload),
   })
-  const body = await res.json()
-  if (!res.ok) {
-    const err = new Error(body?.error?.message || `HTTP ${res.status}`)
-    err.code = body?.error?.code
-    throw err
-  }
-  return body
+  return unwrap(res)
+}
+
+// 서버 계약 버전 게이팅(P0) — 구버전 서버에 신계약 기능(POST /api/plan 등)을 노출하지
+// 않는다. 진입점 표시에만 쓰고, 딥링크는 시도 후 사용자 문안 오류로 우아하게 강등한다.
+export function supportsPlan(status) {
+  const v = status?.meta?.schemaVersion
+  if (!v) return false
+  const [maj, min] = v.split('.').map(Number)
+  return maj > 1 || (maj === 1 && min >= 5)
 }
 
 export const api = {
