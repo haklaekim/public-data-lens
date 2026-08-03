@@ -132,9 +132,14 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
 
   // 검색어에서 읽어낸 조건 표시(해석 배너) — keys는 자동 적용된 필터 키(해제용)
   const [interp, setInterp] = useState(null)
+  // 첫 화면에만 예시를 보여준다 — 검색을 시작하면 화면을 비운다
+  const [pristine, setPristine] = useState(true)
+  // 필터는 기본 접힘 — 활성 조건은 칩으로 요약 노출
+  const [showFilters, setShowFilters] = useState(false)
 
   const submit = (e) => {
     e.preventDefault()
+    setPristine(false)
     const { found, labels, rest } = interpretQuery(query)
     const keys = Object.keys(found)
     if (keys.length && rest !== query.trim()) {
@@ -164,6 +169,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
   const [colQuery, setColQuery] = useState('')
   const runColumnSearch = async (e, q = colQuery) => {
     e?.preventDefault()
+    setPristine(false)
     const kws = q.split(',').map((k) => k.trim()).filter(Boolean)
     if (!kws.length) return
     setLoading(true)
@@ -192,40 +198,42 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
         className="searchbar unified"
         onSubmit={mode === 'keyword' ? submit : runColumnSearch}
       >
-        <div className="seg" role="tablist" aria-label="검색 방식">
-          <button
-            type="button"
-            className={mode === 'keyword' ? 'on' : ''}
-            onClick={() => setMode('keyword')}
-          >
-            키워드
-          </button>
-          <button
-            type="button"
-            className={mode === 'columns' ? 'on' : ''}
-            onClick={() => setMode('columns')}
-            title="실제 파일에서 관측된 원본 컬럼명으로 데이터셋을 찾습니다"
-          >
-            컬럼
-          </button>
+        <div className="search-shell">
+          <div className="seg" role="tablist" aria-label="검색 방식">
+            <button
+              type="button"
+              className={mode === 'keyword' ? 'on' : ''}
+              onClick={() => setMode('keyword')}
+            >
+              키워드
+            </button>
+            <button
+              type="button"
+              className={mode === 'columns' ? 'on' : ''}
+              onClick={() => setMode('columns')}
+              title="실제 파일에서 관측된 원본 컬럼명으로 데이터셋을 찾습니다"
+            >
+              컬럼
+            </button>
+          </div>
+          {mode === 'keyword' ? (
+            <input
+              key="kw"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="무엇을 찾으시나요? — 지역·포맷을 함께 적어도 됩니다"
+              maxLength={500}
+            />
+          ) : (
+            <input
+              key="col"
+              value={colQuery}
+              onChange={(e) => setColQuery(e.target.value)}
+              placeholder="원본 컬럼명 — 쉼표로 여러 개 (예: 위도, 경도)"
+              maxLength={200}
+            />
+          )}
         </div>
-        {mode === 'keyword' ? (
-          <input
-            key="kw"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="키워드로 검색 (예: 어린이 보호구역)"
-            maxLength={500}
-          />
-        ) : (
-          <input
-            key="col"
-            value={colQuery}
-            onChange={(e) => setColQuery(e.target.value)}
-            placeholder="원본 컬럼명 — 쉼표로 여러 개 (예: 위도, 경도)"
-            maxLength={200}
-          />
-        )}
         <button type="submit" disabled={loading}>검색</button>
       </form>
       {mode === 'columns' && (
@@ -242,22 +250,63 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
         </p>
       )}
 
-      <div className="examples">
-        {(mode === 'keyword' ? EXAMPLES : COLUMN_EXAMPLES).map((ex) => (
-          <button
-            key={ex}
-            className="chip"
-            onClick={() => {
-              if (mode === 'keyword') { setQuery(ex); runSearch(null, ex, filters) }
-              else { setColQuery(ex); runColumnSearch(null, ex) }
-            }}
-          >
-            {ex}
-          </button>
-        ))}
-      </div>
+      {pristine && (
+        <div className="examples">
+          <span className="examples-label">예시</span>
+          {(mode === 'keyword' ? EXAMPLES : COLUMN_EXAMPLES).map((ex) => (
+            <button
+              key={ex}
+              className="chip"
+              onClick={() => {
+                setPristine(false)
+                if (mode === 'keyword') { setQuery(ex); runSearch(null, ex, filters) }
+                else { setColQuery(ex); runColumnSearch(null, ex) }
+              }}
+            >
+              {ex}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {mode === 'keyword' && (
+      {result && (
+        <div className="toolbar">
+          <p
+            className="result-meta"
+            title={result.data.ranking
+              ? `랭킹 ${result.data.ranking.method} (${result.data.ranking.version})`
+              : undefined}
+          >
+            총 {result.data.totalEstimate.toLocaleString()}건
+            {result.data.coverage
+              ? <> · 구조가 관측된 {result.data.coverage.searchedRecords.toLocaleString()}건 중 검색</>
+              : result.data.ranking?.method?.includes('bm25')
+                ? ' · 관련도순'
+                : ' · 최신 수정순'}
+          </p>
+          {mode === 'keyword' && (
+            <div className="toolbar-right">
+              {['listType', 'region', 'updateCycle', 'format'].filter((k) => filters[k]).map((k) => (
+                <button key={k} className="fchip" onClick={() => setFilter(k, '')} title="조건 해제">
+                  {k === 'region'
+                    ? REGIONS.find(([c]) => c === filters[k])?.[1]
+                    : k === 'updateCycle' ? CYCLE_LABEL[filters[k]] : filters[k]}
+                  <span aria-hidden> ×</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`filter-toggle${showFilters ? ' open' : ''}`}
+                onClick={() => setShowFilters((v) => !v)}
+              >
+                필터
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showFilters && mode === 'keyword' && (
       <div className="filters">
         <select value={filters.listType} onChange={(e) => setFilter('listType', e.target.value)}>
           <option value="">유형 전체</option>
@@ -286,26 +335,16 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
       )}
 
       {error && <p className="error">{error}</p>}
-      {result && (
-        <>
-          <p
-            className="result-meta"
-            title={result.data.ranking
-              ? `랭킹 ${result.data.ranking.method} (${result.data.ranking.version})`
-              : undefined}
-          >
-            총 {result.data.totalEstimate.toLocaleString()}건
-            {result.data.coverage
-              ? <> · 구조가 관측된 {result.data.coverage.searchedRecords.toLocaleString()}건 중 검색</>
-              : result.data.ranking?.method?.includes('bm25')
-                ? ' · 관련도순'
-                : ' · 최신 수정순'}
+      {result?.warnings
+        .filter((w) => !w.startsWith('본 결과는'))
+        .map((w, i) => (
+          // 계약 경고 원문은 툴팁으로 보존하고, 화면에는 소비자 언어로 순화해 보여준다
+          <p className="notice" key={i} title={w}>
+            {w.includes('INFERRED_')
+              ? '지역 조건에는 추론된 지역도 포함됩니다 — 각 결과의 지역 배지(명시/추론)에서 근거를 확인할 수 있습니다.'
+              : w}
           </p>
-          {result.warnings
-            .filter((w) => !w.startsWith('본 결과는'))
-            .map((w, i) => <p className="notice" key={i}>{w}</p>)}
-        </>
-      )}
+        ))}
 
       {result && !loading && items.length === 0 && (
         <div className="empty-state">

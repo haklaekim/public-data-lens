@@ -1126,3 +1126,65 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 }
 .empty-title { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
 .empty-body { font-size: 13px; color: var(--muted); margin: 0; }
+
+/* ---- 검색 셸(세그먼트+입력 병합)·툴바·접힘 필터 (양 테마 공통 기본) ---- */
+.search-shell {
+  flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0;
+  border: 1px solid var(--input-border); border-radius: var(--radius-pill);
+  background: var(--card); padding-left: 6px;
+}
+.search-shell input, .search-shell input:focus { border: none; box-shadow: none; outline: none; }
+.search-shell:focus-within { border-color: var(--green-accent); box-shadow: 0 0 0 1px var(--green-accent); }
+.search-shell .seg { border: none; background: var(--neutral-cool); }
+.examples-label { font-size: 12px; color: var(--muted); align-self: center; margin-right: 2px; }
+
+.toolbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin: 16px 0 8px; flex-wrap: wrap;
+}
+.toolbar .result-meta { margin: 0; }
+.toolbar-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.fchip {
+  border: 1px solid transparent; background: var(--green-light); color: var(--green-accent);
+  border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.fchip:hover { border-color: var(--green-accent); }
+.filter-toggle {
+  border: 1px solid var(--input-border); background: var(--card); border-radius: 8px;
+  padding: 5px 13px; font-size: 12.5px; color: var(--muted); cursor: pointer; font-weight: 500;
+}
+.filter-toggle:hover { color: var(--text); }
+.filter-toggle.open { border-color: var(--green-accent); color: var(--green-accent); }
+
+/* ---- Core: 검색 셸 정제 + 결과를 카드 상자에서 디바이더 리스트로 ---- */
+:root[data-surface='core'] .search-shell { border-radius: 10px; padding-left: 5px; }
+:root[data-surface='core'] .search-shell:focus-within {
+  border-color: var(--green-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+:root[data-surface='core'] .search-shell .seg { background: var(--neutral-cool); padding: 3px; }
+:root[data-surface='core'] .search-shell input { height: 44px; }
+:root[data-surface='core'] .filters { margin: 4px 0 12px; padding: 12px 14px; background: var(--neutral-cool); border: 1px solid var(--line); border-radius: 10px; }
+
+:root[data-surface='core'] .results {
+  gap: 0; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card); overflow: hidden;
+}
+:root[data-surface='core'] .card-row {
+  border: none; border-radius: 0; border-bottom: 1px solid var(--line);
+  box-shadow: none; padding: 15px 20px;
+}
+:root[data-surface='core'] .card-row:last-child { border-bottom: none; }
+:root[data-surface='core'] .card-row:hover { background: #fafbfd; box-shadow: none; }
+:root[data-surface='core'] .card-badges { margin-top: 8px; }
+:root[data-surface='core'] .card-actions { flex-direction: row; align-items: center; align-self: center; gap: 14px; }
+:root[data-surface='core'] .empty-state { background: none; }
+
+/* ---- 검색 셸 모바일: 셸 한 줄 + 버튼 전체 폭 ---- */
+@media (max-width: 720px) {
+  .searchbar.unified { flex-wrap: wrap; }
+  .search-shell { flex: 1 1 100%; }
+  .searchbar.unified > button[type='submit'] { flex: 1 1 auto; width: 100%; }
+  .seg button { padding: 0 12px; font-size: 12.5px; }
+  .toolbar { align-items: flex-start; }
+}
