@@ -11,6 +11,8 @@ const fx = (name) => readFileSync(path.join(dir, 'fixtures', name), 'utf-8')
 // 구조 관측이 있는 고정 레코드(픽스처 캡처 시 선정) — 프로필·구조 탭 시나리오용
 export const RID = fx('.rid').trim()
 export const CARD_TITLE = JSON.parse(fx('dataset-card.json')).data.dataset.title
+// 규칙 개수는 픽스처에서 도출(UI·테스트 모두 하드코딩 금지 — 가이드 §3.2)
+export const RULES_COUNT = JSON.parse(fx('resources-rules.json')).rules.length
 
 export async function stubApi(page) {
   const json = (body) => ({ status: 200, contentType: 'application/json', body })
@@ -18,6 +20,7 @@ export async function stubApi(page) {
     const url = new URL(route.request().url())
     const p = url.pathname
     if (p === '/api/status') return route.fulfill(json(fx('status.json')))
+    if (p === '/api/resources/rules') return route.fulfill(json(fx('resources-rules.json')))
     if (p === '/api/search/columns') return route.fulfill(json(fx('search-columns.json')))
     if (p === '/api/search') {
       const q = url.searchParams.get('query')

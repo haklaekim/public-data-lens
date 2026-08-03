@@ -46,4 +46,6 @@ export const api = {
   compare: (ids) => get('/compare', { ids: ids.join(',') }),
   changes: (params) => get('/changes', params),
   stats: (axis, limit) => get('/stats', { axis, limit }),
+  // 판정 규칙 레지스트리 전문(§3.2) — /api/status에는 규칙 목록이 없어 이 라우트가 정본
+  rules: () => get('/resources/rules'),
 }

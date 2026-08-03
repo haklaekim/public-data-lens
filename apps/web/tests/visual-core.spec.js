@@ -1,7 +1,7 @@
 // 코어 표면(VITE_SURFACE=core) 시각 베이스라인 — 런북 STEP 1 대상 9화면.
 // 모든 화면은 DOM 스모크(구성 검증)를 항상 수행하고, 스크린샷 대조는 SKIP_VISUAL이 아닐 때만.
 import { test, expect } from '@playwright/test'
-import { stubApi, shoot, CARD_TITLE } from './stub.js'
+import { stubApi, shoot, CARD_TITLE, RULES_COUNT } from './stub.js'
 
 test.beforeEach(async ({ page }) => {
   await stubApi(page)
@@ -18,7 +18,17 @@ async function searchFor(page, text) {
 test('홈 — 검색 첫 화면(pristine)', async ({ page }) => {
   await expect(page.locator('.hero-title')).toContainText('근거와 함께')
   await expect(page.locator('.examples .chip').first()).toBeVisible()
-  await expect(page.locator('.result-row')).toHaveCount(0) // 랜딩은 결과를 숨긴다
+  // §3 #4 Live exploration — 이미 받아둔 최신 수정순 상위 5건 노출
+  await expect(page.locator('.live-block .result-row')).toHaveCount(5)
+  // §3.1 Coverage — 세 숫자(전체·FILE·구조 관측)와 스냅샷 지연이 함께 보인다
+  const cov = page.locator('.cov-figures')
+  await expect(cov).toContainText('96,056')
+  await expect(cov).toContainText('83,695')
+  await expect(cov).toContainText('59,395')
+  await expect(page.locator('.cov-lag')).toContainText('지연')
+  // §3.2 Open Infrastructure — 규칙 레지스트리(개수는 응답 length), 폐기 표시 유지
+  await expect(page.locator('.rule-list .rule')).toHaveCount(RULES_COUNT)
+  await expect(page.locator('.rule.deprecated .rule-flag')).toContainText('폐기')
   await shoot(page, 'home.png')
 })
 

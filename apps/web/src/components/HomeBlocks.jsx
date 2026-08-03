@@ -1,0 +1,87 @@
+// 홈 하단 블록(가이드 §3) — 전부 기존 응답으로 채운다. 표에 없는 데이터를 가정하지 않는다.
+import { useEffect, useState } from 'react'
+import { api } from '../api.js'
+
+const pct = (a, b) => (b ? ((a / b) * 100).toFixed(1) : null)
+
+// §3.1 Coverage — 세 숫자를 함께(분모 규칙), 스냅샷 지연을 숨기지 않는다(§2 원칙 5)
+export function CoverageBlock({ status }) {
+  const d = status?.data
+  if (!d?.structureCoverage) return null
+  const { recordsAvailable, fileRecordsTotal } = d.structureCoverage
+  const total = d.counts.datasets
+  // 스냅샷 기준월 시작 ~ 배포 시각의 간격(일) — 목록 기준일과 배포 사이의 지연
+  const lagDays = d.deployedAt
+    ? Math.floor((Date.parse(d.deployedAt) - Date.parse(`${d.currentSnapshot}-01`)) / 86400000)
+    : null
+  return (
+    <section className="home-block">
+      <h3>구조 관측 커버리지</h3>
+      <div className="cov-figures">
+        <div className="cov-fig">
+          <strong>{total.toLocaleString()}</strong>
+          <span>목록 전체</span>
+        </div>
+        <div className="cov-fig">
+          <strong>{fileRecordsTotal.toLocaleString()}</strong>
+          <span>FILE 유형</span>
+        </div>
+        <div className="cov-fig">
+          <strong>{recordsAvailable.toLocaleString()}</strong>
+          <span>구조 관측 확보</span>
+        </div>
+      </div>
+      <p className="cov-note">
+        구조 관측 확보분은 FILE의 {pct(recordsAvailable, fileRecordsTotal)}% ·
+        전체의 {pct(recordsAvailable, total)}%입니다. API·STD 유형은 아직 구조 관측
+        대상이 아닙니다(API_STRUCTURE_NOT_SUPPORTED_YET).
+      </p>
+      <p className="cov-lag">
+        현재 스냅샷 {d.currentSnapshot} · 배포 {d.deployedAt?.slice(0, 10)}
+        {lagDays != null && <> — 스냅샷 기준월 시작으로부터 {lagDays}일 지연</>}
+        {' '}· 릴리스 <code>{d.release}</code>
+      </p>
+    </section>
+  )
+}
+
+// §3.2 Open Infrastructure — 판정 규칙 레지스트리 전체(개수 하드코딩 금지).
+// 폐기 규칙(deprecated)은 숨기지 않고 표시한다 — 버전 관리의 증거.
+export function OpenInfraBlock() {
+  const [registry, setRegistry] = useState(null)
+  useEffect(() => {
+    api.rules().then(setRegistry).catch(() => setRegistry(null))
+  }, [])
+  if (!registry?.rules) return null
+  return (
+    <section className="home-block">
+      <h3>열린 판정 인프라 — 규칙 레지스트리 {registry.rules.length}종</h3>
+      <p className="infra-sub">
+        모든 판정에는 규칙 버전이 붙습니다. 레지스트리 원문·스키마·프롬프트가 그대로 공개됩니다.
+      </p>
+      <ul className="rule-list">
+        {registry.rules.map((r) => (
+          <li key={r.ruleId} className={r.deprecated ? 'rule deprecated' : 'rule'}>
+            <details>
+              <summary>
+                <code>{r.ruleId}</code> {r.title}
+                {r.deprecated && <span className="rule-flag"> 폐기{r.supersededBy && ` → ${r.supersededBy}`}</span>}
+              </summary>
+              <p>{r.definition}</p>
+              {r.effectiveDate && <p className="rule-meta">시행일 {r.effectiveDate}</p>}
+            </details>
+          </li>
+        ))}
+      </ul>
+      <p className="infra-links">
+        원문:{' '}
+        <a href="/api/resources/rules" target="_blank" rel="noreferrer">규칙 레지스트리</a> ·{' '}
+        <a href="/api/resources/spec/tools" target="_blank" rel="noreferrer">Tool 스키마</a> ·{' '}
+        <a href="/api/resources/context" target="_blank" rel="noreferrer">JSON-LD Context</a> ·{' '}
+        <a href="/api/resources/shapes" target="_blank" rel="noreferrer">SHACL</a> ·{' '}
+        <a href="/api/resources/prompts/build-data-plan" target="_blank" rel="noreferrer">Prompt 원문</a> ·{' '}
+        <a href="/api/resources/privacy" target="_blank" rel="noreferrer">개인정보·로그 고지</a>
+      </p>
+    </section>
+  )
+}

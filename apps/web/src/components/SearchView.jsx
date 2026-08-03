@@ -4,6 +4,7 @@ import { UPDATE_CYCLE_LABEL } from '../labels.js'
 import DatasetRow from './DatasetRow.jsx'
 import WarningPanel from './WarningPanel.jsx'
 import { CoveragePopulation } from './CoverageIndicator.jsx'
+import { CoverageBlock, OpenInfraBlock } from './HomeBlocks.jsx'
 
 const EXAMPLES = [
   '어린이 보호구역',
@@ -81,7 +82,7 @@ function interpretQuery(raw) {
   return { found, labels, rest: rest.join(' ') }
 }
 
-export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }) {
+export default function SearchView({ onOpen, compareIds, onToggleCompare, seed, status }) {
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({
     listType: '', region: '', includeInferred: true, updateCycle: '', format: '',
@@ -290,6 +291,28 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           전체 목록 둘러보기 →
         </button>
       )}
+
+      {/* §3 #4 Live exploration — 마운트 시 이미 받아둔 결과 상위 5건(추가 왕복 없음) */}
+      {pristine && result && items.length > 0 && (
+        <div className="home-block live-block">
+          <h3>지금 카탈로그 — 최신 수정순 상위 5건</h3>
+          <ul className="results">
+            {items.slice(0, 5).map((item) => (
+              <DatasetRow
+                key={item.recordId}
+                item={item}
+                onOpen={onOpen}
+                compared={compareIds.includes(item.recordId)}
+                compareFull={compareIds.length >= 5}
+                onToggleCompare={onToggleCompare}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {pristine && <CoverageBlock status={status} />}
+      {pristine && <OpenInfraBlock />}
 
       {!pristine && result && (
         <div className="toolbar">

@@ -85,6 +85,7 @@ export default function App() {
             compareIds={compareIds}
             onToggleCompare={toggleCompare}
             seed={searchSeed}
+            status={status}
           />
         )}
         {view === 'compare' && (

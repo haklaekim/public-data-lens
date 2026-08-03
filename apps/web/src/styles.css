@@ -1392,8 +1392,37 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 }
 .browse-all:hover { color: var(--accent); }
 
+/* ---------- 홈 블록(§3) — Live·Coverage·Open Infrastructure ---------- */
+.home-block { margin-top: 44px; text-align: left; width: 100%; }
+.home-block h3 { font-size: 16px; margin: 0 0 10px; color: var(--text); }
+.live-block .results { margin-top: 0; }
+.cov-figures { display: flex; gap: 28px; flex-wrap: wrap; margin: 14px 0 10px; }
+.cov-fig { display: flex; flex-direction: column; gap: 2px; }
+.cov-fig strong { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+.cov-fig span { font-size: 12.5px; color: var(--muted); }
+.cov-note { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+.cov-lag { font-size: 12.5px; color: var(--muted); margin: 0; }
+.cov-lag code { font-size: 11.5px; }
+.infra-sub { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+.rule-list { list-style: none; padding: 0; margin: 0 0 12px; }
+.rule-list .rule { border-bottom: 1px solid var(--border); }
+.rule-list summary {
+  cursor: pointer; padding: 7px 2px; font-size: 13px; color: var(--text);
+}
+.rule-list summary code { font-size: 11.5px; color: var(--muted); margin-right: 6px; }
+.rule-list details p { font-size: 13px; color: var(--muted); margin: 4px 2px 10px; }
+.rule-list .rule-meta { font-size: 12px; }
+.rule.deprecated summary { color: var(--muted); }
+.rule.deprecated summary code { text-decoration: line-through; }
+.rule-flag { color: var(--status-warn-fg); font-size: 12px; font-weight: 600; }
+.infra-links { font-size: 12.5px; color: var(--muted); }
+.infra-links a { color: var(--accent); text-decoration: none; }
+.infra-links a:hover { text-decoration: underline; }
+
 @media (max-width: 720px) {
   .search-home { padding-top: 32px; }
+  .cov-figures { gap: 18px; }
+  .cov-fig strong { font-size: 22px; }
 }
 
 /* ---- Core: 결과를 컨테이너 상자 없이 검색엔진식 맨 리스트로 ---- */
