@@ -12,6 +12,13 @@
       "runtimeArgs": ["run", "dev"],
       "cwd": "apps/web",
       "port": 5173
+    },
+    {
+      "name": "datanav-web-core",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:core"],
+      "cwd": "apps/web",
+      "port": 5173
     }
   ]
 }
