@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { UPDATE_CYCLE_LABEL } from '../labels.js'
-import DatasetCardRow from './DatasetCardRow.jsx'
+import DatasetRow from './DatasetRow.jsx'
 import WarningPanel from './WarningPanel.jsx'
 import { CoveragePopulation } from './CoverageIndicator.jsx'
 
@@ -299,15 +299,18 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
               ? `랭킹 ${result.data.ranking.method} (${result.data.ranking.version})`
               : undefined}
           >
+            {/* 정렬 방식은 계약(ranking.method/version)을 그대로 툴팁에 표기 —
+                문자열 패턴으로 의미를 추론하지 않는다(CLAUDE.md 불변식) */}
             총 {result.data.totalEstimate.toLocaleString()}건
-            {result.data.coverage
-              ? <> · <CoveragePopulation
-                  searched={result.data.coverage.searchedRecords}
-                  total={result.data.coverage.fileRecordsTotal}
-                /></>
-              : result.data.ranking?.method?.includes('bm25')
-                ? ' · 관련도순'
-                : ' · 최신 수정순'}
+            {result.data.coverage && (
+              <> · <CoveragePopulation
+                searched={result.data.coverage.searchedRecords}
+                total={result.data.coverage.fileRecordsTotal}
+              /></>
+            )}
+            {result.data.coverage && items.length < result.data.totalEstimate && (
+              <> · 상위 {items.length}건 표시 — 컬럼 검색에는 커서 페이징이 없습니다(컬럼을 추가해 좁혀 보세요)</>
+            )}
           </p>
           {mode === 'keyword' && (
             <div className="toolbar-right">
@@ -362,10 +365,17 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
       {error && <p className="error">{error}</p>}
       {!pristine && <WarningPanel warnings={result?.warnings} />}
 
+      {/* 빈 결과(§4.5) — 조회 범위를 함께 말해 '데이터 부재'로 읽히지 않게 한다 */}
       {!pristine && result && !loading && items.length === 0 && (
         <div className="empty-state">
-          <p className="empty-title">조건에 맞는 데이터를 찾지 못했습니다</p>
+          <p className="empty-title">이 조건으로는 결과가 없습니다</p>
           <p className="empty-body">
+            조회 범위: {result.meta?.sourceSnapshot} 스냅샷
+            {result.data.coverage
+              ? <> — 컬럼 검색은 구조가 관측된 {result.data.coverage.searchedRecords.toLocaleString()}건
+                  안에서만 찾습니다. 결과에 없다고 해당 컬럼이 없는 것이 아닙니다(미수집일 수 있음).</>
+              : ' 전체 목록.'}
+            <br />
             키워드를 줄이거나 필터를 해제해 보세요. 찾는 방식이 막막하면 우측 상단
             <strong> AI에 연결</strong>로 대화하며 탐색할 수도 있습니다.
           </p>
@@ -375,7 +385,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
       {!pristine && (<>
       <ul className="results">
         {items.map((item) => (
-          <DatasetCardRow
+          <DatasetRow
             key={item.recordId}
             item={item}
             onOpen={onOpen}

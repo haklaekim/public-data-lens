@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import WarningPanel from './WarningPanel.jsx'
+import { rowButtonProps } from '../a11y.js'
 
 export default function CasesView({ onOpen }) {
   const [list, setList] = useState(null)
@@ -31,16 +32,16 @@ export default function CasesView({ onOpen }) {
         </p>
         <ul className="results">
           {list.data.items.map((c) => (
-            <li key={c.id} className="card-row">
-              <div className="card-main" onClick={() => setSelected(c.id)}>
-                <div className="card-title-line">
+            <li key={c.id} className="result-row">
+              <div className="row-main" {...rowButtonProps(() => setSelected(c.id))}>
+                <div className="row-title">
                   <span className="type type-STD">사례</span>
                   <strong>{c.title}</strong>
                 </div>
-                <div className="card-sub">
+                <div className="row-sub">
                   <span>{c.purpose}</span>
                 </div>
-                <div className="card-badges">
+                <div className="row-badges">
                   <span className="chip small">후보 {c.candidateCount}개</span>
                   <span className="chip small">작성 스냅샷 {c.sourceSnapshot}</span>
                   {!c.humanReviewed && <span className="region inferred">인간 검토 전</span>}
@@ -69,16 +70,19 @@ export default function CasesView({ onOpen }) {
       <h3 className="case-h">② 후보 데이터셋 (선정 이유는 목록 사실 기반)</h3>
       <ul className="results">
         {d.candidates.map((c) => (
-          <li key={c.recordId} className="card-row">
-            <div className="card-main" onClick={() => c.presentInCurrentSnapshot && onOpen(c.recordId)}>
-              <div className="card-title-line">
+          <li key={c.recordId} className="result-row">
+            <div
+              className="row-main"
+              {...(c.presentInCurrentSnapshot ? rowButtonProps(() => onOpen(c.recordId)) : {})}
+            >
+              <div className="row-title">
                 {c.card && <span className={`type type-${c.card.listType}`}>{c.card.listType}</span>}
                 <strong>{c.card ? c.card.title : c.recordId}</strong>
                 <span className="chip small">{c.role}</span>
               </div>
-              <div className="card-sub"><span>{c.whySelected}</span></div>
+              <div className="row-sub"><span>{c.whySelected}</span></div>
               {c.card && (
-                <div className="card-badges">
+                <div className="row-badges">
                   <span className="completeness">
                     <span className="bar"><span className="fill" style={{ width: `${c.card.completeness.score * 100}%` }} /></span>
                     {(c.card.completeness.score * 100).toFixed(0)}% ({c.card.completeness.profile})
@@ -89,7 +93,7 @@ export default function CasesView({ onOpen }) {
               {!c.presentInCurrentSnapshot && <p className="warning">현재 스냅샷에 없음 — 재검증 필요</p>}
             </div>
             {c.card?.portalUrl && (
-              <div className="card-actions">
+              <div className="row-actions">
                 <a href={c.card.portalUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>포털 원문 ↗</a>
               </div>
             )}

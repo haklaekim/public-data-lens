@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { rowButtonProps } from '../a11y.js'
 
 /* ---------- 유틸 ---------- */
 
@@ -717,16 +718,16 @@ export default function ConciergeDashboard({ result, onOpen, onFollowUp, onSearc
           <summary>후보 데이터셋 상세 {candidates.length}건</summary>
           <ul className="results" style={{ marginTop: 10 }}>
             {candidates.map((c) => (
-              <li key={c.recordId} className="card-row">
-                <div className="card-main" onClick={() => c.card && onOpen(c.recordId)}>
-                  <div className="card-title-line">
+              <li key={c.recordId} className="result-row">
+                <div className="row-main" {...(c.card ? rowButtonProps(() => onOpen(c.recordId)) : {})}>
+                  <div className="row-title">
                     {c.card && <span className={`type type-${c.card.listType}`}>{c.card.listType}</span>}
                     <strong>{c.card ? c.card.title : c.recordId}</strong>
                     {c.role && <span className="chip small">{c.role}</span>}
                   </div>
-                  <div className="card-sub"><span>{c.reason}</span></div>
+                  <div className="row-sub"><span>{c.reason}</span></div>
                   {c.card && (
-                    <div className="card-badges">
+                    <div className="row-badges">
                       <span className="completeness">
                         <span className="bar"><span className="fill" style={{ width: `${c.card.completeness.score * 100}%` }} /></span>
                         {(c.card.completeness.score * 100).toFixed(0)}%
@@ -736,7 +737,7 @@ export default function ConciergeDashboard({ result, onOpen, onFollowUp, onSearc
                   )}
                 </div>
                 {c.card?.portalUrl && (
-                  <div className="card-actions">
+                  <div className="row-actions">
                     <a href={c.card.portalUrl} target="_blank" rel="noreferrer"
                        onClick={(e) => e.stopPropagation()}>포털 원문 ↗</a>
                   </div>

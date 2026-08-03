@@ -20,7 +20,9 @@ export async function stubApi(page) {
     if (p === '/api/status') return route.fulfill(json(fx('status.json')))
     if (p === '/api/search/columns') return route.fulfill(json(fx('search-columns.json')))
     if (p === '/api/search') {
-      return route.fulfill(json(url.searchParams.get('query') ? fx('search-query.json') : fx('search-initial.json')))
+      const q = url.searchParams.get('query')
+      if (q === '존재하지않는검색어') return route.fulfill(json(fx('search-empty.json')))
+      return route.fulfill(json(q ? fx('search-query.json') : fx('search-initial.json')))
     }
     if (p.endsWith('/structure')) return route.fulfill(json(fx('dataset-structure.json')))
     if (p.startsWith('/api/datasets/')) return route.fulfill(json(fx('dataset-card.json')))

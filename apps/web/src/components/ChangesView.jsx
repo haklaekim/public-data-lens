@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { CHANGE_STATUS_LABEL, CHANGE_STATUS_NOTE } from '../labels.js'
 import WarningPanel from './WarningPanel.jsx'
+import { rowButtonProps } from '../a11y.js'
 
 const STATUSES = [['', '전체'], ...Object.entries(CHANGE_STATUS_LABEL)]
 
@@ -48,15 +49,15 @@ export default function ChangesView({ onOpen }) {
 
       <ul className="results">
         {items.map((c) => (
-          <li key={`${c.status}-${c.recordId}`} className="card-row">
-            <div className="card-main" onClick={() => onOpen(c.recordId)}>
-              <div className="card-title-line">
+          <li key={`${c.status}-${c.recordId}`} className="result-row">
+            <div className="row-main" {...rowButtonProps(() => onOpen(c.recordId))}>
+              <div className="row-title">
                 <span className={`change-status s-${c.status}`} title={CHANGE_STATUS_NOTE[c.status] || ''}>
                   {CHANGE_STATUS_LABEL[c.status] || c.status}
                 </span>
                 <strong>{c.title}</strong>
               </div>
-              <div className="card-sub">
+              <div className="row-sub">
                 <span>{c.orgName}</span>
                 {c.changedFields && <span>변경 필드: {c.changedFields.join(', ')}</span>}
               </div>

@@ -12,13 +12,13 @@ test.beforeEach(async ({ page }) => {
 async function searchFor(page, text) {
   await page.locator('.search-shell input').fill(text)
   await page.locator('.searchbar button[type=submit]').click()
-  await expect(page.locator('.card-row').first()).toBeVisible()
+  await expect(page.locator('.result-row').first()).toBeVisible()
 }
 
 test('홈 — 검색 첫 화면(pristine)', async ({ page }) => {
   await expect(page.locator('.hero-title')).toContainText('근거와 함께')
   await expect(page.locator('.examples .chip').first()).toBeVisible()
-  await expect(page.locator('.card-row')).toHaveCount(0) // 랜딩은 결과를 숨긴다
+  await expect(page.locator('.result-row')).toHaveCount(0) // 랜딩은 결과를 숨긴다
   await shoot(page, 'home.png')
 })
 
@@ -37,16 +37,32 @@ test('컬럼 검색 결과 — 위도, 경도', async ({ page }) => {
   await shoot(page, 'search-columns.png')
 })
 
+test('키보드 접근 — 결과 행을 포커스해 Enter로 연다 (WCAG 2.1.1)', async ({ page }) => {
+  await searchFor(page, '어린이 보호구역')
+  const row = page.locator('.row-main').first()
+  await expect(row).toHaveAttribute('role', 'button')
+  await row.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.profile h2')).toContainText(CARD_TITLE)
+})
+
+test('빈 결과 — 조회 범위를 명시한다 (§4.5)', async ({ page }) => {
+  await page.locator('.search-shell input').fill('존재하지않는검색어')
+  await page.locator('.searchbar button[type=submit]').click()
+  await expect(page.locator('.empty-title')).toContainText('이 조건으로는 결과가 없습니다')
+  await expect(page.locator('.empty-body')).toContainText('조회 범위')
+})
+
 test('데이터셋 프로필 — card 탭', async ({ page }) => {
   await searchFor(page, '어린이 보호구역')
-  await page.locator('.card-title-line strong', { hasText: CARD_TITLE }).first().click()
+  await page.locator('.row-title strong', { hasText: CARD_TITLE }).first().click()
   await expect(page.locator('.profile h2')).toContainText(CARD_TITLE)
   await shoot(page, 'profile-card.png')
 })
 
 test('데이터셋 프로필 — structure 탭', async ({ page }) => {
   await searchFor(page, '어린이 보호구역')
-  await page.locator('.card-title-line strong', { hasText: CARD_TITLE }).first().click()
+  await page.locator('.row-title strong', { hasText: CARD_TITLE }).first().click()
   await page.locator('.drawer-tabs .tab', { hasText: '데이터 구조' }).click()
   await expect(page.locator('.structure-table').first()).toBeVisible()
   await shoot(page, 'profile-structure.png')

@@ -1,4 +1,5 @@
 import { KEY_FIELD_LABEL } from '../labels.js'
+import { rowButtonProps } from '../a11y.js'
 import { RegionBadges } from './EvidenceRow.jsx'
 import CoverageIndicator from './CoverageIndicator.jsx'
 
@@ -18,38 +19,39 @@ function CompletenessBadges({ c }) {
       ))}
       <span className="fill-count">
         기재 {c.filledFields}/{c.totalFields}
-        {c.typical ? ' · 표준 수준' : c.topPercent <= 10 ? ` · 상위 ${c.topPercent}%` : ''}
+        {c.typical ? ' · 표준 수준' : ` · 상위 ${c.topPercent}%`}
       </span>
     </span>
   )
 }
 
-export default function DatasetCardRow({ item, onOpen, compared, compareFull, onToggleCompare }) {
+export default function DatasetRow({ item, onOpen, compared, compareFull, onToggleCompare }) {
   return (
-    <li className="card-row">
-      <div className="card-main" onClick={() => onOpen(item.recordId)}>
-        <div className="card-title-line">
+    <li className="result-row">
+      <div className="row-main" {...rowButtonProps(() => onOpen(item.recordId))}>
+        <div className="row-title">
           <span className={`type type-${item.listType}`}>{item.listType}</span>
           <strong>{item.title}</strong>
           {item.modifiedDate && <span className="row-date">{item.modifiedDate}</span>}
         </div>
-        <div className="card-sub">
+        <div className="row-sub">
           <span>{item.orgName}</span>
           {item.theme?.top && <span>{item.theme.top}{item.theme.sub ? ` › ${item.theme.sub}` : ''}</span>}
           {item.formats?.length > 0 && <span>{item.formats.join(' · ')}</span>}
+          {item.rowCountListed != null && <span>행 {item.rowCountListed.toLocaleString()}</span>}
         </div>
         {item.matchedColumns && (
           <p className="matched-columns">
             일치 컬럼: {item.matchedColumns.map((m) => m.columns.join(', ')).join(' · ')}
           </p>
         )}
-        <div className="card-badges">
+        <div className="row-badges">
           {item.structureAvailable && <CoverageIndicator mode="chip" status="AVAILABLE" />}
           <CompletenessBadges c={item.completeness} />
           <RegionBadges regions={item.regions} short />
         </div>
       </div>
-      <div className="card-actions">
+      <div className="row-actions">
         <label className="compare-check" title="비교에 추가 (최대 5개)">
           <input
             type="checkbox"
