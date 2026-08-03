@@ -33,7 +33,8 @@ services:
       DATANAV_RATE_LIMIT_PER_MIN: ${DATANAV_RATE_LIMIT_PER_MIN:-120}
       # 관측 예시값 공개(S0-2 법적 확인 후 .env에서 1로) — api·mcp 양쪽에 전달해야 한다
       DATANAV_EXAMPLES_PUBLIC: ${DATANAV_EXAMPLES_PUBLIC:-0}
-      # §10 익명 사용 로그(기본 켬)와 익명 식별자 HMAC 키(미지정 시 프로세스별 임시 키)
+      # §10 익명 사용 로그(기본 켬)와 익명 식별자 HMAC 키 — 미지정 시 데이터 볼륨에 1회 생성해
+      # 영속한다(재시작에도 캡·지표 연속). 임시 키로 동작하는 것은 볼륨이 읽기 전용인 mcp뿐.
       DATANAV_USAGE_LOG: ${DATANAV_USAGE_LOG:-1}
       DATANAV_ANON_HMAC_KEY: ${DATANAV_ANON_HMAC_KEY:-}
       # 월간 빌드 시 SHACL 검증 표본 수(0=전수) — docker compose run api 빌드에도 적용

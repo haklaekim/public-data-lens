@@ -19,7 +19,10 @@ standard. Connector URL: `https://service.datahub.kr/projects/public-data-lens/m
 
 ## 빠른 시작 — Claude에 연결하기
 
-인증 없이 **URL 등록만으로** 사용할 수 있습니다 (읽기 전용, 무료).
+인증 없이 **URL 등록만으로** 사용할 수 있습니다 (읽기 전용, 무료). 베타 기간의 공개 서비스로
+SLA 없이 제공되며, 과도한 사용은 예고 없이 제한될 수 있습니다 — 대량 분석은 벌크
+파일(`.ndjson.gz`)을 이용하세요. API 안정성은 계약 버전(v1.0.0 동결 + additive) 범위에서
+유지됩니다.
 
 1. Claude 웹/앱 → **[설정] → [커넥터] → [커스텀 커넥터 추가]**
 2. `https://service.datahub.kr/projects/public-data-lens/mcp` 입력
@@ -94,6 +97,9 @@ Claude Code 등 개발 도구는 `.mcp.json`에 등록합니다:
 Docker 스택 하나로 배포합니다(LLM API 키 불필요). 보안 필수 env 2종은 미지정 시 기동이
 실패합니다. 절차·운영 전제 전문: [배포 설명서](docs/배포_설명서_v1.0.md)
 
+> **주의**: 저장소에는 공공데이터포털 원본 CSV와 생성된 카탈로그 DB가 포함되지 않습니다.
+> 셀프 호스팅 시 [목록개방현황 CSV](https://www.data.go.kr)를 내려받아 최초 빌드를 수행해야 합니다.
+
 ```bash
 cp .env.example .env               # GATEWAY_REAL_IP_FROM(LB 대역)·DATANAV_MCP_ALLOWED_HOSTS 설정
 sudo chown -R 10001:10001 data     # 비루트 컨테이너(uid 10001)
@@ -128,4 +134,4 @@ docker compose -f docker-compose.prod.yml up -d --build
 - **인용**: [`CITATION.cff`](CITATION.cff) 참조 또는 저장소 URL 명시.
 - **개발 이력**: [haklaekim/public-data-lens](https://github.com/haklaekim/public-data-lens)
   (이 저장소는 릴리스 스냅샷입니다)
-- **문의**: GitHub Issue 또는 _(연구실 대표 연락처 — 확정 예정)_
+- **문의 및 오류 제보**: GitHub Issues
