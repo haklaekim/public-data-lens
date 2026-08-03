@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { anonHeaders } from '../api'
 import ConciergeDashboard from './ConciergeDashboard.jsx'
+import WarningPanel from './WarningPanel.jsx'
 
 const EXAMPLES = [
   '고령자 의료·교통 접근성을 분석하고 싶다',
@@ -419,9 +420,7 @@ export default function ConciergeView({ onOpen, onSearch }) {
 
       {phase === 'done' && result && result.data?.plan && (
         <>
-          {result.warnings.filter((w) => !w.startsWith('본 결과는') && !w.startsWith('생성형 응답은')).map((w, i) => (
-            <p className="warning" key={i}>⚠ {w}</p>
-          ))}
+          <WarningPanel warnings={result.warnings} />
 
           <div aria-live="polite" className="sr-only">
             분석 완료 — 후보 {result.data.plan.candidates?.length || 0}건이 제시되었습니다

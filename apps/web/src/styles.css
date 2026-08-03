@@ -306,10 +306,11 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 }
 .s-ADDED { background: var(--status-emphasis-bg); color: var(--status-emphasis-fg); }
 .s-MODIFIED { background: var(--surface-2); color: var(--band); }
-.s-MISSING_FROM_SNAPSHOT { background: var(--status-warn-bg); color: var(--status-warn-fg); }
+/* 스냅샷 부재는 사실 기록(폐기 아님) → 중립, 공식 폐기는 확정 사건 → 경고 (가이드 §2.7, ADR-002) */
+.s-MISSING_FROM_SNAPSHOT { background: var(--status-neutral-bg); color: var(--status-neutral-fg); }
 .s-REAPPEARED { background: var(--accent-wash); color: var(--accent); }
 .s-POSSIBLE_IDENTITY_CHANGE { background: var(--error-tint); color: var(--error); }
-.s-OFFICIALLY_WITHDRAWN { background: var(--status-neutral-bg); color: var(--status-neutral-fg); }
+.s-OFFICIALLY_WITHDRAWN { background: var(--status-warn-bg); color: var(--status-warn-fg); }
 
 /* ---------- Drawer ---------- */
 .drawer-backdrop {
@@ -932,10 +933,15 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 .structure-view { margin-top: 4px; }
 .coverage-note { font-size: 14px; margin-bottom: 12px; }
 .coverage-note .ex-policy { color: var(--status-warn-fg); font-weight: 600; }
-.coverage-note.s-NOT_COLLECTED, .coverage-note.s-API_STRUCTURE_NOT_SUPPORTED_YET {
+/* 무자산 상태 머리말 — COLLECTION_FAILED만 경고, 나머지는 전부 중립(§2.4 절대 규칙) */
+.coverage-note[class*='s-'] {
   color: var(--muted); background: var(--surface-2);
   padding: 10px 14px; border-radius: var(--radius-card);
 }
+.coverage-note.s-COLLECTION_FAILED {
+  color: var(--status-warn-fg); background: var(--status-warn-bg);
+}
+.structure-chip.s-COLLECTION_FAILED { background: var(--status-warn-bg); color: var(--status-warn-fg); }
 .structure-asset { margin-bottom: 20px; }
 .structure-asset h3 { font-size: 14px; margin: 12px 0 4px; }
 .structure-asset h3 small { color: var(--muted); font-weight: 400; }

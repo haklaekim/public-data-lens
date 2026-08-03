@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 
-import { COVERAGE_LABEL, exampleStatusLabel, COMPLETENESS_FIELD_LABEL, FRESHNESS_LABEL } from '../labels.js'
+import { exampleStatusLabel, COMPLETENESS_FIELD_LABEL, FRESHNESS_LABEL } from '../labels.js'
+import WarningPanel from './WarningPanel.jsx'
+import EvidenceRow from './EvidenceRow.jsx'
+import CoverageIndicator from './CoverageIndicator.jsx'
 
 const VIEWS = [
   ['card', '카드'],
@@ -43,9 +46,7 @@ export default function DatasetProfile({ recordId, onClose }) {
         {error && <p className="error">{error}</p>}
         {!body && !error && <p className="loading">불러오는 중…</p>}
 
-        {body?.warnings
-          ?.filter((w) => !w.startsWith('본 결과는'))
-          .map((w, i) => <p className="warning" key={i}>⚠ {w}</p>)}
+        <WarningPanel warnings={body?.warnings} />
 
         {ds && view === 'card' && <CardView ds={ds} />}
         {st && <StructureView st={st} />}
@@ -142,9 +143,7 @@ function CardView({ ds }) {
             공공데이터포털에서 원문 확인 ↗
           </a>
         )}
-        <p className="evidence-note">
-          근거 수준: 목록 메타데이터만(CATALOG_METADATA_ONLY) — 실제 데이터 내용은 확인되지 않았습니다.
-        </p>
+        <EvidenceRow level={ds.evidenceLevel} />
       </div>
     </div>
   )
@@ -162,15 +161,10 @@ function Prop({ k, v }) {
 /* 데이터 구조 탭(v1.2) — 실제 파일에서 관측한 원본 컬럼·유형·예시값 상태.
    미수집·보류는 오류가 아닌 정상 상태로 표시한다. */
 function StructureView({ st }) {
-  const label = COVERAGE_LABEL[st.coverageStatus] || st.coverageStatus
   if (!st.assets) {
     return (
       <div className="structure-view">
-        <p className={`coverage-note s-${st.coverageStatus}`}>
-          {label}
-          {st.coverageStatus === 'NOT_COLLECTED' &&
-            ' — 품질 문제가 아니라 수집 순번입니다.'}
-        </p>
+        <CoverageIndicator status={st.coverageStatus} />
         {st.portalUrl && (
           <p><a href={st.portalUrl} target="_blank" rel="noreferrer">공공데이터포털에서 원문 확인 ↗</a></p>
         )}
@@ -179,23 +173,21 @@ function StructureView({ st }) {
   }
   return (
     <div className="structure-view">
-      <p className="coverage-note">
-        <strong>{label}</strong> · 파일 {st.coverage.availableAssets}/{st.coverage.totalAssets}개 관측
-        {!st.examplesPublic && <span className="ex-policy"> · 예시값 비공개(법적 확인 전)</span>}
-      </p>
+      <CoverageIndicator
+        status={st.coverageStatus}
+        available={st.coverage.availableAssets}
+        total={st.coverage.totalAssets}
+        examplesPublic={st.examplesPublic}
+      />
       {st.assets.map((a, i) => (
         <div className="structure-asset" key={i}>
           <h3>
             {a.containerName ? `${a.containerName} › ` : ''}{a.fileName}
             <small> {a.shape || a.format} · {a.status}</small>
           </h3>
-          {a.observation && (
-            <p className="obs-meta">
-              관측 {a.observation.observedAt?.slice(0, 10)} · {a.observation.provenance}
-              {' · '}스캔 {a.observation.scanScope}
-              {a.observation.licenseGate === 'COLUMNS_ONLY' && ' · 예시값 라이선스 보류'}
-            </p>
-          )}
+          <EvidenceRow className="obs-meta" observation={a.observation}>
+            {a.observation?.licenseGate === 'COLUMNS_ONLY' && ' · 예시값 라이선스 보류'}
+          </EvidenceRow>
           {(a.tables || []).map((t) => (
             <div key={t.tableIndex}>
               {t.sheetName && <p className="sheet-name">시트: {t.sheetName}</p>}

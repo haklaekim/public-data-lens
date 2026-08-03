@@ -1,4 +1,6 @@
-import { EVIDENCE_LABEL, KEY_FIELD_LABEL } from '../labels.js'
+import { KEY_FIELD_LABEL } from '../labels.js'
+import { RegionBadges } from './EvidenceRow.jsx'
+import CoverageIndicator from './CoverageIndicator.jsx'
 
 /* 완전성 표시(v1.1.0): 점수 막대 대신 "무엇이 기재됐는가".
    대부분(FILE의 89%)이 동일 점수라 %는 변별력이 없고, 실제 차이는
@@ -42,22 +44,9 @@ export default function DatasetCardRow({ item, onOpen, compared, compareFull, on
           </p>
         )}
         <div className="card-badges">
-          {item.structureAvailable && (
-            <span className="key-field structure-chip" title="실제 파일에서 원본 컬럼·유형이 관측됨 — 프로필의 '데이터 구조' 탭에서 확인">
-              구조 확인됨
-            </span>
-          )}
+          {item.structureAvailable && <CoverageIndicator mode="chip" status="AVAILABLE" />}
           <CompletenessBadges c={item.completeness} />
-          {item.regions?.map((r) => (
-            <span
-              key={r.code}
-              className={`region ${r.evidence === 'EXPLICIT_SPATIAL' ? 'explicit' : 'inferred'}`}
-              title={`${EVIDENCE_LABEL[r.evidence] || r.evidence} · 신뢰도 ${r.confidence}`}
-            >
-              {r.name.replace(/(특별자치|특별|광역)?(시|도)$/, '')}
-              {r.evidence !== 'EXPLICIT_SPATIAL' && <span className="inf-mark">추론</span>}
-            </span>
-          ))}
+          <RegionBadges regions={item.regions} short />
         </div>
       </div>
       <div className="card-actions">

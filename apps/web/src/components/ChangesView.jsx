@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { CHANGE_STATUS_LABEL, CHANGE_STATUS_NOTE } from '../labels.js'
+import WarningPanel from './WarningPanel.jsx'
 
 const STATUSES = [['', '전체'], ...Object.entries(CHANGE_STATUS_LABEL)]
 
@@ -39,9 +40,7 @@ export default function ChangesView({ onOpen }) {
       </div>
 
       {error && <p className="error">{error}</p>}
-      {body?.warnings
-        ?.filter((w) => !w.startsWith('본 결과는'))
-        .map((w, i) => <p className="warning" key={i}>⚠ {w}</p>)}
+      <WarningPanel warnings={body?.warnings} />
 
       {body && body.data.totalEstimate === 0 && !body.warnings.some((w) => w.includes('이전 스냅샷')) && (
         <p className="empty">해당 상태의 변경이 없습니다.</p>

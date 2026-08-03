@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { cycleLabel, licenseLabel, COMPARE_FIELD_LABEL } from '../labels.js'
+import WarningPanel from './WarningPanel.jsx'
 
 function fmt(v, field) {
   if (v === null || v === undefined) return '—'
@@ -37,9 +38,7 @@ export default function CompareView({ ids, onRemove, onOpen }) {
   return (
     <section>
       {error && <p className="error">{error}</p>}
-      {body?.warnings?.map((w, i) => (
-        !w.startsWith('본 결과는') && <p className="warning" key={i}>⚠ {w}</p>
-      ))}
+      <WarningPanel warnings={body?.warnings} />
       {!body && !error && <p className="loading">비교 중…</p>}
       {body && (
         <>

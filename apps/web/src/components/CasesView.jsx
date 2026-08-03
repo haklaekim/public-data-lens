@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import WarningPanel from './WarningPanel.jsx'
 
 export default function CasesView({ onOpen }) {
   const [list, setList] = useState(null)
@@ -60,9 +61,7 @@ export default function CasesView({ onOpen }) {
       <button className="link" onClick={() => setSelected(null)}>← 사례 목록</button>
       <h2 style={{ margin: '10px 0 2px' }}>{d.title}</h2>
       <p className="result-meta">{d.purpose}</p>
-      {detail.warnings.filter((w) => !w.startsWith('본 결과는')).map((w, i) => (
-        <p className="warning" key={i}>⚠ {w}</p>
-      ))}
+      <WarningPanel warnings={detail.warnings} />
 
       <h3 className="case-h">① 목적 분해</h3>
       <ul className="case-list">{d.purposeBreakdown.map((x, i) => <li key={i}>{x}</li>)}</ul>

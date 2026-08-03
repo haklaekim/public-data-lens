@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { UPDATE_CYCLE_LABEL } from '../labels.js'
 import DatasetCardRow from './DatasetCardRow.jsx'
+import WarningPanel from './WarningPanel.jsx'
+import { CoveragePopulation } from './CoverageIndicator.jsx'
 
 const EXAMPLES = [
   '어린이 보호구역',
@@ -299,7 +301,10 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
           >
             총 {result.data.totalEstimate.toLocaleString()}건
             {result.data.coverage
-              ? <> · 구조가 관측된 {result.data.coverage.searchedRecords.toLocaleString()}건 중 검색</>
+              ? <> · <CoveragePopulation
+                  searched={result.data.coverage.searchedRecords}
+                  total={result.data.coverage.fileRecordsTotal}
+                /></>
               : result.data.ranking?.method?.includes('bm25')
                 ? ' · 관련도순'
                 : ' · 최신 수정순'}
@@ -355,16 +360,7 @@ export default function SearchView({ onOpen, compareIds, onToggleCompare, seed }
       )}
 
       {error && <p className="error">{error}</p>}
-      {!pristine && result?.warnings
-        .filter((w) => !w.startsWith('본 결과는'))
-        .map((w, i) => (
-          // 계약 경고 원문은 툴팁으로 보존하고, 화면에는 소비자 언어로 순화해 보여준다
-          <p className="notice" key={i} title={w}>
-            {w.includes('INFERRED_')
-              ? '지역 조건에는 추론된 지역도 포함됩니다 — 각 결과의 지역 배지(명시/추론)에서 근거를 확인할 수 있습니다.'
-              : w}
-          </p>
-        ))}
+      {!pristine && <WarningPanel warnings={result?.warnings} />}
 
       {!pristine && result && !loading && items.length === 0 && (
         <div className="empty-state">
