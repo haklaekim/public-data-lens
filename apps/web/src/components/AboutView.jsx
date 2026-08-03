@@ -1,28 +1,12 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 
-const MCP_URL = `${window.location.origin}/projects/public-data-lens/mcp`
-
-export default function AboutView({ status, anchor }) {
+export default function AboutView({ status }) {
   const [themes, setThemes] = useState(null)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     api.stats('theme', 6).then((b) => setThemes(b.data.buckets)).catch(() => setThemes(null))
   }, [])
-
-  // 'AI에 연결' CTA로 진입하면 연결 섹션으로 스크롤
-  useEffect(() => {
-    if (anchor) document.getElementById('connect')?.scrollIntoView({ behavior: 'smooth' })
-  }, [anchor])
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(MCP_URL)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch { /* 수동 복사 */ }
-  }
 
   const s = status?.data
 
@@ -84,41 +68,6 @@ export default function AboutView({ status, anchor }) {
       ) : (
         <p className="loading">현황을 불러오는 중…</p>
       )}
-
-      <h3 id="connect">AI에 연결하기</h3>
-      <p>
-        이 서비스의 검색·비교·구조 조회는 <strong>MCP(Model Context Protocol)</strong> 서버로
-        제공됩니다. MCP를 지원하는 AI에 아래 주소를 등록하면 대화로 공공데이터를 탐색할 수
-        있습니다 — 인증 없이 무료이며, 웹과 동일한 판정 엔진이라 근거 수준·규칙 버전이 응답에
-        함께 담깁니다.
-      </p>
-      <div className="mcp-url">
-        <code>{MCP_URL}</code>
-        <button onClick={copy}>{copied ? '복사됨 ✓' : '복사'}</button>
-      </div>
-      <div className="connect-grid">
-        <div className="connect-card">
-          <h4>Claude 웹 · 앱</h4>
-          <ol className="mcp-steps">
-            <li><strong>설정 → 커넥터 → 커스텀 커넥터 추가</strong></li>
-            <li>위 주소를 붙여넣고 추가</li>
-            <li>대화에서 바로: <em>"폐교 활용 사업에 참고할 공공데이터 찾아줘"</em></li>
-          </ol>
-        </div>
-        <div className="connect-card">
-          <h4>Claude Code (터미널)</h4>
-          <pre className="connect-code">claude mcp add --transport http \{'\n'}  public-data-lens {MCP_URL}</pre>
-        </div>
-        <div className="connect-card">
-          <h4>기타 MCP 클라이언트</h4>
-          <p className="connect-note">
-            원격 MCP(streamable HTTP)를 지원하는 클라이언트라면 같은 주소로 등록할 수 있습니다.
-            도구 8종·프롬프트 2종·리소스가 제공되며, 명세는{' '}
-            <a href="/projects/public-data-lens/spec/tools/1.0" target="_blank" rel="noreferrer">Tool 스키마(JSON)</a>에서
-            확인할 수 있습니다.
-          </p>
-        </div>
-      </div>
 
       <h3>데이터 출처와 원칙</h3>
       <ul className="about-list">

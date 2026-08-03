@@ -3,9 +3,9 @@ import { api } from './api.js'
 import SearchView from './components/SearchView.jsx'
 import CompareView from './components/CompareView.jsx'
 import ChangesView from './components/ChangesView.jsx'
-import CasesView from './components/CasesView.jsx'
 import DatasetProfile from './components/DatasetProfile.jsx'
 import AboutView from './components/AboutView.jsx'
+import ConnectView from './components/ConnectView.jsx'
 
 // 배포 표면(빌드 시 결정): 'core' = MCP 배포 동반 웹(비생성형만),
 // 'concierge' = 별도 컨시어지 서비스(컨시어지 중심 + 보조 검색), 'all' = 로컬 개발 기본
@@ -24,10 +24,10 @@ document.documentElement.dataset.surface = SURFACE
 
 // IA: 주 표면은 '데이터 찾기' 하나. 나머지는 우측 유틸리티 내비(조용한 링크),
 // 비교는 선택이 생겼을 때만 하단 컨텍스트 바로 등장한다.
+// '활용 사례'는 자동 생성 v0(인간 검토 전)이라 상용 표면에서 내렸다 — 검수 후 복귀.
 const NAV_LINKS = [
   ...(HAS_CONCIERGE ? [{ id: 'concierge', label: 'AI 컨시어지' }] : []),
   { id: 'changes', label: '변경 이력' },
-  { id: 'cases', label: '활용 사례' },
   { id: 'about', label: '소개' },
 ]
 
@@ -37,7 +37,6 @@ export default function App() {
   const [profileId, setProfileId] = useState(null)
   const [compareIds, setCompareIds] = useState([])
   const [searchSeed, setSearchSeed] = useState(null) // 컨시어지 보완 노드 → 검색 프리필
-  const [aboutAnchor, setAboutAnchor] = useState(null) // 'AI에 연결' → 소개의 연결 섹션
 
   const seedSearch = (q) => {
     setSearchSeed({ q, t: Date.now() })
@@ -58,10 +57,6 @@ export default function App() {
     )
   }
 
-  const openConnect = () => {
-    setView('about')
-    setAboutAnchor(Date.now())
-  }
 
   return (
     <div className="app">
@@ -79,7 +74,7 @@ export default function App() {
               {l.label}
             </button>
           ))}
-          <button className="mcp-cta" onClick={openConnect}>AI에 연결</button>
+          <button className="mcp-cta" onClick={() => setView('connect')}>AI에 연결</button>
         </nav>
       </header>
 
@@ -103,8 +98,8 @@ export default function App() {
           </>
         )}
         {view === 'changes' && <ChangesView onOpen={setProfileId} />}
-        {view === 'cases' && <CasesView onOpen={setProfileId} />}
-        {view === 'about' && <AboutView status={status} anchor={aboutAnchor} />}
+        {view === 'about' && <AboutView status={status} />}
+        {view === 'connect' && <ConnectView />}
         {view === 'concierge' && ConciergeView && (
           <Suspense fallback={null}>
             <ConciergeView onOpen={setProfileId} onSearch={seedSearch} />
