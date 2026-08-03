@@ -18,6 +18,93 @@ const FIT_LABEL = {
 }
 const NEED_STATUS = { SATISFIED: '충족', UNSATISFIED: '미충족', PARTIAL: '부분 충족' }
 
+// 계획 초안 표시의 단일 지점 — 상세의 렌즈와 검색의 '목적' 모드가 공유한다
+export function PlanResult({ body, onOpen }) {
+  const plan = body?.data
+  if (!plan) return null
+  return (
+    <>
+      <WarningPanel warnings={body.warnings} notices={body.notices} />
+      <div className="uses-status">
+        <span className="chip small">계획 상태: 초안(<code>{plan.planStatus}</code>)</span>
+        <span className="chip small">품질: 미평가(<code>{plan.qualityAssessment}</code>)</span>
+      </div>
+
+      <h3>해석된 목적</h3>
+      <p className="obs-meta">
+        검색어 {plan.interpretedPurpose.searchTerms.join(', ') || '—'}
+        {plan.interpretedPurpose.regionApplied && <> · 지역 {plan.interpretedPurpose.regionApplied}
+          ({plan.interpretedPurpose.regionSource === 'PARAMETER' ? '지정' : '문장에서 추출'})</>}
+        {' '}· 검색 반복 {plan.interpretedPurpose.iterationsUsed}회
+      </p>
+
+      <h3>데이터 요구</h3>
+      <ul className="case-list">
+        {plan.dataNeeds.map((n, i) => (
+          <li key={i}>
+            [{ROLE_LABEL[n.role] || n.role}] {n.need} — {NEED_STATUS[n.status] || n.status}
+            {n.reason && <> ({n.reason})</>}
+          </li>
+        ))}
+      </ul>
+
+      <h3>후보 데이터셋 (근거는 목록·관측 사실)</h3>
+      <ul className="results">
+        {plan.recommendedDatasets.map((c) => (
+          <li key={c.recordId} className="result-row">
+            <div className="row-main">
+              <div className="row-title">
+                <span className={`type type-${c.listType}`}>{c.listType}</span>
+                <button type="button" className="link" onClick={() => onOpen?.(c.recordId)}>
+                  {c.title}
+                </button>
+                {c.roles.map((r) => <span key={r} className="chip small">{ROLE_LABEL[r] || r}</span>)}
+              </div>
+              <div className="row-sub"><span>{c.orgName}</span></div>
+              {/* fitSignals 4개 개별 표시 — 종합 점수로 합치지 않는다(계약 주석) */}
+              <div className="row-badges">
+                {Object.entries(c.fitSignals).map(([k, v]) => (
+                  <span key={k} className="key-field">{FIT_LABEL[k] || k}: {v}</span>
+                ))}
+              </div>
+              <p className="obs-meta">{c.whySelected}</p>
+              {c.limitations?.length > 0 && (
+                <ul className="case-list uses-limits">
+                  {c.limitations.map((l, i) => <li key={i}>{l}</li>)}
+                </ul>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <h3>예상 결합 키 — 전부 후보(CANDIDATE_ONLY)</h3>
+      {plan.possibleJoinKeys.length === 0
+        ? <p className="obs-meta">관측 근거가 있는 결합 키 후보가 없습니다 — 원문 컬럼 정의에서 직접 확인이 필요합니다.</p>
+        : (
+          <ul className="case-list">
+            {plan.possibleJoinKeys.map((k, i) => (
+              <li key={i}>
+                {k.key} — <code>{k.status || 'CANDIDATE_ONLY'}</code>
+                {k.note && <> · {k.note}</>}
+              </li>
+            ))}
+          </ul>
+        )}
+
+      {plan.missingNeeds?.length > 0 && (
+        <>
+          <h3>미충족 요구</h3>
+          <ul className="case-list">{plan.missingNeeds.map((m, i) => <li key={i}>{m.need || m}</li>)}</ul>
+        </>
+      )}
+
+      <h3>다음 확인사항</h3>
+      <ul className="case-list">{plan.nextChecks.map((c, i) => <li key={i}>{c}</li>)}</ul>
+    </>
+  )
+}
+
 export default function PossibleUsesLens({ ds, onOpen }) {
   const [purpose, setPurpose] = useState('')
   const [body, setBody] = useState(null)
@@ -38,7 +125,6 @@ export default function PossibleUsesLens({ ds, onOpen }) {
     }
   }
 
-  const plan = body?.data
   return (
     <div className="profile uses-lens">
       <h2>활용 계획 초안</h2>
@@ -59,88 +145,7 @@ export default function PossibleUsesLens({ ds, onOpen }) {
 
       {error && <p className="error">{error}</p>}
       {loading && <p className="loading">조립 중…</p>}
-      <WarningPanel warnings={body?.warnings} notices={body?.notices} />
-
-      {plan && (
-        <>
-          <div className="uses-status">
-            <span className="chip small">계획 상태: 초안(<code>{plan.planStatus}</code>)</span>
-            <span className="chip small">품질: 미평가(<code>{plan.qualityAssessment}</code>)</span>
-          </div>
-
-          <h3>해석된 목적</h3>
-          <p className="obs-meta">
-            검색어 {plan.interpretedPurpose.searchTerms.join(', ') || '—'}
-            {plan.interpretedPurpose.regionApplied && <> · 지역 {plan.interpretedPurpose.regionApplied}
-              ({plan.interpretedPurpose.regionSource === 'PARAMETER' ? '지정' : '문장에서 추출'})</>}
-            {' '}· 검색 반복 {plan.interpretedPurpose.iterationsUsed}회
-          </p>
-
-          <h3>데이터 요구</h3>
-          <ul className="case-list">
-            {plan.dataNeeds.map((n, i) => (
-              <li key={i}>
-                [{ROLE_LABEL[n.role] || n.role}] {n.need} — {NEED_STATUS[n.status] || n.status}
-                {n.reason && <> ({n.reason})</>}
-              </li>
-            ))}
-          </ul>
-
-          <h3>후보 데이터셋 (근거는 목록·관측 사실)</h3>
-          <ul className="results">
-            {plan.recommendedDatasets.map((c) => (
-              <li key={c.recordId} className="result-row">
-                <div className="row-main">
-                  <div className="row-title">
-                    <span className={`type type-${c.listType}`}>{c.listType}</span>
-                    <button type="button" className="link" onClick={() => onOpen?.(c.recordId)}>
-                      {c.title}
-                    </button>
-                    {c.roles.map((r) => <span key={r} className="chip small">{ROLE_LABEL[r] || r}</span>)}
-                  </div>
-                  <div className="row-sub"><span>{c.orgName}</span></div>
-                  {/* fitSignals 4개 개별 표시 — 종합 점수로 합치지 않는다(계약 주석) */}
-                  <div className="row-badges">
-                    {Object.entries(c.fitSignals).map(([k, v]) => (
-                      <span key={k} className="key-field">{FIT_LABEL[k] || k}: {v}</span>
-                    ))}
-                  </div>
-                  <p className="obs-meta">{c.whySelected}</p>
-                  {c.limitations?.length > 0 && (
-                    <ul className="case-list uses-limits">
-                      {c.limitations.map((l, i) => <li key={i}>{l}</li>)}
-                    </ul>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          <h3>예상 결합 키 — 전부 후보(CANDIDATE_ONLY)</h3>
-          {plan.possibleJoinKeys.length === 0
-            ? <p className="obs-meta">관측 근거가 있는 결합 키 후보가 없습니다 — 원문 컬럼 정의에서 직접 확인이 필요합니다.</p>
-            : (
-              <ul className="case-list">
-                {plan.possibleJoinKeys.map((k, i) => (
-                  <li key={i}>
-                    {k.key} — <code>{k.status || 'CANDIDATE_ONLY'}</code>
-                    {k.note && <> · {k.note}</>}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-          {plan.missingNeeds?.length > 0 && (
-            <>
-              <h3>미충족 요구</h3>
-              <ul className="case-list">{plan.missingNeeds.map((m, i) => <li key={i}>{m.need || m}</li>)}</ul>
-            </>
-          )}
-
-          <h3>다음 확인사항</h3>
-          <ul className="case-list">{plan.nextChecks.map((c, i) => <li key={i}>{c}</li>)}</ul>
-        </>
-      )}
+      <PlanResult body={body} onOpen={onOpen} />
     </div>
   )
 }

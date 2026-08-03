@@ -4,7 +4,8 @@ import { UPDATE_CYCLE_LABEL } from '../labels.js'
 import DatasetRow from './DatasetRow.jsx'
 import WarningPanel from './WarningPanel.jsx'
 import { CoveragePopulation } from './CoverageIndicator.jsx'
-import { CoverageBlock, OpenInfraBlock } from './HomeBlocks.jsx'
+import { CoverageBlock, OpenInfraBlock, AnatomyBlock, ExplorationStoryBlock } from './HomeBlocks.jsx'
+import { PlanResult } from './PossibleUsesLens.jsx'
 
 const EXAMPLES = [
   '어린이 보호구역',
@@ -17,6 +18,13 @@ const EXAMPLES = [
 
 // 컬럼 모드 예시 — 실파일에서 자주 관측되는 원본 컬럼명 조합
 const COLUMN_EXAMPLES = ['위도, 경도', '주소, 전화번호', '사업자등록번호', '설치연도']
+
+// 목적 모드 예시 — 이름을 몰라도 하려는 일로 탐색한다(Exploration over search)
+const PURPOSE_EXAMPLES = [
+  '전기차 충전소 위치와 운영기관을 분석하고 싶다',
+  '고령자 의료 접근성을 지역별로 비교하고 싶다',
+  '어린이 보호구역 교통안전을 분석하고 싶다',
+]
 
 const REGIONS = [
   ['', '지역 전체'], ['KR-11', '서울'], ['KR-26', '부산'], ['KR-27', '대구'],
@@ -48,6 +56,11 @@ function toUrlParams(q, f, m, cq) {
   if (m === 'columns') {
     p.set('mode', 'columns')
     if (cq) p.set('cols', cq)
+    return p.toString()
+  }
+  if (m === 'purpose') {
+    p.set('mode', 'purpose')
+    if (cq) p.set('purpose', cq)
     return p.toString()
   }
   if (q) p.set('q', q)
@@ -133,8 +146,28 @@ export default function SearchView({
   }
 
   // 컬럼 기준 검색(v1.3) — 원본 컬럼명 부분 일치(AND), 구조 확인분 내에서만
-  const [mode, setMode] = useState('keyword') // 'keyword' | 'columns'
+  const [mode, setMode] = useState('keyword') // 'keyword' | 'columns' | 'purpose'
   const [colQuery, setColQuery] = useState('')
+
+  // 목적 기준 탐색(v1.5) — 이름 대신 하려는 일로. POST /api/plan(결정론 조립기, 항상 초안)
+  const [purposeQuery, setPurposeQuery] = useState('')
+  const [planBody, setPlanBody] = useState(null)
+  const runPurposeSearch = async (e, p = purposeQuery) => {
+    e?.preventDefault()
+    if (p.trim().length < 2) return
+    setPristine(false)
+    setPlanBody(null)
+    syncUrl('', filters, 'purpose', p)
+    setLoading(true)
+    setError(null)
+    try {
+      setPlanBody(await api.plan(p))
+    } catch (err) {
+      setError(`${err.code || ''} ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
   const runColumnSearch = async (e, q = colQuery) => {
     e?.preventDefault()
     setPristine(false)
@@ -170,6 +203,12 @@ export default function SearchView({
       runColumnSearch(null, p.get('cols'))
       return
     }
+    if (p && p.get('mode') === 'purpose' && p.get('purpose')) {
+      setMode('purpose')
+      setPurposeQuery(p.get('purpose'))
+      runPurposeSearch(null, p.get('purpose'))
+      return
+    }
     const restored = { ...filters }
     let any = false
     for (const k of ['listType', 'region', 'updateCycle', 'format']) {
@@ -193,20 +232,21 @@ export default function SearchView({
       {pristine && (
         <div className="hero">
           <h2 className="hero-title">
-            공공데이터 {result ? result.data.totalEstimate.toLocaleString() : '96,056'}건을<br />
-            근거와 함께 찾아드립니다
+            공공데이터를 찾는 것에서<br />
+            이해하고 활용하는 것으로
           </h2>
           <p className="hero-sub">
-            목록 검색부터 실파일에서 확인한 컬럼 구조까지 — 웹과 AI(MCP)가 같은 판정 엔진을 씁니다
+            {result ? result.data.totalEstimate.toLocaleString() : '96,056'}건의 목록을 제목이 아니라
+            구조·근거·한계로 탐색합니다 — 웹과 AI(MCP)가 같은 판정 엔진을 씁니다
           </p>
         </div>
       )}
       <form
         className="searchbar unified"
-        onSubmit={mode === 'keyword' ? submit : runColumnSearch}
+        onSubmit={mode === 'keyword' ? submit : mode === 'columns' ? runColumnSearch : runPurposeSearch}
       >
         <div className="search-shell">
-          <div className="seg" role="tablist" aria-label="검색 방식">
+          <div className="seg" role="tablist" aria-label="탐색 방식">
             <button
               type="button"
               className={mode === 'keyword' ? 'on' : ''}
@@ -222,8 +262,16 @@ export default function SearchView({
             >
               컬럼
             </button>
+            <button
+              type="button"
+              className={mode === 'purpose' ? 'on' : ''}
+              onClick={() => setMode('purpose')}
+              title="데이터 이름을 몰라도 하려는 일을 적으면 후보와 한계를 초안으로 조립합니다"
+            >
+              목적
+            </button>
           </div>
-          {mode === 'keyword' ? (
+          {mode === 'keyword' && (
             <input
               key="kw"
               value={query}
@@ -231,7 +279,8 @@ export default function SearchView({
               placeholder="무엇을 찾으시나요? — 지역·포맷을 함께 적어도 됩니다"
               maxLength={500}
             />
-          ) : (
+          )}
+          {mode === 'columns' && (
             <input
               key="col"
               value={colQuery}
@@ -240,13 +289,28 @@ export default function SearchView({
               maxLength={200}
             />
           )}
+          {mode === 'purpose' && (
+            <input
+              key="pp"
+              value={purposeQuery}
+              onChange={(e) => setPurposeQuery(e.target.value)}
+              placeholder="하려는 일을 한 문장으로 — 데이터 이름을 몰라도 됩니다"
+              maxLength={200}
+            />
+          )}
         </div>
-        <button type="submit" disabled={loading}>검색</button>
+        <button type="submit" disabled={loading}>{mode === 'purpose' ? '초안 조립' : '검색'}</button>
       </form>
       {mode === 'columns' && (
         <p className="search-hint">
           실제 파일에서 관측된 원본 컬럼명과 부분 일치하는 데이터셋을 찾습니다 — 여러 개를
           쉼표로 적으면 모두 가진 것만(AND) 반환합니다.
+        </p>
+      )}
+      {mode === 'purpose' && (
+        <p className="search-hint">
+          결정론 규칙(plan-assembly-v1.0)이 목적을 해석해 후보·역할·한계를 조립합니다 —
+          LLM 없음, 판정 없음, 결과는 항상 초안(DRAFT)입니다.
         </p>
       )}
       {mode === 'keyword' && result?.data?.interpretedFilters?.length > 0 && (
@@ -263,14 +327,15 @@ export default function SearchView({
       {pristine && (
         <div className="examples">
           <span className="examples-label">예시</span>
-          {(mode === 'keyword' ? EXAMPLES : COLUMN_EXAMPLES).map((ex) => (
+          {(mode === 'keyword' ? EXAMPLES : mode === 'columns' ? COLUMN_EXAMPLES : PURPOSE_EXAMPLES).map((ex) => (
             <button
               key={ex}
               className="chip"
               onClick={() => {
                 setPristine(false)
                 if (mode === 'keyword') { setQuery(ex); runSearch(null, ex, filters); syncUrl(ex, filters) }
-                else { setColQuery(ex); runColumnSearch(null, ex) }
+                else if (mode === 'columns') { setColQuery(ex); runColumnSearch(null, ex) }
+                else { setPurposeQuery(ex); runPurposeSearch(null, ex) }
               }}
             >
               {ex}
@@ -308,10 +373,23 @@ export default function SearchView({
         </div>
       )}
 
+      {/* §3 #3 탐색 서사 — 결과가 아니라 과정. CTA는 목적 모드로 이어진다 */}
+      {pristine && (
+        <ExplorationStoryBlock
+          onTryPurpose={(p) => {
+            setMode('purpose')
+            setPurposeQuery(p)
+            runPurposeSearch(null, p)
+            window.scrollTo({ top: 0 })
+          }}
+        />
+      )}
+      {/* §3 #5 Dataset anatomy — 이미 받아둔 결과에서 구조 관측 레코드 1건 해부 */}
+      {pristine && <AnatomyBlock items={items} onOpen={onOpen} />}
       {pristine && <CoverageBlock status={status} />}
       {pristine && <OpenInfraBlock />}
 
-      {!pristine && result && (
+      {!pristine && mode !== 'purpose' && result && (
         <div className="toolbar">
           <p
             className="result-meta"
@@ -383,10 +461,20 @@ export default function SearchView({
       )}
 
       {error && <p className="error">{error}</p>}
-      {!pristine && <WarningPanel warnings={result?.warnings} notices={result?.notices} />}
+      {loading && mode === 'purpose' && <p className="loading">초안 조립 중…</p>}
+      {!pristine && mode !== 'purpose' && (
+        <WarningPanel warnings={result?.warnings} notices={result?.notices} />
+      )}
+
+      {/* 목적 모드 결과 — 상세의 '활용 초안' 렌즈와 같은 단일 렌더러(PlanResult) */}
+      {!pristine && mode === 'purpose' && planBody && (
+        <div className="profile plan-standalone">
+          <PlanResult body={planBody} onOpen={onOpen} />
+        </div>
+      )}
 
       {/* 빈 결과(§4.5) — 조회 범위를 함께 말해 '데이터 부재'로 읽히지 않게 한다 */}
-      {!pristine && result && !loading && items.length === 0 && (
+      {!pristine && mode !== 'purpose' && result && !loading && items.length === 0 && (
         <div className="empty-state">
           <p className="empty-title">이 조건으로는 결과가 없습니다</p>
           <p className="empty-body">
@@ -402,7 +490,7 @@ export default function SearchView({
         </div>
       )}
 
-      {!pristine && (<>
+      {!pristine && mode !== 'purpose' && (<>
       <ul className="results">
         {items.map((item) => (
           <DatasetRow

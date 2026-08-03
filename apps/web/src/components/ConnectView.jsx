@@ -22,7 +22,7 @@ export default function ConnectView() {
   return (
     <section className="about connect">
       <div className="about-hero">
-        <h2>AI에서 대화로 공공데이터를 탐색하세요</h2>
+        <h2>웹은 탐색 방식을 보여주고, MCP는 그 능력을 AI 안으로 가져갑니다</h2>
         <p>
           이 서비스의 검색·비교·구조 조회는 <strong>MCP(Model Context Protocol)</strong> 서버로
           제공됩니다. MCP를 지원하는 AI에 아래 주소를 등록하면 화면 대신 대화로 탐색할 수
@@ -34,6 +34,36 @@ export default function ConnectView() {
       <div className="mcp-url">
         <code>{MCP_URL}</code>
         <button onClick={copy}>{copied ? '복사됨 ✓' : '복사'}</button>
+      </div>
+
+      {/* capability demonstration — 설치 안내보다 먼저, 무엇이 달라지는지(§3 #7).
+          결과를 날조하지 않는다: 단계는 실제 Tool 파이프라인, 응답 항목은 계약 필드다 */}
+      <h3>연결하면 이렇게 달라집니다</h3>
+      <div className="cap-demo">
+        <div className="cap-col">
+          <h4>말로 요청하면</h4>
+          <p className="cap-quote">
+            "전기차 충전소 중 위도·경도가 실제로 있고, 지역별 비교에 쓸 만한 데이터를 찾아줘"
+          </p>
+        </div>
+        <div className="cap-col">
+          <h4>렌즈가 단계로 탐색하고</h4>
+          <ol className="cap-steps">
+            <li>목적 해석 <code>build_data_plan</code></li>
+            <li>컬럼 조건 검색 <code>search_by_columns</code></li>
+            <li>후보 비교 <code>compare_datasets</code></li>
+            <li>구조 확인 <code>get_dataset_structure</code></li>
+          </ol>
+        </div>
+        <div className="cap-col">
+          <h4>근거가 붙은 답이 옵니다</h4>
+          <ul className="cap-out">
+            <li>후보 데이터셋과 역할 — 확정이 아니라 검토 대상</li>
+            <li>좌표 컬럼의 관측 근거(<code>FILE_OBSERVATION</code>)</li>
+            <li>한계·미확인 항목(<code>NOT_ASSESSED</code>·<code>CANDIDATE_ONLY</code>)</li>
+            <li>모든 판정의 규칙 버전과 스냅샷</li>
+          </ul>
+        </div>
       </div>
 
       <h3>클라이언트별 등록 방법</h3>

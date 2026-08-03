@@ -16,8 +16,13 @@ async function searchFor(page, text) {
 }
 
 test('홈 — 검색 첫 화면(pristine)', async ({ page }) => {
-  await expect(page.locator('.hero-title')).toContainText('근거와 함께')
+  await expect(page.locator('.hero-title')).toContainText('이해하고 활용하는 것으로')
   await expect(page.locator('.examples .chip').first()).toBeVisible()
+  // §3 #3 탐색 서사 — 과정(해석→후보→한계)이 실제 plan 응답으로 렌더된다
+  await expect(page.locator('.story-steps')).toContainText('목적 해석')
+  await expect(page.locator('.story-block')).toContainText('DRAFT')
+  // §3 #5 Dataset anatomy — 원본 컬럼명 그대로 + 관측 출처
+  await expect(page.locator('.anatomy-block .structure-table')).toBeVisible()
   // §3 #4 Live exploration — 이미 받아둔 최신 수정순 상위 5건 노출
   await expect(page.locator('.live-block .result-row')).toHaveCount(5)
   // §3.1 Coverage — 세 숫자(전체·FILE·구조 관측)와 스냅샷 지연이 함께 보인다
@@ -141,9 +146,21 @@ test('소개', async ({ page }) => {
   await shoot(page, 'about.png')
 })
 
-test('AI에 연결', async ({ page }) => {
+test('AI에 연결 — capability 데모가 설치 안내보다 먼저', async ({ page }) => {
   await page.locator('.mcp-cta').click()
-  await expect(page.locator('.connect h2')).toContainText('대화로')
+  await expect(page.locator('.connect h2')).toContainText('MCP는 그 능력을 AI 안으로')
   await expect(page.locator('.mcp-url code')).toContainText('/projects/public-data-lens/mcp')
+  await expect(page.locator('.cap-demo')).toContainText('후보')
+  await expect(page.locator('.cap-demo')).not.toContainText('추천')
   await shoot(page, 'connect.png')
+})
+
+test('목적 모드 — 이름 대신 하려는 일로 탐색 (ADR-005)', async ({ page }) => {
+  await page.locator('.seg button', { hasText: '목적' }).click()
+  await page.locator('.search-shell input').fill('어린이 보호구역 교통안전을 분석하고 싶다')
+  await page.locator('.searchbar button[type=submit]').click()
+  await expect(page.locator('.plan-standalone .uses-status')).toContainText('DRAFT')
+  await expect(page.locator('.plan-standalone')).toContainText('후보 데이터셋')
+  await expect(page).toHaveURL(/mode=purpose/)
+  await shoot(page, 'search-purpose.png')
 })
