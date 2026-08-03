@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: 의존성 설치 (재현: requirements.lock)
+      - name: 의존성 설치 — requirements.lock 재현
         run: |
           pip install -r apps/server/requirements.lock
           pip install --no-deps -e "apps/server[dev]"
