@@ -20,6 +20,7 @@ def test_mcp_surface_and_calls():
                 "get_catalog_changes", "get_catalog_stats", "get_context",
                 "get_dataset_structure",  # v1.2 — 데이터 구조 관측
                 "search_by_columns",      # v1.3 — 컬럼 기준 검색
+                "build_data_plan",        # v1.4 — 결정론적 활용 계획 초안
             }
             prompts = {p.name for p in (await c.list_prompts()).prompts}
             assert prompts == {"build_data_plan", "compare_for_purpose"}

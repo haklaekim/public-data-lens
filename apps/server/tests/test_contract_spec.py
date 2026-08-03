@@ -14,7 +14,7 @@ from jsonschema import Draft202012Validator
 from datanav.spec import OUTPUT_SCHEMAS
 
 SPEC_PATH = (
-    Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.3.0.json"
+    Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.4.0.json"
 )
 
 

@@ -16,7 +16,7 @@ from jsonschema import Draft202012Validator  # noqa: E402
 from datanav.config import BASE_URI, MAX_COMPARE, MAX_PAGE_SIZE, MAX_QUERY_LENGTH  # noqa: E402
 from datanav.spec import OUTPUT_SCHEMAS, SPEC_VERSION  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.3.0.json"
+OUT = Path(__file__).resolve().parents[1] / "datanav" / "spec" / "tool-schemas-v1.4.0.json"
 
 
 async def collect_input_schemas() -> dict[str, dict]:
@@ -48,6 +48,15 @@ def _structure_samples(svc) -> list[dict]:
     return samples
 
 
+def _plan_samples(svc) -> list[dict]:
+    """계획 조립 표본: 지역 포함 분석형 / 결과 희박형(미충족 요구 경로)."""
+    from datanav.api.plan import build_plan
+    return [
+        build_plan(svc, "서울 무더위 쉼터 접근성을 분석하고 싶다", max_candidates=5),
+        build_plan(svc, "존재하지않는주제어구십구", max_candidates=3),
+    ]
+
+
 def validate_against_live(spec: dict) -> list[str]:
     """현 스냅샷에서 각 Tool을 실제 호출해 출력 스키마 정합을 검증한다."""
     from datanav.api.service import Service
@@ -74,6 +83,7 @@ def validate_against_live(spec: dict) -> list[str]:
             svc.search_by_columns(["위도", "경도"], 5),
             svc.search_by_columns(["존재하지않는컬럼명이다"], 5),
         ],
+        "build_data_plan": _plan_samples(svc),
     }
     # get_context는 서비스 합성이 MCP 계층에 있어 MCP 경유 검증(아래 main에서 스키마만 확인)
     checked = []
@@ -106,7 +116,7 @@ def main() -> int:
     )
     spec = {
         "specVersion": SPEC_VERSION,
-        "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness 확장 / v1.2.0 minor(2026-07-30): 구조 관측 Tool / v1.3.0 minor(2026-07-30): search_by_columns Tool·compare structureComparison 추가(S2). breaking은 재승인 필요",
+        "status": "APPROVED — v1.0.0 동결(2026-07-17) 후 v1.1.0 minor(2026-07-28): completeness 확장 / v1.2.0 minor(2026-07-30): 구조 관측 Tool / v1.3.0 minor(2026-07-30): search_by_columns Tool·compare structureComparison 추가(S2) / v1.4.0 minor(2026-08-03): build_data_plan Tool(결정론적 활용 계획 초안 — LLM 미사용·DRAFT 전용). breaking은 재승인 필요",
         "generatedAt": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "baseUri": BASE_URI,
         "compatibilityPolicy": (

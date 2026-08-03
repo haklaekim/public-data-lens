@@ -1,7 +1,8 @@
-"""2층 MCP 서버 — Tool 5+1, Prompt 2, Resources (설계서 §4).
+"""2층 MCP 서버 — Tool 9종, Prompt 2, Resources (설계서 §4).
 
-책임 분리(§2): 이 서버는 결정론적 판정만 수행한다.
-목적 의존적 해석(의도 해석, 조건부 추천, 활용 계획)은 호스트가 수행한다.
+책임 분리(§2): 이 서버는 결정론적 판정만 수행한다. build_data_plan Tool(v1.4)도
+LLM 없는 결정론적 '계획 조립'이며 초안(DRAFT)만 반환한다 — 목적 의존적 해석·검증은
+호스트와 별도 컨시어지가 수행한다.
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ from ..config import BASE_URI, CURRENT_POINTER, DISCLAIMER
 from ..pipeline.jsonld import JSONLD_CONTEXT
 from ..rules import load_registry
 from .errors import DatanavError
+from .plan import build_plan
 from .service import Service
 
 _PROMPTS_DIR = Path(__file__).resolve().parents[1] / "prompts"
@@ -189,6 +191,22 @@ def get_dataset_structure(
     return _guard(lambda: _svc().get_dataset_structure(recordId, includeExamples, maxExamples))
 
 
+@mcp.tool(name="build_data_plan", annotations=_RO)
+def build_data_plan_tool(
+    purpose: Annotated[str, Field(description="분석·서비스 목적 한 문장(2~200자) — 예: '전기차 충전 사각지대를 분석하고 싶다'", min_length=2, max_length=200)],
+    region: Annotated[str | None, Field(description="시·도 필터(선택) — ISO 코드(KR-11) 또는 이름('서울특별시', '경기도')")] = None,
+    maxCandidates: Annotated[int, Field(description="추천 후보 최대 수(1~8)", ge=1, le=8)] = 5,
+) -> dict:
+    """목적 문장 → 데이터 활용 계획 초안(v1.4). LLM 없이 결정론적으로 조립한다:
+    검색어 추출 → 후보 검색 → 역할 배정(PRIMARY/DEMAND/SUPPLY/SPATIAL/TEMPORAL/REFERENCE)
+    → 선정 근거(fitSignals·whySelected) → 예상 결합 키(항상 CANDIDATE_ONLY) → 미충족
+    요구(missingNeeds) → 다음 확인사항. 결과는 항상 초안(planStatus=DRAFT)이며 품질
+    (NOT_ASSESSED)·결합 가능성·분석 충분성을 확정하지 않는다 — 검증·반복 설계는 별도
+    컨시어지의 몫이다. 같은 이름의 Prompt는 이 Tool 결과를 사용자 친화적으로 설명하는 용도다."""
+    return _guard(lambda: build_plan(_svc(), purpose=purpose, region=region,
+                                     max_candidates=maxCandidates))
+
+
 @mcp.tool(annotations=_RO)
 def get_context() -> dict:
     """(호환 Tool) 서비스 개요·현재 스냅샷·규칙 레지스트리 요약.
@@ -269,7 +287,7 @@ def prompt_doc() -> str:
 @mcp.resource(f"{BASE_URI}/spec/tools/1.0", name="부속 명세(Tool JSON Schema)", mime_type="application/json")
 def tool_spec() -> str:
     """부속 명세(승인·동결) — Tool별 input/output JSON Schema 전문 + 공통 계약(v1.0.0, 2026-07-17 동결)."""
-    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.3.0.json"
+    spec_path = Path(__file__).resolve().parents[1] / "spec" / "tool-schemas-v1.4.0.json"
     return spec_path.read_text(encoding="utf-8")
 
 

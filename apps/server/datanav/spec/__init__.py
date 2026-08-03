@@ -8,7 +8,7 @@ schemaVersion은 응답 봉투 meta.schemaVersion으로 전달된다.
 """
 from __future__ import annotations
 
-SPEC_VERSION = "1.3.0"
+SPEC_VERSION = "1.4.0"
 
 # ---------------------------------------------------------------- $defs
 DEFS = {
@@ -434,6 +434,79 @@ OUTPUT_SCHEMAS: dict[str, dict] = {
                     "type": "object", "required": ["ruleId", "title"],
                 }}},
             },
+        },
+    }),
+    # v1.4.0 (additive): 결정론적 활용 계획 초안 — LLM 미사용, 항상 DRAFT
+    "build_data_plan": _envelope({
+        "type": "object",
+        "required": ["purpose", "planStatus", "interpretedPurpose", "dataNeeds",
+                     "recommendedDatasets", "possibleJoinKeys", "missingNeeds",
+                     "qualityAssessment", "nextChecks"],
+        "properties": {
+            "purpose": {"type": "string"},
+            "planStatus": {"const": "DRAFT", "description": "항상 초안 — 서버는 계획을 확정하지 않는다"},
+            "interpretedPurpose": {
+                "type": "object",
+                "required": ["searchTerms", "regionApplied", "iterationsUsed"],
+                "properties": {
+                    "searchTerms": {"type": "array", "items": {"type": "string"}},
+                    "regionApplied": {"type": ["string", "null"], "description": "적용된 시·도 코드(ISO 3166-2:KR)"},
+                    "regionSource": {"type": ["string", "null"], "enum": ["PARAMETER", "PURPOSE_TEXT", None]},
+                    "iterationsUsed": {"type": "integer", "minimum": 1, "maximum": 2},
+                },
+            },
+            "dataNeeds": {"type": "array", "items": {
+                "type": "object",
+                "required": ["role", "need", "status"],
+                "properties": {
+                    "role": {"enum": ["PRIMARY", "DEMAND", "SUPPLY", "SPATIAL", "TEMPORAL", "REFERENCE"]},
+                    "need": {"type": "string"},
+                    "status": {"enum": ["SATISFIED", "PARTIAL", "UNSATISFIED"]},
+                    "matchedRecordIds": {"type": "array", "items": {"type": "string"}},
+                    "reason": {"type": "string"},
+                },
+            }},
+            "recommendedDatasets": {"type": "array", "maxItems": 8, "items": {
+                "type": "object",
+                "required": ["recordId", "title", "candidateStatus", "roles",
+                             "fitSignals", "whySelected", "limitations"],
+                "properties": {
+                    "recordId": {"type": "string"},
+                    "title": {"type": ["string", "null"]},
+                    "orgName": {"type": ["string", "null"]},
+                    "listType": {"type": ["string", "null"]},
+                    "portalUrl": {"type": ["string", "null"]},
+                    "candidateStatus": {"const": "CANDIDATE_DATASET"},
+                    "roles": {"type": "array", "minItems": 1, "items": {
+                        "enum": ["PRIMARY", "DEMAND", "SUPPLY", "SPATIAL", "TEMPORAL", "REFERENCE", "RELATED"]}},
+                    "fitSignals": {
+                        "type": "object",
+                        "description": "항목별 근거 신호 — 단일 점수는 과도한 확신을 만들므로 제공하지 않는다",
+                        "required": ["searchRelevance", "structureEvidence", "freshness", "metadataCompleteness"],
+                        "properties": {
+                            "searchRelevance": {"enum": ["HIGH", "MEDIUM", "LOW"]},
+                            "structureEvidence": {"enum": ["FILE_OBSERVATION", "STRUCTURE_NOT_COLLECTED", "NOT_APPLICABLE"]},
+                            "freshness": {"enum": ["LISTED", "UNKNOWN"]},
+                            "metadataCompleteness": {"type": "string"},
+                        },
+                    },
+                    "whySelected": {"type": "array", "items": {"type": "string"}},
+                    "limitations": {"type": "array", "items": {"type": "string"}},
+                },
+            }},
+            "possibleJoinKeys": {"type": "array", "items": {
+                "type": "object",
+                "required": ["key", "status", "observedIn", "warning"],
+                "properties": {
+                    "key": {"type": "string"},
+                    "status": {"const": "CANDIDATE_ONLY", "description": "결합 가능성은 확정하지 않는다"},
+                    "observedIn": {"type": "array", "items": {"type": "string"}},
+                    "warning": {"type": "string"},
+                },
+            }},
+            "missingNeeds": {"type": "array", "items": {"type": "object"}},
+            "qualityAssessment": {"const": "NOT_ASSESSED"},
+            "nextChecks": {"type": "array", "items": {"type": "string"}},
         },
     }),
 }
