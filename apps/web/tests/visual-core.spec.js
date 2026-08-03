@@ -6,7 +6,7 @@ import { stubApi, shoot, CARD_TITLE, RID, RULES_COUNT } from './stub.js'
 test.beforeEach(async ({ page }) => {
   await stubApi(page)
   await page.goto('/')
-  await expect(page.locator('.brand h1')).toHaveText('공공데이터 렌즈')
+  await expect(page.locator('.brand h1')).toHaveText('Public Data Lens')
 })
 
 async function searchFor(page, text) {
@@ -23,8 +23,12 @@ test('홈 — 검색 첫 화면(pristine)', async ({ page }) => {
   await expect(page.locator('.story-block')).toContainText('DRAFT')
   // §3 #5 Dataset anatomy — 원본 컬럼명 그대로 + 관측 출처
   await expect(page.locator('.anatomy-block .structure-table')).toBeVisible()
-  // §3 #4 Live exploration — 이미 받아둔 최신 수정순 상위 5건 노출
-  await expect(page.locator('.live-block .result-row')).toHaveCount(5)
+  // §3 #4 Live exploration — 구조 관측이 있는 최신 수정분 3건(2026-08-04 축소·격하)
+  await expect(page.locator('.live-block .result-row')).toHaveCount(3)
+  await expect(page.locator('.live-block .structure-chip').first()).toBeVisible()
+  // 상단 메뉴는 소개·MCP 연결만 — 변경 이력은 푸터로
+  await expect(page.locator('.nav-links .nav-link')).toHaveCount(2)
+  await expect(page.locator('.footer .footer-link')).toContainText('변경 이력')
   // §3.1 Coverage — 세 숫자(전체·FILE·구조 관측)와 스냅샷 지연이 함께 보인다
   const cov = page.locator('.cov-figures')
   await expect(cov).toContainText('96,056')
@@ -136,8 +140,8 @@ test('비교 — 2건 선택', async ({ page }) => {
   await shoot(page, 'compare.png')
 })
 
-test('변경 이력', async ({ page }) => {
-  await page.locator('.nav-link', { hasText: '변경 이력' }).click()
+test('변경 이력 — 푸터 진입', async ({ page }) => {
+  await page.locator('.footer-link', { hasText: '변경 이력' }).click()
   await expect(page.locator('main')).toContainText('변경') // 빈 기준 스냅샷 상태도 정상 화면
   await shoot(page, 'changes.png')
 })
@@ -150,7 +154,7 @@ test('소개', async ({ page }) => {
 })
 
 test('AI에 연결 — capability 데모가 설치 안내보다 먼저', async ({ page }) => {
-  await page.locator('.mcp-cta').click()
+  await page.locator('.nav-link', { hasText: 'MCP 연결' }).click()
   await expect(page.locator('.connect h2')).toContainText('MCP는 그 능력을 AI 안으로')
   await expect(page.locator('.mcp-url code')).toContainText('/projects/public-data-lens/mcp')
   await expect(page.locator('.cap-demo')).toContainText('후보')

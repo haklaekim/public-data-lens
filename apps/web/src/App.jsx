@@ -26,10 +26,11 @@ document.documentElement.dataset.surface = SURFACE
 // IA: 주 표면은 '데이터 찾기' 하나. 나머지는 우측 유틸리티 내비(조용한 링크),
 // 비교는 선택이 생겼을 때만 하단 컨텍스트 바로 등장한다.
 // '활용 사례'는 자동 생성 v0(인간 검토 전)이라 상용 표면에서 내렸다 — 검수 후 복귀.
+// 상단은 소개·MCP 연결만(2026-08-04 결정) — 변경 이력은 푸터로 강등(라우트는 유지)
 const NAV_LINKS = [
   ...(HAS_CONCIERGE ? [{ id: 'concierge', label: 'AI 컨시어지' }] : []),
-  { id: 'changes', label: '변경 이력' },
   { id: 'about', label: '소개' },
+  { id: 'connect', label: 'MCP 연결' },
 ]
 
 export default function App() {
@@ -92,8 +93,8 @@ export default function App() {
   return (
     <div className="app">
       <header className="topnav">
-        <button className="brand" onClick={() => goto('search')} aria-label="데이터 찾기로 이동">
-          <h1>공공데이터 렌즈</h1>
+        <button className="brand" onClick={() => goto('search')} aria-label="Public Data Lens 홈">
+          <h1>Public Data Lens</h1>
         </button>
         <nav className="nav-links" aria-label="보조 메뉴">
           {NAV_LINKS.map((l) => (
@@ -105,7 +106,6 @@ export default function App() {
               {l.label}
             </button>
           ))}
-          <button className="mcp-cta" onClick={() => goto('connect')}>MCP 연결</button>
         </nav>
       </header>
 
@@ -185,6 +185,7 @@ export default function App() {
         </p>
         <p>
           {status && <>스냅샷 {status.data.currentSnapshot} · 목록 {status.data.counts.datasets.toLocaleString()}건 · </>}
+          <button className="footer-link" onClick={() => goto('changes')}>변경 이력</button> ·
           이용 기록은 익명 수집되며 DNT/GPC로 거부할 수 있습니다.{' '}
           <a href="/api/resources/privacy" target="_blank" rel="noreferrer">개인정보·로그 고지</a>
         </p>

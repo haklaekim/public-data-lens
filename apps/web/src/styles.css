@@ -160,6 +160,10 @@ code, pre, kbd, samp {
   border: 1px solid var(--input-border); border-radius: 8px; background: var(--card);
   color: var(--text); font-size: 12.5px; padding: 5px 8px; font-family: inherit;
 }
+.footer-link {
+  border: none; background: none; padding: 0; cursor: pointer; font-size: inherit;
+  color: inherit; text-decoration: underline; font-family: inherit;
+}
 .desc-fold summary { cursor: pointer; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
 .desc-fold[open] summary { color: var(--text); }
 
@@ -1398,10 +1402,7 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 }
 :root[data-surface='core'] .compare-bar { background: #141b26; border-radius: 12px; }
 :root[data-surface='core'] .cb-go { border-radius: 8px; color: #141b26; }
-:root[data-surface='core'] .brand h1::before {
-  content: ''; width: 11px; height: 11px; border-radius: 50%;
-  background: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); flex: none;
-}
+/* 브랜드 도트 제거(2026-08-04) — 워드마크만. 렌즈는 장식이 아니라 인터랙션이다(DESIGN §5) */
 
 /* ============================================================
    히어로 랜딩(검색창 = 주인공) + 검색엔진식 맨 리스트 — v2 컨셉
@@ -1410,12 +1411,13 @@ button:active:not(:disabled) { transform: var(--button-active-scale); }
 .search-home .searchbar.unified { width: 100%; max-width: 760px; }
 .search-home .examples { justify-content: center; margin-top: 18px; }
 .search-home .search-hint, .search-home .interp { align-self: center; }
-.hero { margin-bottom: 36px; }
+/* 히어로 축소(2026-08-04) — 감성 브랜딩보다 실용 탐색. 화면 점유를 줄인다 */
+.hero { margin-bottom: 28px; }
 .hero-title {
-  font-size: clamp(30px, 4.6vw, 44px); font-weight: 800; letter-spacing: -0.03em;
-  line-height: 1.18; margin: 0 0 16px; color: var(--text);
+  font-size: clamp(24px, 3.4vw, 32px); font-weight: 700; letter-spacing: -0.02em;
+  line-height: 1.25; margin: 0 0 10px; color: var(--text);
 }
-.hero-sub { font-size: 15px; color: var(--muted); margin: 0; }
+.hero-sub { font-size: 13.5px; color: var(--muted); margin: 0; }
 .search-home .search-shell input { height: 56px; font-size: 16.5px; }
 .search-home .searchbar.unified > button[type='submit'] { height: 58px; font-size: 15px; }
 .search-home .search-shell { border-width: 1.5px; }

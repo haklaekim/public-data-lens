@@ -238,9 +238,10 @@ export default function SearchView({
             공공데이터를 찾는 것에서<br />
             이해하고 활용하는 것으로
           </h2>
+          {/* 핵심만(2026-08-04) — 기술 문구(판정 엔진)는 MCP 연결 페이지가 담당 */}
           <p className="hero-sub">
-            {result ? result.data.totalEstimate.toLocaleString() : '96,056'}건의 목록을 제목이 아니라
-            구조·근거·한계로 탐색합니다 — 웹과 AI(MCP)가 같은 판정 엔진을 씁니다
+            {result ? result.data.totalEstimate.toLocaleString() : '96,056'}건을
+            제목이 아니라 구조·근거·한계로 탐색합니다
           </p>
         </div>
       )}
@@ -359,12 +360,28 @@ export default function SearchView({
         </button>
       )}
 
-      {/* §3 #4 Live exploration — 마운트 시 이미 받아둔 결과 상위 5건(추가 왕복 없음) */}
-      {pristine && result && items.length > 0 && (
+      {/* 홈 블록 순서(2026-08-04 재배치): 차별점(서사·해부)을 먼저, 목록 표본은 축소 후순위.
+          §3 #3 탐색 서사 — 결과가 아니라 과정. CTA는 목적 모드로 이어진다(v1.5 게이팅) */}
+      {pristine && planAvailable && (
+        <ExplorationStoryBlock
+          onTryPurpose={(p) => {
+            setMode('purpose')
+            setPurposeQuery(p)
+            runPurposeSearch(null, p)
+            window.scrollTo({ top: 0 })
+          }}
+        />
+      )}
+      {/* §3 #5 Dataset anatomy — 이미 받아둔 결과에서 구조 관측 레코드 1건 해부 */}
+      {pristine && <AnatomyBlock items={items} onOpen={onOpen} />}
+
+      {/* §3 #4 Live exploration — 이미 받아둔 최신 수정분에서 구조 관측이 있는 3건만
+          (최신 수정 자체는 판단 가치가 낮다는 검토 반영 — 탐색 가능성 우선, 추가 왕복 없음) */}
+      {pristine && result && items.some((it) => it.structureAvailable) && (
         <div className="home-block live-block">
-          <h3>지금 카탈로그 — 최신 수정순 상위 5건</h3>
+          <h3>지금 바로 구조까지 볼 수 있는 데이터 — 최신 수정분 중 3건</h3>
           <ul className="results">
-            {items.slice(0, 5).map((item) => (
+            {items.filter((it) => it.structureAvailable).slice(0, 3).map((item) => (
               <DatasetRow
                 key={item.recordId}
                 item={item}
@@ -378,19 +395,6 @@ export default function SearchView({
         </div>
       )}
 
-      {/* §3 #3 탐색 서사 — 결과가 아니라 과정. CTA는 목적 모드로 이어진다(v1.5 게이팅) */}
-      {pristine && planAvailable && (
-        <ExplorationStoryBlock
-          onTryPurpose={(p) => {
-            setMode('purpose')
-            setPurposeQuery(p)
-            runPurposeSearch(null, p)
-            window.scrollTo({ top: 0 })
-          }}
-        />
-      )}
-      {/* §3 #5 Dataset anatomy — 이미 받아둔 결과에서 구조 관측 레코드 1건 해부 */}
-      {pristine && <AnatomyBlock items={items} onOpen={onOpen} />}
       {pristine && <CoverageBlock status={status} />}
       {pristine && <OpenInfraBlock />}
 
