@@ -5,7 +5,7 @@
 ![snapshot](https://img.shields.io/badge/%EC%8A%A4%EB%83%85%EC%83%B7-2026--06-blue)
 ![datasets](https://img.shields.io/badge/%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%85%8B-96%2C056%EA%B1%B4-informational)
 ![contract](https://img.shields.io/badge/MCP%20%EA%B3%84%EC%95%BD-v1.0.0%20%EB%8F%99%EA%B2%B0%20%2B%20v1.4.0%20additive-success)
-![status](https://img.shields.io/badge/%EC%83%81%ED%83%9C-v1.0%20beta-orange)
+![status](https://img.shields.io/badge/%EC%83%81%ED%83%9C-v1.1%20beta-orange)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 > 본 결과는 공공데이터포털 목록 개방 데이터 기반이며 실제 데이터의 내용·품질·결합 가능성을
