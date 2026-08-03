@@ -45,7 +45,9 @@ docs/구현현황_설계대조_v1.0.md
 docs/데이터구조_관측_설계_v2_초안.md
 docs/어휘_매핑_확장_제안_v1.md
 docs/차기_기능_백로그_v1.0.md
+docs/REDESIGN_RUNBOOK.md
 AGENTS.md
+CLAUDE.md
 "
 # 개발 에이전트 워크플로 잔재 — AGENTS.md(에이전트 규칙 문서)와 .claude/(Claude Code 설정)는
 # 개발 저장소 전용이므로 공개 릴리스에서 제외한다.
