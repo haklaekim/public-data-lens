@@ -42,6 +42,10 @@ jobs:
           node-version: "22"
       - name: 웹 빌드 (코어 표면)
         run: cd apps/web && npm ci && VITE_SURFACE=core npm run build
+      - name: Playwright 브라우저 설치
+        run: cd apps/web && npx playwright install --with-deps chromium
+      - name: 화면 스모크 (API 스텁 — 스크린샷 대조는 darwin 베이스라인이라 CI에서 생략)
+        run: cd apps/web && SKIP_VISUAL=1 npx playwright test
 
   compose:
     runs-on: ubuntu-latest

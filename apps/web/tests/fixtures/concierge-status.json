@@ -1,0 +1,15 @@
+{
+ "enabled": true,
+ "model": "stub-model",
+ "promptVersion": "build-data-plan-v1.0",
+ "usage": {
+  "month": "2026-08",
+  "monthlyCostKrw": 0,
+  "monthlyBudgetKrw": 200000,
+  "todayQueries": 0,
+  "dailyLimit": 50,
+  "sessionLimit": 5,
+  "clientDailyLimit": 10
+ },
+ "note": null
+}
