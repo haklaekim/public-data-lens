@@ -41,7 +41,11 @@ apps/web/src/components/ConciergeDashboard.jsx
 apps/web/nginx.concierge.conf
 docker-compose.concierge.yml
 docs/공공데이터_내비게이터_구현정리_v1.0.pptx
+AGENTS.md
 "
+# 개발 에이전트 워크플로 잔재 — AGENTS.md(에이전트 규칙 문서)와 .claude/(Claude Code 설정)는
+# 개발 저장소 전용이므로 공개 릴리스에서 제외한다.
+rm -rf "$OUT/.claude"
 for f in $EXCLUDE; do
   if [ -e "$OUT/$f" ]; then
     rm "$OUT/$f"
