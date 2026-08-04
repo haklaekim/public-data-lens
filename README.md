@@ -15,9 +15,10 @@
 ([data.go.kr](https://www.data.go.kr)). It turns the portal's monthly catalog (~96k dataset
 listings) into a canonical JSON-LD/DCAT layer with versioned, deterministic quality rules
 (SHACL-validated, DQV/PROV issue observations), and exposes search / compare / diff tools to
-AI hosts via the **Model Context Protocol**. It also serves as a research testbed for the
-draft AIRD (AI-Ready Data) standard: every judgment carries a rule version and evidence level,
-and canonical URIs dereference to their JSON-LD representations.
+AI hosts via the **Model Context Protocol**. It is an independent open-source implementation
+that predates the draft AIRD (AI-Ready Data) standard and serves as a reference implementation
+for it: every judgment carries a rule version and evidence level, and canonical URIs
+dereference to their JSON-LD representations.
 
 ## 빠른 시작 — Claude에 연결하기
 
@@ -74,10 +75,10 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 - **서비스로서** — 공공데이터포털이 공식 유통 기반이라면, Public Data Lens는 그 위의
   **탐색·판단 계층**입니다. 어떤 데이터가 존재하고 어떤 후보가 검토할 가치가 있는지를
   근거와 함께 제시하며, 포털을 대체하지 않습니다.
-- **연구로서** — 중앙대학교 HIKE 연구실이 운영하는 **AIRD(AI-Ready Data) 표준안 실증** 프로젝트입니다.
-  월간 목록을 정본 JSON-LD(DCAT)로 정규화하고, SHACL 검증·버전 관리되는 판정 규칙
-  레지스트리·DQV/PROV 이슈 관찰로 "표준이 실제로 동작함"을 보여줍니다. 1차 목적은 표준의
-  제정·확산이며, 서비스는 그 실증 수단입니다.
+- **연구로서** — **AIRD(AI-Ready Data) 표준 논의에 앞서 개발된 독립 오픈소스 구현**이며,
+  표준안의 실현 가능성을 검증하는 참조 구현으로 활용됩니다. 월간 목록을 정본 JSON-LD(DCAT)로
+  정규화하고, SHACL 검증·버전 관리되는 판정 규칙 레지스트리·DQV/PROV 이슈 관찰로
+  "표준이 실제로 동작함"을 보여줍니다. (중앙대학교 HIKE 연구실 운영)
 
 ```
 [3층: 판단·경험]  호스트 에이전트(Claude 등) · 코어 웹(A: 비생성형) · 컨시어지 웹(B: 별도 서비스)
@@ -93,6 +94,10 @@ rule 버전 표기. 전문: [부속명세 v1.0](docs/부속명세_v1.0.md)
 **책임 분리 원칙**: 재현되어야 하는 판정(정규화·완전성·최신성·사실 비교·랭킹)은 서버가
 결정론적으로 수행하고, 목적 의존적 해석(조건부 추천·활용 계획)은 호스트 LLM이 수행합니다.
 판단 로직을 두 벌 만들지 않습니다.
+
+**이해관계 고지** — 이 서비스를 기반으로 하는 상용 AI 컨시어지가 별도 법인에서 제공됩니다.
+렌즈는 MIT 라이선스로 누구에게나 동일하게 공개되며, 특정 사업자에게 우선 접근이나 비공개
+엔드포인트를 제공하지 않습니다.
 
 ## 사용자 가이드라인
 
@@ -261,4 +266,5 @@ cd apps/server
   JSON-LD Context·SHACL)에 모두 적용됩니다. 연구·재사용 시 출처 표기를 권장합니다.
 - **인용**: 연구·보고서에서 인용 시 [`CITATION.cff`](CITATION.cff)를 참조하거나 저장소 URL을
   명시해 주세요.
+- **설계 판단 기록**: [`decisions/`](decisions/) — 버전 변경과 설계 결정의 근거(ADR)
 - **문의**: GitHub Issue 또는 _(연구실 대표 연락처 — 확정 예정)_

@@ -32,3 +32,8 @@ data/anon_hmac.key
 apps/web/dist-test-*/
 apps/web/test-results/
 apps/web/playwright-report/
+
+# evals 공개 범위 정책(ADR 009 결정 6항): 응답 원문 누적분은 미커밋, drift 리포트만 예외
+evals/results/**
+!evals/results/*/
+!evals/results/*/drift.md
