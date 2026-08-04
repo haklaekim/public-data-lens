@@ -51,30 +51,8 @@ def _client_ip(request: Request) -> str:
     return ip
 
 
-# 익명 식별자 HMAC 키(§10) — 단순 SHA-256(IP)은 IPv4 전수 대입으로 역산 가능하므로
-# 비밀키 기반 HMAC을 쓴다. 키 우선순위: 환경변수 > 데이터 볼륨에 1회 생성·영속(재시작에도
-# 캡·지표 연속) > 프로세스 임시 키(볼륨이 읽기 전용일 때 — 재시작 시 캡 카운터 리셋).
-def _anon_hmac_key() -> bytes:
-    env = os.environ.get("DATANAV_ANON_HMAC_KEY")
-    if env:
-        return env.encode()
-    from .. import config
-    p = config.DATA_DIR / "anon_hmac.key"
-    try:
-        key = p.read_bytes()
-        if key:
-            return key
-    except OSError:
-        pass
-    key = secrets.token_bytes(32)
-    try:
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_bytes(key)
-        p.chmod(0o600)
-    except OSError:
-        pass  # 기록 불가 환경 — 임시 키로 동작
-    return key
-
+# 익명 식별자 HMAC 키(§10) — 공통 규칙은 usage.py가 단일 출처(REST·MCP 공용)
+from .usage import anon_hmac_key as _anon_hmac_key  # noqa: E402
 
 _ANON_HMAC_KEY = _anon_hmac_key()
 
@@ -121,8 +99,8 @@ def _log_dir() -> Path:
 
 
 def _opted_out(request: Request) -> bool:
-    h = request.headers
-    return h.get("dnt") == "1" or h.get("sec-gpc") == "1" or h.get("x-datanav-no-log") == "1"
+    from .usage import opted_out
+    return opted_out(request.headers)
 
 
 _RETENTION_DAYS = 365
@@ -315,9 +293,9 @@ def resource_prompt():
 
 @app.get("/api/resources/privacy", response_class=PlainTextResponse)
 def resource_privacy():
-    """§10 로그·개인정보 고지 전문 (docs/개인정보_로그_고지_v1.0.md)."""
+    """§10 로그·개인정보 고지 전문 (docs/개인정보_로그_고지_v1.1.md — MCP 사용 로그 신설)."""
     from .. import config
-    p = config.PROJECT_ROOT / "docs" / "개인정보_로그_고지_v1.0.md"
+    p = config.PROJECT_ROOT / "docs" / "개인정보_로그_고지_v1.1.md"
     return PlainTextResponse(p.read_text(encoding="utf-8"), media_type="text/markdown; charset=utf-8")
 
 

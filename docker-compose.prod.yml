@@ -71,6 +71,10 @@ services:
       DATANAV_MCP_ALLOWED_HOSTS: "${DATANAV_MCP_ALLOWED_HOSTS:?서비스 도메인을 지정하세요 — 예. service.datahub.kr}"
       # 관측 예시값 공개 — api와 동일 값으로 유지(판정 이중화 금지)
       DATANAV_EXAMPLES_PUBLIC: ${DATANAV_EXAMPLES_PUBLIC:-0}
+      # 사용 로그(고지 v1.1): 게이트웨이가 붙인 X-Real-IP를 익명 해시 키로 신뢰
+      DATANAV_TRUST_PROXY: "1"
+      # 선택: api와 같은 키를 주면 웹·MCP의 익명 해시가 결합 가능해진다(미지정 시 임시 키)
+      DATANAV_ANON_HMAC_KEY: ${DATANAV_ANON_HMAC_KEY:-}
     volumes:
       - ./data:/app/data:ro  # 읽기 전용 — MCP는 카탈로그를 조회만 한다
     # 루트FS 쓰기 봉쇄 — MCP는 어떤 쓰기도 하지 않는다(/tmp만 tmpfs)

@@ -23,4 +23,5 @@ USER datanav
 EXPOSE 8000
 
 # 다중 워커 금지: rate limit·사용량 캡이 프로세스 메모리/단일 파일 전제(스케일아웃은 게이트웨이 계층에서)
-CMD ["uvicorn", "datanav.api.rest:app", "--host", "0.0.0.0", "--port", "8000"]
+# uvicorn access log 차단(고지 §1 정합) — 익명 사용 로그는 앱 미들웨어가 기록한다
+CMD ["uvicorn", "datanav.api.rest:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
